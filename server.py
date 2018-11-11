@@ -1,50 +1,38 @@
-import json
-import sys
+# Sky Hoffert
+# November 11, 2018
 
-from flask import Flask, request
-app = Flask(__name__)
+import json
+import socketserver
+import sys
+import threading
 
 db = {}
 
-@app.route('/api/player_update/<id>', methods=['POST'])
-def player_update(id):
-    db['players'][id] = {'x': 0, 'y': 0}
+class MyTCPHandler(socketserver.BaseRequestHandler):
+    """
+    The request handler class for our server.
 
-    return json.dumps(db)
+    It is instantiated once per connection to the server, and must
+    override the handle() method to implement communication to the
+    client.
+    """
 
-@app.route('/api/ball_update/<id>', methods=['POST'])
-def ball_update(id):
-    db['balls'][id] = request.json
-    print(request.json)
-    sys.stdout.flush()
-    return json.dumps(db)
+    def handle(self):
+        # self.request is the TCP socket connected to the client
+        self.data = self.request.recv(1024).strip()
+        print("{} wrote:".format(self.client_address[0]))
+        print(self.data)
+        # just send back the same data, but upper-cased
+        self.request.sendall(self.data.upper())
 
-@app.route('/api/get_db', methods=['GET'])
-def get_db():
-    return json.dumps(db)
+def client():
+    pass
 
-@app.route('/api/reset', methods=['GET'])
-def reset():
-    # remove all but first balls
-    while len(db['balls'] > 1):
-        del db['balls'][1]
-    
-    db['balls'][0]['x'] = db['canvas']['width']/2
-    db['balls'][0]['y'] = db['canvas']['height']/2
+def main():
+    HOST, PORT = 'localhost', 5000
 
-    return json.dumps(db)
-
-@app.route('/api/init', methods=['POST'])
-def init():
-    db = request.json
-    print(request.json)
-    sys.stdout.flush()
-
-    return json.dumps(db)
-
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
+    with socketserver.TCPServer((HOST, PORT), MyTCPHandler) as server:
+        server.serve_forever()
 
 if __name__ == '__main__':
-    app.run(threaded=True)
+    main()
