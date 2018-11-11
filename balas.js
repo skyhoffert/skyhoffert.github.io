@@ -12,7 +12,7 @@ const UPDATE_RATE = 1000/60;
 const SEED_INIT = 1;
 
 const BALL_SIZE = 12;
-const BALL_SPEED = 6;
+const BALL_SPEED = 7;
 
 const PLAYER_SIZE = 32;
 const PLAYER_SPEED = 4;
@@ -164,13 +164,17 @@ class Player extends Entity {
         if (code == CODE_SPACE){
             if (this.grab_ball != null && this.grab_ball.grabbed){
                 let curtime = new Date().getTime();
-                let ang = this.grab_angle + (curtime - this.grab_time) * this.grab_ball.speed/1000;
+                let ang = this.grab_angle + (curtime - this.grab_time) * this.grab_ball.speed/1000 * this.grab_dir;
+                console.log(ang);
                 this.grab_ball.velx = Math.cos(ang) * this.grab_dir;
                 this.grab_ball.vely = -Math.sin(ang) * this.grab_dir;
                 this.grab_ball.normalize_velocity();
                 this.grab_ball.kinematic = true;
                 this.grab_ball.grabbed = false;
                 this.grab_dir = 1;
+
+                console.log(this.grab_ball.velx);
+                console.log(this.grab_ball.vely);
 
                 this.grab_ball = null;
             }
@@ -190,12 +194,12 @@ class Player extends Entity {
                             this.grab_time = new Date().getTime();
                             let dy = this.y - this.grab_ball.y;
                             let dx = this.x - this.grab_ball.x;
-                            if (dx > 0){
-                                this.grab_angle = Math.atan2(-dy,dx)-Math.PI/2;
-                                this.grab_dir = -1;
-                            } else if (dx < 0){
-                                this.grab_angle = Math.atan2(-dy,dx)-Math.PI/2;
+                            this.grab_angle = Math.atan2(-dy,dx) - Math.PI/2;
+                            let cross = cross_product(dx, dy, this.grab_ball.velx, this.grab_ball.vely);
+                            if (cross > 0){
                                 this.grab_dir = 1;
+                            } else if (cross < 0){
+                                this.grab_dir = -1;
                             }
                         }
                     } else {
@@ -432,6 +436,10 @@ function distance_to(x1, y1, x2, y2){
 
 function magnitude(x, y){
     return Math.sqrt(x**2 + y**2)
+}
+
+function cross_product(x1, y1, x2, y2){
+    return x1*y2 - y1*x2;
 }
 
 /* *************************************************************************************************************************************************************/
