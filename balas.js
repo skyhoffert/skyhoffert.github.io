@@ -63,8 +63,21 @@ class Ball extends Entity {
         this.kinematic = true;
         this.id = 'ball';
         this.grabbed = false;
+        this.scored = 0;
 
         this.normalize_velocity();
+    }
+    
+    move(){
+        super.move();
+        
+        if (this.x < canvas.width*1/8-16){
+            this.kinematic = false;
+            this.scored = 1;
+        } else if (this.x > canvas.width*7/8+16){
+            this.kinematic = false;
+            this.scored = -1;
+        }
     }
 
     normalize_velocity(){
@@ -296,15 +309,20 @@ var ctx = canvas.getContext("2d");
 var entities = [];
 var walls = [];
 
+var score_l = 0;
+var score_r = 0;
+
 entities.push(new Ball(canvas.width/2, canvas.height/2));
 entities.push(new Player(canvas.width/4, canvas.height/2));
 
 walls.push(new Wall(canvas.width*1/2, canvas.height*1/8, canvas.width*3/4 + 16, 16, 'blue', 0));
 walls.push(new Wall(canvas.width*1/2, canvas.height*7/8, canvas.width*3/4 + 16, 16, 'blue', 0));
-walls.push(new Wall(canvas.width*1/8, canvas.height*1/2, 16, canvas.height*3/4, 'blue', 0));
-walls.push(new Wall(canvas.width*7/8, canvas.height*1/2, 16, canvas.height*3/4, 'blue', 0));
+walls.push(new Wall(canvas.width*1/8, canvas.height*1/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*1/8, canvas.height*3/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*7/8, canvas.height*1/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*7/8, canvas.height*3/4, 16, canvas.height*1/4, 'blue', 0));
 
-// set frame rate to 30 fps
+// set frame rate to UPDATE_RATE
 setInterval(update, UPDATE_RATE);
 
 canvas.addEventListener('mousedown', function(evt) {
@@ -321,12 +339,16 @@ canvas.addEventListener('mousewheel', function(evt) {
 
 document.body.onkeydown = function(e){
     p = get_player();
-    p.keydown(e.keyCode);
+    if (p){
+        p.keydown(e.keyCode);
+    }
 }
 
 document.body.onkeyup = function(e){
     p = get_player();
-    p.keyup(e.keyCode);
+    if (p){
+        p.keyup(e.keyCode);
+    }
 }
 
 /*
@@ -347,12 +369,49 @@ function update(){
     for (let i = 0; i < walls.length; i++){
         walls[i].draw();
     }
+
+    if (get_ball().scored){
+        score_l += get_ball().scored > 0 ? 1 : 0;
+        score_r += get_ball().scored < 0 ? 1 : 0;
+        reset_game();
+    }
+    
+    ctx.font = "30px Arial";
+    ctx.fillStyle = 'black';
+    ctx.fillText(score_l,canvas.width/16,canvas.height/16);
+    ctx.fillText(score_r,canvas.width*15/16,canvas.height/16);
+}
+
+function reset_game(){
+    let idx = get_ball_index();
+    entities.splice(idx, 1);
+    entities.push(new Ball(canvas.width/2, canvas.height/2));
 }
 
 function get_player(){
     for (let i = 0; i < entities.length; i++){
         if (entities[i].id === 'player'){
             return entities[i];
+        }
+    }
+
+    return null;
+}
+
+function get_ball(){
+    for (let i = 0; i < entities.length; i++){
+        if (entities[i].id === 'ball'){
+            return entities[i];
+        }
+    }
+
+    return null;
+}
+
+function get_ball_index(){
+    for (let i = 0; i < entities.length; i++){
+        if (entities[i].id === 'ball'){
+            return i;
         }
     }
 
