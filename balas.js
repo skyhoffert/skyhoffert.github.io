@@ -9,10 +9,9 @@ const WIDTH = 1600;
 const HEIGHT = 900;
 const UPDATE_RATE = 1000/60;
 
-const SEED_INIT = 1;
-
 const BALL_SIZE = 12;
 const BALL_SPEED = 7;
+const BALL_COLOR = 'red';
 
 const PLAYER_SIZE = 32;
 const PLAYER_SPEED = 4;
@@ -114,46 +113,38 @@ var y = 0.0;
 /* BEGIN CLASSES ***********************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
 
+class Wall {
+    constructor(x, y, w, h, c, a){
+        this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.color = c;
+        this.angle = a;
+        this.id = 'wall';
+        this.kinematic = false;
+    }
 
+    draw(){
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        if (Math.abs(this.angle) > 1){
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle * Math.PI/180);
+            ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+        } else {
+            ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+        }
+        ctx.fill();
+        ctx.closePath();
+        ctx.restore();
+    }
+}
 
 /* *************************************************************************************************************************************************************/
 /* END CLASSES *************************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
-
-/* GLOBAL VARIABLES ****************************************************************************************************/
-var seed = SEED_INIT;
-
-/* FUNCTIONS ***********************************************************************************************************/
-// Standard Normal variate using Box-Muller transform.
-function random_bm(mean=0.5, sigma=0.125) {
-    let u = 0, v = 0;
-    while(u === 0) u = random(); //Converting [0,1) to (0,1)
-    while(v === 0) v = random();
-    let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
-    num = num / 10.0 + 0.5; // Translate to 0 -> 1
-    let diff_mean = mean - 0.5;
-    let diff_stddev = sigma / 0.125;
-    // bring value down to be around 0 and scale/translate
-    num -= 0.5;
-    num *= diff_stddev;
-    num += diff_mean + 0.5;
-    return num;
-}
-
-// Random uniform value between 0 and 1
-function random(min=0, max=1) {
-    let x = Math.sin(seed++) * 10000;
-    x = x - Math.floor(x);
-    let range = max - min;
-    x *= range;
-    x += min;
-    return x;
-}
-
-// round a floating point value with given significant figures
-function round_to_sigfigs(val, sigfigs){
-    return Number.parseFloat(val.toPrecision(sigfigs));
-}
 
 /* *************************************************************************************************************************************************************/
 /* BEGIN DRAWING ***********************************************************************************************************************************************/
@@ -170,6 +161,12 @@ var players = {};
 var ball = {};
 
 var walls = [];
+walls.push(new Wall(canvas.width*1/2, canvas.height*1/8, canvas.width*3/4 + 16, 16, 'blue', 0));
+walls.push(new Wall(canvas.width*1/2, canvas.height*7/8, canvas.width*3/4 + 16, 16, 'blue', 0));
+walls.push(new Wall(canvas.width*1/8, canvas.height*1/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*1/8, canvas.height*3/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*7/8, canvas.height*1/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*7/8, canvas.height*3/4, 16, canvas.height*1/4, 'blue', 0));
 
 var score_l = 0;
 var score_r = 0;
@@ -214,6 +211,8 @@ function update(){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     draw_players();
+    draw_ball();
+    draw_walls();
 
     network();
 }
@@ -225,6 +224,26 @@ function draw_players(){
         ctx.arc(players[Object.keys(players)[i]].x, players[Object.keys(players)[i]].y, PLAYER_SIZE/2, 0, 2*Math.PI);
         ctx.fill();
         ctx.closePath();
+        
+        ctx.beginPath();
+        ctx.strokeStyle = '#999999';
+        ctx.arc(players[Object.keys(players)[i]].x, players[Object.keys(players)[i]].y, players[Object.keys(players)[i]].grab_range, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.closePath();
+    }
+}
+
+function draw_ball(){
+    ctx.beginPath();
+    ctx.fillStyle = BALL_COLOR;
+    ctx.arc(ball.x, ball.y, BALL_SIZE/2, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.closePath();
+}
+
+function draw_walls(){
+    for (let i = 0; i < walls.length; i++){
+        walls[i].draw();
     }
 }
 
@@ -251,26 +270,6 @@ function network(){
     } else if (ws.readyState === 3){
         return;
     }
-}
-
-/*
-Find the vector distance between 2 points
-    @arg x1: int; point x1
-    @arg y1: int; point y1
-    @arg x2: int; point x2
-    @arg y2: int; point y2
-    @return: float; distance between the two points
-*/
-function distance_to(x1, y1, x2, y2){
-    return Math.sqrt((x2-x1)**2 + (y2-y1)**2);
-}
-
-function magnitude(x, y){
-    return Math.sqrt(x**2 + y**2)
-}
-
-function cross_product(x1, y1, x2, y2){
-    return x1*y2 - y1*x2;
 }
 
 /* *************************************************************************************************************************************************************/
