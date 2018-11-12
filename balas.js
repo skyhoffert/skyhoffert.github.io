@@ -34,7 +34,7 @@ const CODE_SPACE = 32;
 
 var IP = 'localhost';
 //var IP = '35.171.151.27';
-var PORT = '443';
+var PORT = '5000';
 
 var ws = new WebSocket('ws://' + IP + ':' + PORT);
 
