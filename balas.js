@@ -191,13 +191,17 @@ canvas.addEventListener('mousewheel', function(evt) {
 
 document.body.onkeydown = function(e){
     if (ID != -1){
-        ws.send(JSON.stringify(key_msg(e.keyCode, true)));
+        if (ws.readyState === 1){
+            ws.send(JSON.stringify(key_msg(e.keyCode, true)));
+        }
     }
 }
 
 document.body.onkeyup = function(e){
     if (ID != -1){
-        ws.send(JSON.stringify(key_msg(e.keyCode, false)));
+        if (ws.readyState === 1){
+            ws.send(JSON.stringify(key_msg(e.keyCode, false)));
+        }
     }
 }
 
@@ -224,6 +228,9 @@ function draw_players(){
     }
 }
 
+const WAIT_TICKS_MAX = 10;
+var wait_ticks = 0;
+
 function network(){
     if (ws.readyState === 1){
         if (ID != -1){
@@ -234,7 +241,12 @@ function network(){
             }
             tick++;
         } else {
-            ws.send(JSON.stringify(INIT_MSG));
+            if (wait_ticks <= 0){
+                ws.send(JSON.stringify(INIT_MSG));
+                wait_ticks = WAIT_TICKS_MAX;
+            } else {
+                wait_ticks--;
+            }
         }
     } else if (ws.readyState === 3){
         return;
