@@ -16,6 +16,7 @@ const BALL_SPEED = 7;
 
 const PLAYER_SIZE = 32;
 const PLAYER_SPEED = 4;
+const PLAYER_COLOR = 'blue';
 
 const CODE_A = 65;
 const CODE_D = 68;
@@ -31,8 +32,8 @@ const CODE_SPACE = 32;
 /* BEGIN WEB SOCKET ********************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
 
-//var IP = 'localhost';
-var IP = '35.171.151.27';
+var IP = 'localhost';
+//var IP = '35.171.151.27';
 var PORT = '443';
 
 var ws = new WebSocket('ws://' + IP + ':' + PORT);
@@ -46,6 +47,7 @@ const INIT_MSG = {
 function key_msg(code, down=true) {
     return {
         'type': 'key',
+        'id': ID,
         'down': down,
         'code': code
     };
@@ -78,9 +80,12 @@ ws.onmessage = function (evt) {
         case 'ack':
             console.log('ACK: ' + obj['message']);
             break;
+        case 'tick':
+            players = obj['players'];
+            ball = obj['ball'];
+            break;
         case 'player_position':
-            console.log('Updated player ' + obj['id'] + ' position to ' + obj['x'] + ', ' + obj['y']);
-            if (obj['id'] > Object.keys(players).length){
+            if (obj['id'] === 0 || obj['id'] > Object.keys(players).length){
                 players[obj['id']] = {'x': obj['x'], 'y': obj['y']};
             } else {
                 players[obj['id']]['x'] = obj['x'];
@@ -160,20 +165,11 @@ canvas.width = WIDTH;
 canvas.height = HEIGHT;
 var ctx = canvas.getContext("2d");
 
-var players = {
-    0: {
-        'x': 0,
-        'y': 0
-    },
-    1: {
-        'x': 0,
-        'y': 0
-    }
-};
+var players = {};
+
+var ball = {};
 
 var walls = [];
-
-var keys = {}
 
 var score_l = 0;
 var score_r = 0;
@@ -194,11 +190,15 @@ canvas.addEventListener('mousewheel', function(evt) {
 }, false);
 
 document.body.onkeydown = function(e){
-    keys[e.keyCode] = true;
+    if (ID != -1){
+        ws.send(JSON.stringify(key_msg(e.keyCode, true)));
+    }
 }
 
 document.body.onkeyup = function(e){
-    keys[e.keyCode] = false;
+    if (ID != -1){
+        ws.send(JSON.stringify(key_msg(e.keyCode, false)));
+    }
 }
 
 /*
@@ -209,29 +209,16 @@ function update(){
     // clear the screen
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    input();
-
     draw_players();
 
     network();
 }
 
-function input(){
-    let lr = keys[CODE_A] ? -PLAYER_SPEED : keys[CODE_D] ? PLAYER_SPEED : 0.0;
-    let ud = keys[CODE_W] ? -PLAYER_SPEED : keys[CODE_S] ? PLAYER_SPEED : 0.0;
-    if (Math.abs(lr) > 0 && Math.abs(ud) > 0){
-        lr /= Math.sqrt(2);
-        ud /= Math.sqrt(2);
-    }
-    x += lr;
-    y += ud;
-}
-
 function draw_players(){
     for (let i = 0; i < Object.keys(players).length; i++){
         ctx.beginPath();
-        ctx.fillStyle = this.color;
-        ctx.arc(players[Object.keys(players)[i]]['x'], players[Object.keys(players)[i]]['y'], PLAYER_SIZE/2, 0, 2*Math.PI);
+        ctx.fillStyle = PLAYER_COLOR;
+        ctx.arc(players[Object.keys(players)[i]].x, players[Object.keys(players)[i]].y, PLAYER_SIZE/2, 0, 2*Math.PI);
         ctx.fill();
         ctx.closePath();
     }
@@ -241,9 +228,9 @@ function network(){
     if (ws.readyState === 1){
         if (ID != -1){
             if (tick % 15 === 0){
-                ws.send(JSON.stringify({'type': 'ping', 'id': ID, 'time': (new Date().getTime())}));
+                //ws.send(JSON.stringify({'type': 'ping', 'id': ID, 'time': (new Date().getTime())}));
             } else {
-                ws.send(JSON.stringify({'type': 'player_position', 'id': ID, 'x': x, 'y': y}));
+                //ws.send(JSON.stringify({'type': 'player_position', 'id': ID, 'x': x, 'y': y}));
             }
             tick++;
         } else {
