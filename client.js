@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 
 const ws = new WebSocket('ws://localhost:5000');
 
-var ID = 0;
+var ID = -1;
 
 const INIT_MSG = {
     'type': 'connect',
@@ -19,6 +19,7 @@ function key_msg(code, down=true) {
 ws.on('open', function open() {
     let start = new Date().getTime();
     ws.send(JSON.stringify(INIT_MSG));
+    ws.send(JSON.stringify({'type': 'ping', 'time': (new Date().getTime())}));
 });
 
 ws.on('message', function incoming(data) {
@@ -31,6 +32,11 @@ ws.on('message', function incoming(data) {
         case 'id':
             ID = obj['id'];
             console.log('ID: ' + ID);
+            break;
+        case 'pong':
+            let elapsed = (new Date().getTime()) - obj['time'];
+            console.log('Ping: ' + elapsed + ' ms');
+            ws.send(JSON.stringify({'type': 'ack', 'message': 'OK'}));
             break;
         case 'ping':
             let resp = JSON.stringify({'type': 'pong', 'time': obj['time']});

@@ -27,7 +27,11 @@ wss.on('connection', function connection(ws){
             case 'pong':
                 let elapsed = (new Date().getTime()) - obj['time'];
                 console.log('Ping: ' + elapsed + ' ms');
-                resp_d(players[0]['ws'], {'type': 'ack', 'message': 'OK'});
+                resp_d(players[players.length-1]['ws'], {'type': 'ack', 'message': 'OK'});
+                break;
+            case 'ping':
+                let resp = JSON.stringify({'type': 'pong', 'time': obj['time']});
+                ws.send(resp);
                 break;
             default:
                 resp_d(ws, {'type': 'error', 'message': 'given type not found'});
