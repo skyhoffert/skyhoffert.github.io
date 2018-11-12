@@ -220,7 +220,7 @@ function update(){
 function draw_players(){
     for (let i = 0; i < Object.keys(players).length; i++){
         ctx.beginPath();
-        ctx.fillStyle = PLAYER_COLOR;
+        ctx.fillStyle = players[Object.keys(players)[i]].color;
         ctx.arc(players[Object.keys(players)[i]].x, players[Object.keys(players)[i]].y, PLAYER_SIZE/2, 0, 2*Math.PI);
         ctx.fill();
         ctx.closePath();
