@@ -33,7 +33,7 @@ const CODE_SPACE = 32;
 
 //var IP = 'localhost';
 var IP = '35.171.151.27';
-var PORT = '5000';
+var PORT = '443';
 
 var ws = new WebSocket('ws://' + IP + ':' + PORT);
 
@@ -80,8 +80,12 @@ ws.onmessage = function (evt) {
             break;
         case 'player_position':
             console.log('Updated player ' + obj['id'] + ' position to ' + obj['x'] + ', ' + obj['y']);
-            players[obj['id']]['x'] = obj['x'];
-            players[obj['id']]['y'] = obj['y'];
+            if (obj['id'] > Object.keys(players).length){
+                players[obj['id']] = {'x': obj['x'], 'y': obj['y']};
+            } else {
+                players[obj['id']]['x'] = obj['x'];
+                players[obj['id']]['y'] = obj['y'];
+            }
             break;
         default:
             console.log(obj);
@@ -227,7 +231,7 @@ function draw_players(){
     for (let i = 0; i < Object.keys(players).length; i++){
         ctx.beginPath();
         ctx.fillStyle = this.color;
-        ctx.arc(players[i]['x'], players[i]['y'], PLAYER_SIZE/2, 0, 2*Math.PI);
+        ctx.arc(players[Object.keys(players)[i]]['x'], players[Object.keys(players)[i]]['y'], PLAYER_SIZE/2, 0, 2*Math.PI);
         ctx.fill();
         ctx.closePath();
     }
