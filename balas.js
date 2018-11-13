@@ -31,8 +31,8 @@ const CODE_SPACE = 32;
 /* BEGIN WEB SOCKET ********************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
 
-var IP = 'localhost';
-//var IP = '35.171.151.27';
+//var IP = 'localhost';
+var IP = '35.171.151.27';
 var PORT = '5000';
 
 var ws = new WebSocket('ws://' + IP + ':' + PORT);
@@ -82,6 +82,8 @@ ws.onmessage = function (evt) {
         case 'tick':
             players = obj['players'];
             ball = obj['ball'];
+            score_l = obj['score_l'];
+            score_r = obj['score_r'];
             break;
         case 'player_position':
             if (obj['id'] === 0 || obj['id'] > Object.keys(players).length){
@@ -215,6 +217,11 @@ function update(){
     draw_walls();
 
     network();
+    
+    ctx.font = "30px Arial";
+    ctx.fillStyle = 'black';
+    ctx.fillText(score_l,canvas.width/16,canvas.height/16);
+    ctx.fillText(score_r,canvas.width*15/16,canvas.height/16);
 }
 
 function draw_players(){
@@ -225,11 +232,13 @@ function draw_players(){
         ctx.fill();
         ctx.closePath();
         
-        ctx.beginPath();
-        ctx.strokeStyle = '#999999';
-        ctx.arc(players[Object.keys(players)[i]].x, players[Object.keys(players)[i]].y, players[Object.keys(players)[i]].grab_range, 0, 2*Math.PI);
-        ctx.stroke();
-        ctx.closePath();
+        if (players[Object.keys(players)[i]].can_grab){
+            ctx.beginPath();
+            ctx.strokeStyle = '#999999';
+            ctx.arc(players[Object.keys(players)[i]].x, players[Object.keys(players)[i]].y, players[Object.keys(players)[i]].grab_range, 0, 2*Math.PI);
+            ctx.stroke();
+            ctx.closePath();
+        }
     }
 }
 
