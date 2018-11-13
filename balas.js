@@ -11,11 +11,17 @@ const UPDATE_RATE = 1000/60;
 
 const BALL_SIZE = 12;
 const BALL_SPEED = 7;
-const BALL_COLOR = 'red';
+const BALL_COLOR = '#990000';
 
 const PLAYER_SIZE = 32;
 const PLAYER_SPEED = 4;
-const PLAYER_COLOR = 'blue';
+const PLAYER_COLOR_L = '#47d147';
+const PLAYER_COLOR_R = '#ff00ff';
+
+const WALL_THICKNESS = 32;
+const WALL_COLOR = '#0040ff';
+
+const GOAL_LINE_COLOR = '#00ffff';
 
 const CODE_A = 65;
 const CODE_D = 68;
@@ -34,6 +40,8 @@ const CODE_SPACE = 32;
 //var IP = 'localhost';
 var IP = '35.171.151.27';
 var PORT = '5000';
+
+var ping = 0;
 
 var ws = new WebSocket('ws://' + IP + ':' + PORT);
 
@@ -69,8 +77,10 @@ ws.onmessage = function (evt) {
             break;
         case 'pong':
             let elapsed = (new Date().getTime()) - obj['time'];
-            console.log('Ping: ' + elapsed + ' ms');
-            ws.send(JSON.stringify({'type': 'ack', 'id': ID, 'message': 'OK'}));
+            ping = elapsed;
+
+            // DEBUG
+            console.log('ping: ' + elapsed + ' ms');
             break;
         case 'ping':
             let resp = JSON.stringify({'type': 'pong', 'id': obj['id'], 'time': obj['time']});
@@ -163,12 +173,12 @@ var players = {};
 var ball = {};
 
 var walls = [];
-walls.push(new Wall(canvas.width*1/2, canvas.height*1/8, canvas.width*3/4 + 16, 16, 'blue', 0));
-walls.push(new Wall(canvas.width*1/2, canvas.height*7/8, canvas.width*3/4 + 16, 16, 'blue', 0));
-walls.push(new Wall(canvas.width*1/8, canvas.height*1/4, 16, canvas.height*1/4, 'blue', 0));
-walls.push(new Wall(canvas.width*1/8, canvas.height*3/4, 16, canvas.height*1/4, 'blue', 0));
-walls.push(new Wall(canvas.width*7/8, canvas.height*1/4, 16, canvas.height*1/4, 'blue', 0));
-walls.push(new Wall(canvas.width*7/8, canvas.height*3/4, 16, canvas.height*1/4, 'blue', 0));
+walls.push(new Wall(canvas.width*1/2, canvas.height*1/8, canvas.width*3/4 + WALL_THICKNESS, WALL_THICKNESS, WALL_COLOR, 0));
+walls.push(new Wall(canvas.width*1/2, canvas.height*7/8, canvas.width*3/4 + WALL_THICKNESS, WALL_THICKNESS, WALL_COLOR, 0));
+walls.push(new Wall(canvas.width*1/8, canvas.height*1/4, WALL_THICKNESS, canvas.height*1/4, WALL_COLOR, 0));
+walls.push(new Wall(canvas.width*1/8, canvas.height*3/4, WALL_THICKNESS, canvas.height*1/4, WALL_COLOR, 0));
+walls.push(new Wall(canvas.width*7/8, canvas.height*1/4, WALL_THICKNESS, canvas.height*1/4, WALL_COLOR, 0));
+walls.push(new Wall(canvas.width*7/8, canvas.height*3/4, WALL_THICKNESS, canvas.height*1/4, WALL_COLOR, 0));
 
 var score_l = 0;
 var score_r = 0;
@@ -220,8 +230,12 @@ function update(){
     
     ctx.font = "30px Cambria";
     ctx.fillStyle = 'black';
-    ctx.fillText(score_l,canvas.width/16,canvas.height/16);
-    ctx.fillText(score_r,canvas.width*15/16,canvas.height/16);
+    ctx.fillText(score_l, canvas.width/16, canvas.height/16);
+    ctx.fillText(score_r, canvas.width*15/16, canvas.height/16);
+
+    // DEBUG
+    ctx.font = "16px Cambria";
+    ctx.fillText('ping: ' + ping + ' ms', canvas.width/2, canvas.height/16);
 }
 
 function draw_players(){
@@ -251,6 +265,18 @@ function draw_ball(){
 }
 
 function draw_walls(){
+    ctx.beginPath();
+    ctx.strokeStyle = GOAL_LINE_COLOR;
+    ctx.moveTo(canvas.width/8, canvas.height/4);
+    ctx.lineTo(canvas.width/8, canvas.height*3/4);
+    ctx.stroke();
+    ctx.closePath();
+    ctx.beginPath();
+    ctx.moveTo(canvas.width*7/8, canvas.height/4);
+    ctx.lineTo(canvas.width*7/8, canvas.height*3/4);
+    ctx.stroke();
+    ctx.closePath();
+
     for (let i = 0; i < walls.length; i++){
         walls[i].draw();
     }
@@ -262,10 +288,8 @@ var wait_ticks = 0;
 function network(){
     if (ws.readyState === 1){
         if (ID != -1){
-            if (tick % 15 === 0){
-                //ws.send(JSON.stringify({'type': 'ping', 'id': ID, 'time': (new Date().getTime())}));
-            } else {
-                //ws.send(JSON.stringify({'type': 'player_position', 'id': ID, 'x': x, 'y': y}));
+            if (tick % Number.parseInt(1000/UPDATE_RATE) === 0){
+                ws.send(JSON.stringify({'type': 'ping', 'id': ID, 'time': (new Date().getTime())}));
             }
             tick++;
         } else {
