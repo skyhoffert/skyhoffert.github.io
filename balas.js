@@ -218,7 +218,7 @@ function update(){
 
     network();
     
-    ctx.font = "30px Arial";
+    ctx.font = "30px Cambria";
     ctx.fillStyle = 'black';
     ctx.fillText(score_l,canvas.width/16,canvas.height/16);
     ctx.fillText(score_r,canvas.width*15/16,canvas.height/16);
