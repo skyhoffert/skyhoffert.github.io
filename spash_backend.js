@@ -24,6 +24,7 @@ const PLAYER_TURN_RATE = 0.008;
 const PLAYER_ACCELERATION = 0.001;
 const PLAYER_HEALTH_MAX = 100;
 const PLAYER_FIRE_CD = 500;
+const PLAYER_DAMPING_FACTOR = 0.001;
 
 const BULLET_SIZE = 8;
 const BULLET_DAMAGE = 50.5;
@@ -92,14 +93,16 @@ class Entity {
 }
 
 class Player extends Entity {
-    constructor(x, y, c){
+    constructor(x, y, c, is_ai=false){
         super(x, y, PLAYER_SIZE, PLAYER_SIZE);
         this.color = c;
         this.vely = 0;
         this.velx = 0;
         this.kinematic = true;
         this.id = 'player';
-        this.keys = {65: false, 68: false, 87: false, 83: false, 32: false};
+        this.keys = {65: false, 68: false, 87: false, 83: false, 32: false, CODE_MOUSEDOWN: false};
+        this.mouse_x = 0;
+        this.mouse_y = 0;
         this.angle = 0;
         this.health_max = PLAYER_HEALTH_MAX;
         this.health = PLAYER_HEALTH_MAX;
@@ -107,6 +110,7 @@ class Player extends Entity {
         this.fire_lasttime = 0;
         this.fire_cd = PLAYER_FIRE_CD;
         this.alive = true;
+        this.is_ai = is_ai;
     }
 
     keydown(code){
@@ -115,6 +119,11 @@ class Player extends Entity {
 
     keyup(code){
         this.keys[code] = false;
+    }
+
+    mouse_update(x, y){
+        this.mouse_x = x;
+        this.mouse_y = y;
     }
 
     apply_damage(dmg){
@@ -135,27 +144,34 @@ class Player extends Entity {
 
         super.tick();
 
-        // check for turning keys
-        if (this.keys[CODE_A]){
+        // check for turning towards mouse pointer
+        let ang = Math.atan2(this.mouse_y - this.y, this.mouse_x - this.x);
+        let diff = -ang - this.angle;
+        if (this.mouse_x < this.x && ang > 0 && this.angle > 0){
             this.angle += PLAYER_TURN_RATE * time_delta;
-        }
-        if (this.keys[CODE_D]){
+        } else if (this.mouse_x < this.x && ang < 0 && this.angle < 0){
             this.angle -= PLAYER_TURN_RATE * time_delta;
+        } else {
+            if (diff > 0.1){
+                this.angle += PLAYER_TURN_RATE * time_delta;
+            } else if (diff < -0.1){
+                this.angle -= PLAYER_TURN_RATE * time_delta;
+            }
         }
 
         // check for acceleration keys
         if (this.keys[CODE_W]){
-            this.velx += Math.cos(ent.angle) * time_delta * PLAYER_ACCELERATION;
-            this.vely += -Math.sin(ent.angle) * time_delta * PLAYER_ACCELERATION;
+            this.velx += Math.cos(this.angle) * time_delta * PLAYER_ACCELERATION;
+            this.vely += -Math.sin(this.angle) * time_delta * PLAYER_ACCELERATION;
         } else {
             if (Math.abs(this.velx) > 0.01){
-                this.velx -= this.velx * time_delta * PLAYER_ACCELERATION/20;
+                this.velx -= this.velx * time_delta * PLAYER_DAMPING_FACTOR;
             } else {
                 this.velx = 0;
             }
 
             if (Math.abs(this.vely) > 0.01){
-                this.vely -= this.vely * time_delta * PLAYER_ACCELERATION/20;
+                this.vely -= this.vely * time_delta * PLAYER_DAMPING_FACTOR;
             } else {
                 this.vely = 0;
             }
@@ -177,13 +193,12 @@ class Player extends Entity {
         }
         
         // keep angle at normal values
-        if (this.angle > 2*Math.PI){
-            this.angle -= 2 * Math.PI;
-        } else if (this.angle < 0){
-            this.angle += 2 * Math.PI;
+        if (this.angle > Math.PI){
+            this.angle -= 2*Math.PI;
+        } else if (this.angle < -Math.PI){
+            this.angle += 2*Math.PI;
         }
     }
-
 }
 
 class Bullet extends Entity {
@@ -219,6 +234,34 @@ class Bullet extends Entity {
     }
 }
 
+class Enemy_AI {
+    constructor(index){
+        this.index = index;
+        this.spawn_time = new Date().getTime();
+        this.entity = players[this.index]['entity'];
+        this.entity.mouse_update(WIDTH/2, this.y);
+    }
+
+    tick(){
+        if (!this.entity.alive){
+            delete players[this.index];
+            return;
+        }
+
+        let alive_for = new Date().getTime() - this.spawn_time;
+
+        this.entity.mouse_update(WIDTH/4 * Math.cos(alive_for/1000) + WIDTH/2, HEIGHT/4 * Math.sin(alive_for/1000) + HEIGHT/2);
+
+        if (alive_for%15==0){
+            this.entity.keydown(CODE_W);
+        } else {
+            if (this.entity.keys[CODE_W]){
+                this.entity.keyup(CODE_W);
+            }
+        }
+    }
+}
+
 /* *************************************************************************************************************************************************************/
 /* END CLASSES *************************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
@@ -226,6 +269,11 @@ class Bullet extends Entity {
 var players = {};
 
 var bullets = [];
+
+let id = Number.parseInt(random(0,100000));
+console.log(id + ' given to AI');
+players[id] = {'ws': null, 'entity': new Player(WIDTH/4, HEIGHT/4, random_color(), is_ai=true)};
+var enemy_ais = [new Enemy_AI(id)];
 
 seed = new Date().getTime();
 
@@ -237,8 +285,10 @@ const wss = new WebSocket.Server({
 });
 
 function resp_d(s, msg){
-    if (s.readyState === 1){
-        s.send(JSON.stringify(msg));
+    if (s){
+        if (s.readyState === 1){
+            s.send(JSON.stringify(msg));
+        }
     }
 }
 
@@ -257,7 +307,7 @@ wss.on('connection', function connection(ws){
             case 'ack':
                 break;
             case 'connect':
-                let id = Object.keys(players).length;
+                let id = Number.parseInt(random(0,100000));
                 console.log(id + ' given');
                 players[id] = {'ws': ws, 'entity': new Player(WIDTH/2, HEIGHT/2, random_color())};
                 resp_d(ws, {'type': 'id', 'id': id});
@@ -287,6 +337,11 @@ wss.on('connection', function connection(ws){
                     }
                 }
                 break;
+            case 'mouse':
+            if (players[obj['id']]){
+                players[obj['id']]['entity'].mouse_update(obj['x'], obj['y']);
+            }
+                break;
             default:
                 console.log(obj);
                 resp_d(ws, {'type': 'error', 'message': 'given type not found'});
@@ -308,23 +363,36 @@ wss.on('connection', function connection(ws){
 setInterval(update, UPDATE_RATE);
 
 function update(){
+    // find a time delta since previous frame
     time_delta = new Date().getTime() - last_tick;
+
+    // trigger the tick for all players
     for (let i = 0; i < Object.keys(players).length; i++){
-        ent = players[Object.keys(players)[i]]['entity'];
-        ent.tick();
+        players[Object.keys(players)[i]]['entity'].tick();
     }
+
+    // handle bullets
     for (let i = 0; i < bullets.length; i++){
         bullets[i].tick();
     }
 
+    // handle enemy ais
+    for (let i = 0; i < enemy_ais.length; i++){
+        enemy_ais[i].tick();
+    }
+
+    // send updates to clients
     send_state();
+
+    // cleanup any garbage
     cleanup();
 
+    // remember this tick time
     last_tick = new Date().getTime();
 }
 
 function reset_game(full=false){
-
+    
 }
 
 function send_state(){
@@ -341,8 +409,8 @@ function send_state(){
 function cleanup(){
     for (let i = 0; i < bullets.length; i++){
         if (bullets[i].dead){
-            bullets.splice(i);
-            i--;
+            bullets.splice(i, 1);
+            return;
         }
     }
 }

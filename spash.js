@@ -27,7 +27,7 @@ const HEALTH_BAR_HEIGHT = 8;
 /* *************************************************************************************************************************************************************/
 
 //var IP = 'localhost';
-var IP = '35.171.151.27';
+var IP = '54.163.147.47';
 var PORT = '5200';
 
 var ping = 0;
@@ -39,6 +39,15 @@ var ID = -1;
 const INIT_MSG = {
     'type': 'connect',
 };
+
+function mouse_msg(x, y){
+    return {
+        'type': 'mouse',
+        'id': ID,
+        'x': x,
+        'y': y
+    }
+}
 
 function key_msg(code, down=true) {
     return {
@@ -129,7 +138,6 @@ canvas.height = HEIGHT;
 var ctx = canvas.getContext("2d");
 
 var players = {};
-
 var bullets = [];
 
 // set frame rate to UPDATE_RATE
@@ -144,6 +152,11 @@ canvas.addEventListener('mousedown', function(evt) {
 }, false);
 
 canvas.addEventListener('mousemove', function(evt){
+    if (ID != -1){
+        if (ws.readyState === 1){
+            ws.send(JSON.stringify(mouse_msg(evt.x, evt.y)));
+        }
+    }
 }, false);
 
 canvas.addEventListener('mouseup', function(evt) {
