@@ -18,16 +18,22 @@ const CODE_S = 83;
 const CODE_SPACE = 32;
 const CODE_SHIFT = 16;
 const CODE_MOUSEDOWN = 1000;
+const CODE_ALT = 18;
+const CODE_P = 80;
 
 const PLAYER_SIZE = 40;
 const PLAYER_TURN_RATE = 0.008;
 const PLAYER_ACCELERATION = 0.001;
 const PLAYER_HEALTH_MAX = 100;
-const PLAYER_FIRE_CD = 500;
+const PLAYER_FIRE_CD = 250;
 const PLAYER_DAMPING_FACTOR = 0.001;
 
 const BULLET_SIZE = 8;
 const BULLET_DAMAGE = 50.5;
+
+const NUMBER_OF_AI = 3;
+
+const MAX_ID = 1000000;
 
 /* GLOBAL VARIABLES ****************************************************************************************************/
 var seed = SEED_INIT;
@@ -111,14 +117,29 @@ class Player extends Entity {
         this.fire_cd = PLAYER_FIRE_CD;
         this.alive = true;
         this.is_ai = is_ai;
+        this.just_spawned_new_ai = false;
     }
 
     keydown(code){
         this.keys[code] = true;
+
+        if (code === CODE_P){
+            if (this.keys[CODE_ALT]){
+                if (!this.just_spawned_new_ai){
+                    this.just_spawned_new_ai = true;
+
+                    spawn_new_ai();
+                }
+            }
+        }
     }
 
     keyup(code){
         this.keys[code] = false;
+
+        if (code === CODE_P){
+            this.just_spawned_new_ai = false;
+        }
     }
 
     mouse_update(x, y){
@@ -184,7 +205,7 @@ class Player extends Entity {
                 this.fire_lasttime = curtime;
                 this.firing = true;
 
-                bullets.push(new Bullet(this.x + this.width*3/4 * Math.cos(this.angle), this.y - this.height*3/4 * Math.sin(this.angle), Math.cos(this.angle)+this.velx, -Math.sin(this.angle)-this.vely));
+                bullets.push(new Bullet(this.x + this.width*3/4 * Math.cos(this.angle), this.y - this.height*3/4 * Math.sin(this.angle), Math.cos(this.angle)+this.velx, -Math.sin(this.angle)+this.vely));
             } else {
                 this.firing = false;
             }
@@ -235,11 +256,12 @@ class Bullet extends Entity {
 }
 
 class Enemy_AI {
-    constructor(index){
+    constructor(index, version=0, st=(new Date().getTime())){
         this.index = index;
-        this.spawn_time = new Date().getTime();
+        this.spawn_time = Number.parseInt(st);
         this.entity = players[this.index]['entity'];
         this.entity.mouse_update(WIDTH/2, this.y);
+        this.version = version;
     }
 
     tick(){
@@ -248,16 +270,21 @@ class Enemy_AI {
             return;
         }
 
-        let alive_for = new Date().getTime() - this.spawn_time;
+        if (this.version === 0){
+        } else if (this.version === 1){
+            let alive_for = new Date().getTime() - this.spawn_time;
 
-        this.entity.mouse_update(WIDTH/4 * Math.cos(alive_for/1000) + WIDTH/2, HEIGHT/4 * Math.sin(alive_for/1000) + HEIGHT/2);
+            this.entity.mouse_update(WIDTH/4 * Math.cos(alive_for/1000) + WIDTH/2, HEIGHT/4 * Math.sin(alive_for/1000) + HEIGHT/2);
 
-        if (alive_for%15==0){
-            this.entity.keydown(CODE_W);
-        } else {
-            if (this.entity.keys[CODE_W]){
-                this.entity.keyup(CODE_W);
+            if (alive_for%4 === 0){
+                this.entity.keydown(CODE_W);
+            } else {
+                if (this.entity.keys[CODE_W]){
+                    this.entity.keyup(CODE_W);
+                }
             }
+        } else {
+            this.entity.angle += 0.01;
         }
     }
 }
@@ -269,11 +296,11 @@ class Enemy_AI {
 var players = {};
 
 var bullets = [];
+var enemy_ais = [];
 
-let id = Number.parseInt(random(0,100000));
-console.log(id + ' given to AI');
-players[id] = {'ws': null, 'entity': new Player(WIDTH/4, HEIGHT/4, random_color(), is_ai=true)};
-var enemy_ais = [new Enemy_AI(id)];
+for (let i = 0; i < NUMBER_OF_AI; i++){
+    spawn_new_ai();
+}
 
 seed = new Date().getTime();
 
@@ -307,7 +334,7 @@ wss.on('connection', function connection(ws){
             case 'ack':
                 break;
             case 'connect':
-                let id = Number.parseInt(random(0,100000));
+                let id = Number.parseInt(random(0, MAX_ID));
                 console.log(id + ' given');
                 players[id] = {'ws': ws, 'entity': new Player(WIDTH/2, HEIGHT/2, random_color())};
                 resp_d(ws, {'type': 'id', 'id': id});
@@ -413,6 +440,17 @@ function cleanup(){
             return;
         }
     }
+}
+
+function spawn_new_ai(){
+    let id = Number.parseInt(random(0, MAX_ID));
+    while (id in players){
+        let id = Number.parseInt(random(0, MAX_ID));
+    }
+    let v = Number.parseInt(random(0,2));
+    console.log(id + ' given to AI');
+    players[id] = {'ws': null, 'entity': new Player(random(WIDTH/8, WIDTH*7/8), random(HEIGHT/8, HEIGHT*7/8), random_color(), is_ai=true)};
+    enemy_ais.push(new Enemy_AI(id, 1, (new Date().getTime() + random(-10000, 10000))));
 }
 
 /*
