@@ -29,7 +29,7 @@ const PLAYER_FIRE_CD = 250;
 const PLAYER_DAMPING_FACTOR = 0.001;
 
 const BULLET_SIZE = 8;
-const BULLET_DAMAGE = 50.5;
+const BULLET_DAMAGE = 34;
 
 const NUMBER_OF_AI = 3;
 
@@ -262,6 +262,8 @@ class Enemy_AI {
         this.entity = players[this.index]['entity'];
         this.entity.mouse_update(WIDTH/2, this.y);
         this.version = version;
+        this.state = 'roaming';
+        this.target_id = -1;
     }
 
     tick(){
@@ -272,15 +274,65 @@ class Enemy_AI {
 
         if (this.version === 0){
         } else if (this.version === 1){
-            let alive_for = new Date().getTime() - this.spawn_time;
+            if (this.state === 'roaming'){
+                let alive_for = new Date().getTime() - this.spawn_time;
 
-            this.entity.mouse_update(WIDTH/4 * Math.cos(alive_for/1000) + WIDTH/2, HEIGHT/4 * Math.sin(alive_for/1000) + HEIGHT/2);
+                this.entity.mouse_update(WIDTH/4 * Math.cos(alive_for/1000) + WIDTH/2, HEIGHT/4 * Math.sin(alive_for/1000) + HEIGHT/2);
 
-            if (alive_for%4 === 0){
-                this.entity.keydown(CODE_W);
-            } else {
-                if (this.entity.keys[CODE_W]){
-                    this.entity.keyup(CODE_W);
+                if (alive_for%4 === 0){
+                    this.entity.keydown(CODE_W);
+                } else {
+                    if (this.entity.keys[CODE_W]){
+                        this.entity.keyup(CODE_W);
+                    }
+                }
+
+                if (random(0,1) < 0.002){
+                    this.state = 'attacking';
+                    if (this.entity.keys[CODE_W]){
+                        this.entity.keyup(CODE_W);
+                    }
+                }
+            } else if (this.state === 'attacking'){
+                if (Object.keys(players).length > 1){
+                    if (this.target_id === -1){
+                        this.target_id = Object.keys(players)[Number.parseInt(random(0, Object.keys(players).length))];
+                        while (this.target_id === this.index){
+                            this.target_id = Object.keys(players)[Number.parseInt(random(0, Object.keys(players).length))];
+                        }
+
+                        console.log('' + this.index + ' acquired new target ' + this.target_id);
+                    }
+
+                    if (!players[this.target_id] || players[this.target_id].dead){
+                        return;
+                    }
+
+                    let target = players[this.target_id]['entity'];
+
+                    this.entity.mouse_update(target.x, target.y);
+
+                    if (random(0,1) < 0.01){
+                        this.entity.keydown(CODE_MOUSEDOWN);
+                    } else {
+                        if (this.entity.keys[CODE_MOUSEDOWN]){
+                            this.entity.keyup(CODE_MOUSEDOWN);
+                        }
+                    }
+
+                    if (random(0,1) < 0.002){
+                        this.state = 'roaming';
+                        if (this.entity.keys[CODE_W]){
+                            this.entity.keyup(CODE_W);
+                        }
+                        this.target_id = -1;
+                    }
+                } else {
+                    this.state = 'roaming';
+                    if (this.entity.keys[CODE_W]){
+                        this.entity.keyup(CODE_W);
+                    }
+                    this.target_id = -1;
                 }
             }
         } else {

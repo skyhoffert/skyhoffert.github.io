@@ -18,6 +18,14 @@ const CODE_MOUSEDOWN = 1000;
 
 const HEALTH_BAR_HEIGHT = 8;
 
+const AI_ANIM_IMGS = [];
+let img = new Image();
+img.src = 'gfx/enemy_basic_1.png';
+AI_ANIM_IMGS.push(img);
+img = new Image();
+img.src = 'gfx/enemy_basic_2.png';
+AI_ANIM_IMGS.push(img);
+
 /* *************************************************************************************************************************************************************/
 /* END CONSTANTS ***********************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
@@ -140,6 +148,8 @@ var ctx = canvas.getContext("2d");
 var players = {};
 var bullets = [];
 
+var start_time = new Date().getTime();
+
 // set frame rate to UPDATE_RATE
 setInterval(update, UPDATE_RATE);
 
@@ -208,33 +218,45 @@ function update(){
 function draw_players(){
     for (let i = 0; i < Object.keys(players).length; i++){
         let ent = players[Object.keys(players)[i]];
-        ctx.beginPath();
-        ctx.fillStyle = ent.color;
-        ctx.moveTo(ent.x + ent.width/2 * Math.cos(ent.angle), ent.y - ent.height/2 * Math.sin(ent.angle));
-        ctx.lineTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*5/4), ent.y - ent.height/2 * Math.sin(ent.angle+Math.PI*5/4));
-        ctx.lineTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*3/4), ent.y - ent.height/2 * Math.sin(ent.angle+Math.PI*3/4));
-        ctx.fill();
-        ctx.closePath();
-
-        if (ent.alive){
-            if (ent.keys[CODE_W]){
-                ctx.beginPath();
-                ctx.fillStyle = 'red';
-                ctx.moveTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*7/8), ent.y - ent.height/3 * Math.sin(ent.angle+Math.PI*7/8));
-                ctx.lineTo(ent.x + ent.width*5/8 * Math.cos(ent.angle+Math.PI), ent.y - ent.height/2 * Math.sin(ent.angle+Math.PI));
-                ctx.lineTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*9/8), ent.y - ent.height/3 * Math.sin(ent.angle+Math.PI*9/8));
-                ctx.fill();
-                ctx.closePath();
+        if (ent.is_ai){
+            ctx.save();
+            ctx.translate(ent.x, ent.y);
+            ctx.rotate(-ent.angle+Math.PI/2);
+            if (!ent.keys[CODE_W]){
+                ctx.drawImage(AI_ANIM_IMGS[0], -ent.width/2, -ent.height/2, ent.width, ent.height);
+            } else {
+                ctx.drawImage(AI_ANIM_IMGS[1], -ent.width/2, -ent.height/2, ent.width, ent.height);
             }
+            ctx.restore();
+        } else {
+            ctx.beginPath();
+            ctx.fillStyle = ent.color;
+            ctx.moveTo(ent.x + ent.width/2 * Math.cos(ent.angle), ent.y - ent.height/2 * Math.sin(ent.angle));
+            ctx.lineTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*5/4), ent.y - ent.height/2 * Math.sin(ent.angle+Math.PI*5/4));
+            ctx.lineTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*3/4), ent.y - ent.height/2 * Math.sin(ent.angle+Math.PI*3/4));
+            ctx.fill();
+            ctx.closePath();
 
-            if (ent.keys[CODE_MOUSEDOWN]){
-                ctx.beginPath();
-                ctx.fillStyle = 'blue';
-                ctx.moveTo(ent.x - ent.width/2 * Math.cos(ent.angle+Math.PI*7/8), ent.y + ent.height/3 * Math.sin(ent.angle+Math.PI*7/8));
-                ctx.lineTo(ent.x - ent.width*5/8 * Math.cos(ent.angle+Math.PI), ent.y + ent.height/2 * Math.sin(ent.angle+Math.PI));
-                ctx.lineTo(ent.x - ent.width/2 * Math.cos(ent.angle+Math.PI*9/8), ent.y + ent.height/3 * Math.sin(ent.angle+Math.PI*9/8));
-                ctx.fill();
-                ctx.closePath();
+            if (ent.alive){
+                if (ent.keys[CODE_W]){
+                    ctx.beginPath();
+                    ctx.fillStyle = 'red';
+                    ctx.moveTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*7/8), ent.y - ent.height/3 * Math.sin(ent.angle+Math.PI*7/8));
+                    ctx.lineTo(ent.x + ent.width*5/8 * Math.cos(ent.angle+Math.PI), ent.y - ent.height/2 * Math.sin(ent.angle+Math.PI));
+                    ctx.lineTo(ent.x + ent.width/2 * Math.cos(ent.angle+Math.PI*9/8), ent.y - ent.height/3 * Math.sin(ent.angle+Math.PI*9/8));
+                    ctx.fill();
+                    ctx.closePath();
+                }
+
+                if (ent.keys[CODE_MOUSEDOWN]){
+                    ctx.beginPath();
+                    ctx.fillStyle = 'blue';
+                    ctx.moveTo(ent.x - ent.width/2 * Math.cos(ent.angle+Math.PI*7/8), ent.y + ent.height/3 * Math.sin(ent.angle+Math.PI*7/8));
+                    ctx.lineTo(ent.x - ent.width*5/8 * Math.cos(ent.angle+Math.PI), ent.y + ent.height/2 * Math.sin(ent.angle+Math.PI));
+                    ctx.lineTo(ent.x - ent.width/2 * Math.cos(ent.angle+Math.PI*9/8), ent.y + ent.height/3 * Math.sin(ent.angle+Math.PI*9/8));
+                    ctx.fill();
+                    ctx.closePath();
+                }
             }
         }
 
