@@ -7,8 +7,6 @@ const PORT = 5200;
 
 const SEED_INIT = 1;
 
-const WIDTH = 1600;
-const HEIGHT = 900;
 const UPDATE_RATE = 1000/60;
 
 const CODE_A = 65;
@@ -30,6 +28,7 @@ const PLAYER_DAMPING_FACTOR = 0.001;
 
 const BULLET_SIZE = 8;
 const BULLET_DAMAGE = 34;
+const BULLET_LIFETIME = 2000;
 
 const NUMBER_OF_AI = 3;
 
@@ -99,13 +98,13 @@ class Entity {
 }
 
 class Player extends Entity {
-    constructor(x, y, c, is_ai=false){
+    constructor(x, y, c, is_ai=false, idx=0){
         super(x, y, PLAYER_SIZE, PLAYER_SIZE);
         this.color = c;
         this.vely = 0;
         this.velx = 0;
         this.kinematic = true;
-        this.id = 'player';
+        this.id = idx;
         this.keys = {65: false, 68: false, 87: false, 83: false, 32: false, CODE_MOUSEDOWN: false};
         this.mouse_x = 0;
         this.mouse_y = 0;
@@ -173,9 +172,9 @@ class Player extends Entity {
         } else if (this.mouse_x < this.x && ang < 0 && this.angle < 0){
             this.angle -= PLAYER_TURN_RATE * time_delta;
         } else {
-            if (diff > 0.1){
+            if (diff > 0.05){
                 this.angle += PLAYER_TURN_RATE * time_delta;
-            } else if (diff < -0.1){
+            } else if (diff < -0.05){
                 this.angle -= PLAYER_TURN_RATE * time_delta;
             }
         }
@@ -199,7 +198,7 @@ class Player extends Entity {
         }
 
         // check fire button
-        if (this.keys[CODE_MOUSEDOWN]){
+        if (this.keys[CODE_SPACE]){
             let curtime = new Date().getTime();
             if (curtime > this.fire_lasttime+this.fire_cd){
                 this.fire_lasttime = curtime;
@@ -225,7 +224,7 @@ class Player extends Entity {
 class Bullet extends Entity {
     constructor(x, y, vx, vy){
         super(x, y, BULLET_SIZE, BULLET_SIZE);
-        this.color = 'black';
+        this.color = 'white';
         this.velx = vx;
         this.vely = vy;
         this.kinematic = true;
@@ -233,12 +232,15 @@ class Bullet extends Entity {
         this.spawn_time = new Date().getTime();
         this.dead = false;
         this.damage = BULLET_DAMAGE;
+        this.lifetime = BULLET_LIFETIME;
     }
 
     tick(){
         super.tick();
 
-        if (this.x-this.width > WIDTH || this.x+this.width < 0 || this.y-this.height > HEIGHT || this.y+this.height < 0){
+        let now = new Date().getTime();
+
+        if (now - this.spawn_time > this.lifetime){
             this.dead = true;
         } else {
             for (let i = 0; i < Object.keys(players).length; i++){
@@ -260,7 +262,7 @@ class Enemy_AI {
         this.index = index;
         this.spawn_time = Number.parseInt(st);
         this.entity = players[this.index]['entity'];
-        this.entity.mouse_update(WIDTH/2, this.y);
+        this.entity.mouse_update(0, this.y);
         this.version = version;
         this.state = 'roaming';
         this.target_id = -1;
@@ -277,7 +279,7 @@ class Enemy_AI {
             if (this.state === 'roaming'){
                 let alive_for = new Date().getTime() - this.spawn_time;
 
-                this.entity.mouse_update(WIDTH/4 * Math.cos(alive_for/1000) + WIDTH/2, HEIGHT/4 * Math.sin(alive_for/1000) + HEIGHT/2);
+                this.entity.mouse_update(100 * Math.cos(alive_for/1000), 100 * Math.sin(alive_for/1000));
 
                 if (alive_for%4 === 0){
                     this.entity.keydown(CODE_W);
@@ -388,7 +390,7 @@ wss.on('connection', function connection(ws){
             case 'connect':
                 let id = Number.parseInt(random(0, MAX_ID));
                 console.log(id + ' given');
-                players[id] = {'ws': ws, 'entity': new Player(WIDTH/2, HEIGHT/2, random_color())};
+                players[id] = {'ws': ws, 'entity': new Player(0, 0, random_color(), false, id)};
                 resp_d(ws, {'type': 'id', 'id': id});
                 resp_d(ws, {'type': 'ping', 'id': id, 'time': (new Date().getTime())});
                 break;
@@ -501,7 +503,7 @@ function spawn_new_ai(){
     }
     let v = Number.parseInt(random(0,2));
     console.log(id + ' given to AI');
-    players[id] = {'ws': null, 'entity': new Player(random(WIDTH/8, WIDTH*7/8), random(HEIGHT/8, HEIGHT*7/8), random_color(), is_ai=true)};
+    players[id] = {'ws': null, 'entity': new Player(random(-200, 200), random(-200, 200), random_color(), is_ai=true)};
     enemy_ais.push(new Enemy_AI(id, 1, (new Date().getTime() + random(-10000, 10000))));
 }
 
