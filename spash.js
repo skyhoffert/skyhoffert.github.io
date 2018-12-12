@@ -1,12 +1,14 @@
-// Sky Hoffert
+// spash
 // December 4, 2018
 
 /* *************************************************************************************************************************************************************/
 /* BEGIN CONSTANTS *********************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
 
+// update rate in ms (denominator is fps)
 const UPDATE_RATE = 1000/60;
 
+// keyboard input codes for easy reference
 const CODE_A = 65;
 const CODE_D = 68;
 const CODE_W = 87;
@@ -14,11 +16,14 @@ const CODE_S = 83;
 const CODE_SPACE = 32;
 const CODE_MOUSEDOWN = 1000;
 
+// size of health bar above players
 const HEALTH_BAR_HEIGHT = 8;
 
+// camera movement variables
 const ZOOM_FACTOR = 0.1;
 const MOUSE_MOVE_FACTOR = 1.0;
 
+// animation images
 const AI_ANIM_IMGS = [];
 let img = new Image();
 img.src = 'gfx/enemy_basic_1.png';
@@ -39,16 +44,22 @@ var IP = 'localhost';
 //var IP = '54.163.147.47';
 var PORT = '5200';
 
+// start with high ping to suggest no connection has been made
 var ping = 999;
 
 var ws = new WebSocket('ws://' + IP + ':' + PORT);
 
+// start with known ID to identify when client is connected
 var ID = -1;
+
+// this value is used for establishing a new connection
+var tick = 0;
 
 const INIT_MSG = {
     'type': 'connect',
 };
 
+// package mouse x and y coords into neat JSON message
 function mouse_msg(x, y){
     return {
         'type': 'mouse',
@@ -58,6 +69,7 @@ function mouse_msg(x, y){
     }
 }
 
+// package keypress/keyrelease into neat JSON message
 function key_msg(code, down=true) {
     return {
         'type': 'key',
@@ -72,17 +84,16 @@ ws.onopen = function () {
 };
 
 ws.onmessage = function (evt) {
+    // all messages are JSON objects, parse to begin
     let obj = JSON.parse(evt.data);
 
-    // DEBUG
-    //console.log(obj);
-
+    // handle each "type" differently
     switch (obj['type']){
         case 'id':
             ID = obj['id'];
             console.log('ID: ' + ID);
             break;
-        case 'pong':
+        case 'pong': // response of ping
             let elapsed = (new Date().getTime()) - obj['time'];
             ping = elapsed;
 
@@ -93,20 +104,13 @@ ws.onmessage = function (evt) {
             let resp = JSON.stringify({'type': 'pong', 'id': obj['id'], 'time': obj['time']});
             ws.send(resp);
             break;
-        case 'ack':
+        case 'ack': // not used
+            // DEBUG
             console.log('ACK: ' + obj['message']);
             break;
-        case 'tick':
+        case 'tick': // game snapshot loaded here
             players = obj['players'];
             bullets = obj['bullets'];
-            break;
-        case 'player_position':
-            if (obj['id'] === 0 || obj['id'] > Object.keys(players).length){
-                players[obj['id']] = {'x': obj['x'], 'y': obj['y']};
-            } else {
-                players[obj['id']]['x'] = obj['x'];
-                players[obj['id']]['y'] = obj['y'];
-            }
             break;
         default:
             console.log(obj);
@@ -117,10 +121,6 @@ ws.onmessage = function (evt) {
 ws.onerror = function (err){
     console.log('error: ' + err);
 };
-
-var tick = 0;
-var x = 0.0;
-var y = 0.0;
 
 /* *************************************************************************************************************************************************************/
 /* END WEB SOCKET **********************************************************************************************************************************************/
@@ -148,14 +148,14 @@ var ctx = canvas.getContext("2d");
 
 // camera variables
 var zoom = 1.0;
-var offset_x = 0.0;
-var offset_y = 0.0;
+var offset_x = WIDTH/2;
+var offset_y = HEIGHT/2;
 var lmousedown = false;
 var lmouselastx = 0;
 var lmouselasty = 0;
 
 // game entities
-var players = {};
+var players = [];
 var bullets = [];
 
 // set frame rate to UPDATE_RATE
@@ -180,7 +180,9 @@ canvas.addEventListener('mousemove', function(evt){
         }
     }
 
+    // if "dragging"
     if (lmousedown){
+        // move the camera
         offset_x += (evt.x - lmouselastx) * MOUSE_MOVE_FACTOR;
         offset_y += (evt.y - lmouselasty) * MOUSE_MOVE_FACTOR;
         lmouselastx = evt.x;
@@ -200,6 +202,8 @@ canvas.addEventListener('mouseup', function(evt) {
 
 canvas.addEventListener('mousewheel', function(evt) {
     var delta = Math.max(-1, Math.min(1, (evt.wheelDelta || -evt.detail)));
+
+    // zoom in and out with mousewheel movements
     if (delta < 0){
         zoom *= (1-ZOOM_FACTOR);
     } else {
@@ -223,20 +227,19 @@ document.body.onkeyup = function(e){
     }
 }
 
-/*
-Main update function
-    @return: void
-*/
+// main update function
 function update(){
     // clear the screen
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // draw entities
     draw_players();
     draw_bullets();
 
+    // handle any network tasks
     network();
 
-    // DEBUG
+    // DEBUG - displaying ping
     ctx.font = "16px Cambria";
     ctx.fillStyle = "#aaaaaa";
     ctx.fillRect(0, 0, 60, 24);
@@ -251,8 +254,8 @@ function update(){
 }
 
 function draw_players(){
-    for (let i = 0; i < Object.keys(players).length; i++){
-        let ent = players[Object.keys(players)[i]];
+    for (let i = 0; i < players.length; i++){
+        let ent = players[i];
         if (ent.is_ai){
             ctx.save();
             ctx.translate(ent.x * zoom + offset_x, ent.y * zoom + offset_y);
@@ -283,7 +286,7 @@ function draw_players(){
                     ctx.closePath();
                 }
 
-                if (ent.keys[CODE_MOUSEDOWN]){
+                if (ent.keys[CODE_SPACE]){
                     ctx.beginPath();
                     ctx.fillStyle = 'blue';
                     ctx.moveTo(ent.x * zoom - ent.width/2 * Math.cos(ent.angle+Math.PI*7/8) + offset_x, ent.y * zoom + ent.height/3 * Math.sin(ent.angle+Math.PI*7/8) + offset_y);

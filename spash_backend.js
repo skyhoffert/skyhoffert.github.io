@@ -1,5 +1,5 @@
-// balas
-// November 12, 2018
+// spash backend
+// December 4, 2018
 
 const WebSocket = require('ws');
 
@@ -7,8 +7,10 @@ const PORT = 5200;
 
 const SEED_INIT = 1;
 
+// game update rate (denominator is how many per second)
 const UPDATE_RATE = 1000/60;
 
+// keyboard codes
 const CODE_A = 65;
 const CODE_D = 68;
 const CODE_W = 87;
@@ -19,6 +21,7 @@ const CODE_MOUSEDOWN = 1000;
 const CODE_ALT = 18;
 const CODE_P = 80;
 
+// constants for players
 const PLAYER_SIZE = 40;
 const PLAYER_TURN_RATE = 0.008;
 const PLAYER_ACCELERATION = 0.001;
@@ -26,12 +29,13 @@ const PLAYER_HEALTH_MAX = 100;
 const PLAYER_FIRE_CD = 250;
 const PLAYER_DAMPING_FACTOR = 0.001;
 
+// constants for weapons
 const BULLET_SIZE = 8;
 const BULLET_DAMAGE = 34;
 const BULLET_LIFETIME = 2000;
 
+// other constants
 const NUMBER_OF_AI = 3;
-
 const MAX_ID = 1000000;
 
 /* GLOBAL VARIABLES ****************************************************************************************************/
@@ -122,6 +126,7 @@ class Player extends Entity {
     keydown(code){
         this.keys[code] = true;
 
+        // DEBUG - super secret special command to add more AI (ALT+p)
         if (code === CODE_P){
             if (this.keys[CODE_ALT]){
                 if (!this.just_spawned_new_ai){
@@ -136,6 +141,7 @@ class Player extends Entity {
     keyup(code){
         this.keys[code] = false;
 
+        // DEBUG
         if (code === CODE_P){
             this.just_spawned_new_ai = false;
         }
@@ -181,15 +187,16 @@ class Player extends Entity {
 
         // check for acceleration keys
         if (this.keys[CODE_W]){
+            // accelerate towards current facing direction
             this.velx += Math.cos(this.angle) * time_delta * PLAYER_ACCELERATION;
             this.vely += -Math.sin(this.angle) * time_delta * PLAYER_ACCELERATION;
         } else {
+            // decelerate
             if (Math.abs(this.velx) > 0.01){
                 this.velx -= this.velx * time_delta * PLAYER_DAMPING_FACTOR;
             } else {
                 this.velx = 0;
             }
-
             if (Math.abs(this.vely) > 0.01){
                 this.vely -= this.vely * time_delta * PLAYER_DAMPING_FACTOR;
             } else {
@@ -212,7 +219,7 @@ class Player extends Entity {
             this.firing = false;
         }
         
-        // keep angle at normal values
+        // keep angle at normal values (-pi to pi)
         if (this.angle > Math.PI){
             this.angle -= 2*Math.PI;
         } else if (this.angle < -Math.PI){
@@ -257,6 +264,7 @@ class Bullet extends Entity {
     }
 }
 
+// class that handles AI inputs - uses same inputs as players for ease
 class Enemy_AI {
     constructor(index, version=0, st=(new Date().getTime())){
         this.index = index;
@@ -269,13 +277,15 @@ class Enemy_AI {
     }
 
     tick(){
+        // remove from the game if dead
         if (!this.entity.alive){
             delete players[this.index];
             return;
         }
 
-        if (this.version === 0){
-        } else if (this.version === 1){
+        // move AI based on different versions
+        if (this.version === 0){ // stay still
+        } else if (this.version === 1){ // move in circles and randomly target something
             if (this.state === 'roaming'){
                 let alive_for = new Date().getTime() - this.spawn_time;
 
@@ -315,10 +325,10 @@ class Enemy_AI {
                     this.entity.mouse_update(target.x, target.y);
 
                     if (random(0,1) < 0.01){
-                        this.entity.keydown(CODE_MOUSEDOWN);
+                        this.entity.keydown(CODE_SPACE);
                     } else {
-                        if (this.entity.keys[CODE_MOUSEDOWN]){
-                            this.entity.keyup(CODE_MOUSEDOWN);
+                        if (this.entity.keys[CODE_SPACE]){
+                            this.entity.keyup(CODE_SPACE);
                         }
                     }
 
@@ -337,7 +347,7 @@ class Enemy_AI {
                     this.target_id = -1;
                 }
             }
-        } else {
+        } else { // spins
             this.entity.angle += 0.01;
         }
     }
@@ -347,15 +357,18 @@ class Enemy_AI {
 /* END CLASSES *************************************************************************************************************************************************/
 /* *************************************************************************************************************************************************************/
 
+// players is a dictionary because of easy key based access - may be modified in the future
 var players = {};
 
 var bullets = [];
 var enemy_ais = [];
 
+// DEBUG - on startup, create a bunch of initial AI ships
 for (let i = 0; i < NUMBER_OF_AI; i++){
     spawn_new_ai();
 }
 
+// get a new seed
 seed = new Date().getTime();
 
 var last_tick = new Date().getTime();
@@ -381,13 +394,10 @@ wss.on('connection', function connection(ws){
     ws.on('message', function incoming(message){
         let obj = JSON.parse(message);
 
-        // DEBUG
-        //console.log(obj);
-
         switch (obj['type']){
-            case 'ack':
+            case 'ack': // does nothing for now
                 break;
-            case 'connect':
+            case 'connect': // initial connection messages - issue an ID and add to internal variables
                 let id = Number.parseInt(random(0, MAX_ID));
                 console.log(id + ' given');
                 players[id] = {'ws': ws, 'entity': new Player(0, 0, random_color(), false, id)};
@@ -403,11 +413,11 @@ wss.on('connection', function connection(ws){
                 let resp = JSON.stringify({'type': 'pong', 'id': obj['id'], 'time': obj['time']});
                 ws.send(resp);
                 break;
-            case 'reset':
+            case 'reset': // secret reset command
                 reset_game(true);
                 console.log('Reset command received');
                 break;
-            case 'key':
+            case 'key': // key update message from players
                 if (obj['down']){
                     if (players[obj['id']]){
                         players[obj['id']]['entity'].keydown(obj['code']);
@@ -418,10 +428,10 @@ wss.on('connection', function connection(ws){
                     }
                 }
                 break;
-            case 'mouse':
-            if (players[obj['id']]){
-                players[obj['id']]['entity'].mouse_update(obj['x'], obj['y']);
-            }
+            case 'mouse': // mouse update message from players
+                if (players[obj['id']]){
+                    players[obj['id']]['entity'].mouse_update(obj['x'], obj['y']);
+                }
                 break;
             default:
                 console.log(obj);
@@ -430,6 +440,7 @@ wss.on('connection', function connection(ws){
         }
     });
 
+    // when someone leaves, remove them from the game
     ws.on('close', function close(){
         for (let i = 0; i < Object.keys(players).length; i++){
             let id = Object.keys(players)[i];
@@ -465,21 +476,21 @@ function update(){
     // send updates to clients
     send_state();
 
-    // cleanup any garbage
     cleanup();
 
-    // remember this tick time
     last_tick = new Date().getTime();
 }
 
 function reset_game(full=false){
-    
+    // TODO
 }
 
 function send_state(){
-    let ps = {};
+    // push players into a list because it is a dictionary on this side
+    // TODO - remove this somehow
+    let ps = [];
     for (let i = 0; i < Object.keys(players).length; i++){
-        ps[i] = players[Object.keys(players)[i]]['entity'];
+        ps.push(players[Object.keys(players)[i]]['entity']);
     }
 
     for (let i = 0; i < Object.keys(players).length; i++){
