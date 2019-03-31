@@ -310,7 +310,7 @@ function draw()
         if (p.alive)
         {
             ctx.fillStyle = p.color;
-            ctx.fillRect(p.x - p.w/2, p.y - p.h/2, p.w, p.h);
+            ctx.fillRect(p.x - p.w/2 + offset.x, p.y - p.h/2 + offset.y, p.w, p.h);
         }
     }
 

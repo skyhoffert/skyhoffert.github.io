@@ -24,6 +24,10 @@ const CODE_Z = 90;
 const CODE_SPACE = 32;
 const CODE_MOUSEDOWN = 1000;
 
+const MOVING = false;
+
+const MAX_WIDTH = 1600;
+
 // other constants
 const MAX_ID = 1000000;
 
@@ -184,7 +188,7 @@ class Player extends Entity {
         this.vely = 0;
         this.velx = 0;
         this.accx = 0;
-        this.accy = 0.0004;
+        this.accy = 0.0008;
         this.kinematic = true;
         this.id = idx;
         this.keys = {65: false, 68: false, 87: false, 83: false, 32: false, CODE_MOUSEDOWN: false};
@@ -238,63 +242,44 @@ class Player extends Entity {
         // check fire button
         if (this.keys[CODE_SPACE] && this.has_jump)
         {
-            this.vely = -0.4;
+            this.vely = -0.6;
             this.has_jump = false;
         }
 
-        var res = this.check_sides();
-        if (res == 0)
+        var fl = this.check_p(new V2(this.x - this.width/3, this.y + this.height/2 + 1));
+        var fr = this.check_p(new V2(this.x + this.width/3, this.y + this.height/2 + 1));
+        var bl = this.check_p(new V2(this.x - this.width/3, this.y + this.height/2));
+        var br = this.check_p(new V2(this.x + this.width/3, this.y + this.height/2));
+        var cc = this.check_p(new V2(this.x, this.y));
+        var tc = this.check_p(new V2(this.x, this.y - this.height/2));
+
+        if (fl || fr || bl || br)
         {
-            res = this.check_feet();
-            if (res == -1){}
-            else
-            {
-                this.y = res - this.height/2 - 2;
-                this.vely = 0;
-                this.has_jump = true;
-            }
-        }
-        else
-        {
-            this.velx = 0;
+            this.y -= 2;
             this.vely = 0;
-            this.x -= res;
+            this.has_jump = true;
         }
-        
+
         super.tick(dur);
 
-        if (this.y > 1000){ this.alive = false; }
+        // DEBUG
+        if (this.y > 1000)
+        {
+            this.x = 250;
+            this.y = 200;
+        }
     }
 
-    check_feet()
+    check_p(p)
     {
         for (var i = 0; i < terrain.length; i++)
         {
-            if (terrain[i].contains(new V2(this.x - this.width/3, this.y + this.height/2 + 1))
-                || terrain[i].contains(new V2(this.x + this.width/3, this.y + this.height/2 + 1)))
-            {
-                return this.y + this.height/2 - 1;
+            if (terrain[i].contains(p)){
+                return true;
             }
         }
 
-        return -1;
-    }
-
-    check_sides()
-    {
-        for (var i = 0; i < terrain.length; i++)
-        {
-            if (terrain[i].contains(new V2(this.x - this.width/2 - 1, this.y)))
-            {
-                return -1;
-            }
-            else if (terrain[i].contains(new V2(this.x + this.width/2 + 1, this.y)))
-            {
-                return 1
-            }
-        }
-
-        return 0;
+        return false;
     }
 
     kill()
@@ -311,15 +296,16 @@ class Player extends Entity {
 seed = new Date().getTime();
 
 var last_tick = new Date().getTime();
-var cur_tick = new Date().getTime();
+var elapsed = 0.0;
 
 var players = [];
 var id_track = 0;
 
 var terrain = [];
 
-terrain.push(new Triangle(new V2(0, 600), new V2(200, 800), new V2(400, 600)));
-terrain.push(new Triangle(new V2(600, 400), new V2(800, 600), new V2(1000, 350)));
+terrain.push(new Triangle(new V2(200, 750), new V2(800, 900), new V2(1400, 750)));
+terrain.push(new Triangle(new V2(1150, 550), new V2(1350, 650), new V2(1550, 500)));
+terrain.push(new Triangle(new V2(50, 500), new V2(250, 650), new V2(450, 550)));
 
 const wss = new WebSocket.Server({
   port: PORT
@@ -344,7 +330,7 @@ wss.on("connection", function connection(ws){
                 let id = id_track;
                 id_track++;
                 console.log(id + " given");
-                players.push({"ws": ws, "entity": new Player(100, 200, random_color(), id)});
+                players.push({"ws": ws, "entity": new Player(250, 200, random_color(), id)});
                 resp_d(ws, {"type": "id", "id": id});
                 resp_d(ws, {"type": "ping", "id": id, "time": (new Date().getTime())});
                 break;
@@ -403,10 +389,22 @@ setInterval(update, UPDATE_RATE);
 function update(){
     // find a time delta since previous frame
     time_delta = new Date().getTime() - last_tick;
+    elapsed += time_delta;
 
     // trigger the tick for all players
     for (let i = 0; i < players.length; i++){
         players[i].entity.tick(time_delta);
+    }
+
+    if (MOVING && elapsed > 5000)
+    {
+        for (var i = 0; i < terrain.length; i++)
+        {
+            terrain[i].y += 1;
+            terrain[i].A.y += 1;
+            terrain[i].B.y += 1;
+            terrain[i].C.y += 1;
+        }
     }
 
     // send updates to clients
