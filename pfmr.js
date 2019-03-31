@@ -22,6 +22,9 @@ const CODE_Z = 90;
 const CODE_SPACE = 32;
 const CODE_MOUSEDOWN = 1000;
 
+const MAX_WIDTH = 1600;
+const MAX_HEIGHT = 900;
+
 const PADDINGX = 10;
 const PADDINGY = 10;
 
@@ -136,11 +139,15 @@ canvas.width = document.body.clientWidth;
 canvas.height = document.body.clientHeight;
 var ctx = canvas.getContext("2d");
 
+console.log(canvas.height);
+
 // Variables to control screen movement.
 var offset = {x: 0, y: 0};
 var zoom = 1.0;
 var center_x = canvas.width/2;
 var center_y = canvas.height/2;
+var xdispfac = canvas.width / MAX_WIDTH;
+var ydispfac = canvas.height/ MAX_HEIGHT;
 
 var lmousedown = false;
 var lmouselastx = 0;
@@ -237,6 +244,8 @@ function update()
         canvas.height = document.body.clientHeight;
         center_x = canvas.width/2;
         center_y = canvas.height/2;
+        xdispfac = canvas.width / MAX_WIDTH;
+        ydispfac = canvas.height/ MAX_HEIGHT;
     }
 
     // Clear the screen by drawing the background.
@@ -295,27 +304,52 @@ function draw_triangle(tri)
 {
     ctx.fillStyle = "red";
     ctx.beginPath();
-    ctx.moveTo(tri.A.x, tri.A.y);
-    ctx.lineTo(tri.B.x, tri.B.y);
-    ctx.lineTo(tri.C.x, tri.C.y);
+    ctx.moveTo(tri.A.x * xdispfac, tri.A.y * ydispfac);
+    ctx.lineTo(tri.B.x * xdispfac, tri.B.y * ydispfac);
+    ctx.lineTo(tri.C.x * xdispfac, tri.C.y * ydispfac);
     ctx.closePath();
     ctx.fill();
 }
 
+function draw_rectangle(r)
+{
+    if (r.alive == false){ return; }
+
+    ctx.fillStyle = "white";
+    ctx.fillRect((r.x - r.width/2) * xdispfac, (r.y - r.height/2) * ydispfac, r.width * xdispfac, r.height * ydispfac);
+}
+
 function draw()
 {
+    for (var i = 0; i < terrain.length; i++)
+    {
+        draw_rectangle(terrain[i]);
+    }
+
     for (var i = 0; i < players.length; i++)
     {
         var p = players[i];
         if (p.alive)
         {
             ctx.fillStyle = p.color;
-            ctx.fillRect(p.x - p.w/2 + offset.x, p.y - p.h/2 + offset.y, p.w, p.h);
+            var x = p.x - p.w/2 + offset.x;
+            var y = p.y - p.h/2 + offset.y;
+            ctx.fillRect(x * xdispfac, y * ydispfac, p.w * xdispfac, p.h * ydispfac);
         }
     }
 
-    for (var i = 0; i < terrain.length; i++)
+    if (players[ID] && !players[ID].alive)
     {
-        draw_triangle(terrain[i]);
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1.0;
+        ctx.font = "48px Verdana";
+        ctx.fillStyle = "#990000";
+        ctx.fillText("DED", canvas.width/2 - 72, canvas.height*3/4);
     }
+
+    ctx.fillStyle = "white";
+    ctx.font = "12px Verdana";
+    ctx.fillText(ping + " ms", 0, 12);
 }

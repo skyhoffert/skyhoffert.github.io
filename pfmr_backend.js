@@ -21,18 +21,25 @@ const CODE_M = 77;
 const CODE_S = 83;
 const CODE_W = 87;
 const CODE_Z = 90;
+const CODE_RBRACKET = 221;
+const CODE_ALT = 18;
 const CODE_SPACE = 32;
 const CODE_MOUSEDOWN = 1000;
 
-const MOVING = false;
+var MOVING = true;
 
 const MAX_WIDTH = 1600;
+const MAX_HEIGHT = 900;
 
-// other constants
-const MAX_ID = 1000000;
+const SCROLL_SPEED = 1.5;
 
 const PLAYER_WIDTH = 20;
 const PLAYER_HEIGHT = 40;
+
+const PLAYER_SPAWN_X = MAX_WIDTH/2;
+const PLAYER_SPAWN_Y = MAX_HEIGHT*3/4;
+
+const GRAVITY = 0.0008;
 
 /* GLOBAL VARIABLES ****************************************************************************************************/
 var seed = SEED_INIT;
@@ -153,6 +160,32 @@ class Triangle
     }
 }
 
+class Rectangle
+{
+    constructor(x, y, w, h)
+    {
+        this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.color = "white";
+        this.alive = true;
+    }
+    
+    /**
+     * Returns true if this rectangle contains point p.
+     * 
+     * @param p: V2 for given point.
+     * @return bool
+     */
+    contains(p)
+    {
+        if (this.alive == false){ return false; }
+
+        return p.x > this.x - this.width/2 && p.x < this.x + this.width/2 && p.y > this.y - this.height/2 && p.y < this.y + this.height/2;
+    }
+}
+
 class Entity {
     constructor(x, y, w, h){
         this.x = x;
@@ -188,7 +221,7 @@ class Player extends Entity {
         this.vely = 0;
         this.velx = 0;
         this.accx = 0;
-        this.accy = 0.0008;
+        this.accy = GRAVITY;
         this.kinematic = true;
         this.id = idx;
         this.keys = {65: false, 68: false, 87: false, 83: false, 32: false, CODE_MOUSEDOWN: false};
@@ -196,10 +229,17 @@ class Player extends Entity {
         this.mouse_y = 0;
         this.alive = true;
         this.has_jump = false;
+        this.on_ground = false;
     }
 
     keydown(code){
         this.keys[code] = true;
+
+        // super secret cheat codes
+        if (code == CODE_RBRACKET && this.keys[CODE_ALT])
+        {
+            reset_game();
+        }
     }
 
     keyup(code){
@@ -239,34 +279,93 @@ class Player extends Entity {
             this.velx = 0.0;
         }
 
-        // check fire button
+        var ldist = -1;
+        var rdist = -1;
+
+        for (var i = 0; i < this.height/2; i++)
+        {
+            var lfoot = this.check_p(new V2(this.x - this.width/3, this.y + this.height/2 - i));
+            var rfoot = this.check_p(new V2(this.x + this.width/3, this.y + this.height/2 - i));
+
+            ldist = lfoot ? i : ldist;
+            rdist = rfoot ? i : rdist;
+        }
+        var lbside = this.check_p(new V2(this.x - this.width/2, this.y + this.height/4));
+        var rbside = this.check_p(new V2(this.x + this.width/2, this.y + this.height/4));
+        var luside = this.check_p(new V2(this.x - this.width/2, this.y - this.height/4));
+        var ruside = this.check_p(new V2(this.x + this.width/2, this.y - this.height/4));
+        var chead = this.check_p(new V2(this.x, this.y - this.height/2));
+
+        if (chead)
+        {
+            if (this.vely < 0)
+            {
+                this.vely = 0;
+            }
+        }
+        else
+        {
+            if (lbside || luside)
+            {
+                this.velx = 0;
+                this.x += 1;
+            }
+            else if (rbside || ruside)
+            {
+                this.velx = 0;
+                this.x -= 1;
+            }
+
+            if (ldist != -1 || rdist != -1)
+            {
+                this.on_ground = true;
+                if (this.vely > 0.1)
+                {
+                    this.vely = 0;
+                    this.has_jump = true;
+
+                    this.y -= ldist > rdist ? ldist : rdist;
+                }
+            }
+        }
+
+        if (this.on_ground)
+        {
+            if (ldist == -1 && rdist == -1)
+            {
+                this.on_ground = false;
+            }
+            else
+            {
+                this.accy = 0;
+            }
+        }
+        else
+        {
+            this.accy = GRAVITY;
+        }
+
+        // jump key overrides collision
         if (this.keys[CODE_SPACE] && this.has_jump)
         {
             this.vely = -0.6;
             this.has_jump = false;
         }
 
-        var fl = this.check_p(new V2(this.x - this.width/3, this.y + this.height/2 + 1));
-        var fr = this.check_p(new V2(this.x + this.width/3, this.y + this.height/2 + 1));
-        var bl = this.check_p(new V2(this.x - this.width/3, this.y + this.height/2));
-        var br = this.check_p(new V2(this.x + this.width/3, this.y + this.height/2));
-        var cc = this.check_p(new V2(this.x, this.y));
-        var tc = this.check_p(new V2(this.x, this.y - this.height/2));
-
-        if (fl || fr || bl || br)
-        {
-            this.y -= 2;
-            this.vely = 0;
-            this.has_jump = true;
-        }
-
         super.tick(dur);
 
         // DEBUG
-        if (this.y > 1000)
+        if (this.y - this.height*2 > MAX_HEIGHT)
         {
-            this.x = 250;
-            this.y = 200;
+            this.alive = false;
+        }
+        if (this.x - this.width/2 > MAX_WIDTH)
+        {
+            this.x = 0;
+        }
+        else if (this.x + this.width/2 < 0)
+        {
+            this.x = MAX_WIDTH;
         }
     }
 
@@ -274,6 +373,8 @@ class Player extends Entity {
     {
         for (var i = 0; i < terrain.length; i++)
         {
+            if (terrain[i].alive == false){ continue; }
+
             if (terrain[i].contains(p)){
                 return true;
             }
@@ -303,9 +404,7 @@ var id_track = 0;
 
 var terrain = [];
 
-terrain.push(new Triangle(new V2(200, 750), new V2(800, 900), new V2(1400, 750)));
-terrain.push(new Triangle(new V2(1150, 550), new V2(1350, 650), new V2(1550, 500)));
-terrain.push(new Triangle(new V2(50, 500), new V2(250, 650), new V2(450, 550)));
+start_terrain();
 
 const wss = new WebSocket.Server({
   port: PORT
@@ -330,7 +429,7 @@ wss.on("connection", function connection(ws){
                 let id = id_track;
                 id_track++;
                 console.log(id + " given");
-                players.push({"ws": ws, "entity": new Player(250, 200, random_color(), id)});
+                players.push({"ws": ws, "entity": new Player(PLAYER_SPAWN_X, PLAYER_SPAWN_Y, random_color(), id)});
                 resp_d(ws, {"type": "id", "id": id});
                 resp_d(ws, {"type": "ping", "id": id, "time": (new Date().getTime())});
                 break;
@@ -400,10 +499,23 @@ function update(){
     {
         for (var i = 0; i < terrain.length; i++)
         {
-            terrain[i].y += 1;
-            terrain[i].A.y += 1;
-            terrain[i].B.y += 1;
-            terrain[i].C.y += 1;
+            if (terrain[i].alive){
+                terrain[i].y += SCROLL_SPEED;
+            }
+
+            if (terrain[i].y - terrain[i].height/2 > MAX_HEIGHT)
+            {
+                terrain[i].alive = false;
+            }
+        }
+    }
+
+    if (terrain[terrain.length-1].y >= 100)
+    {
+        var r = Math.floor(random(1, 3));
+        for (var i = 0; i < r; i++)
+        {
+            terrain.push(new Rectangle(random(0, MAX_WIDTH), -100, random(50, 400), 20));
         }
     }
 
@@ -415,8 +527,31 @@ function update(){
     last_tick = new Date().getTime();
 }
 
+function start_terrain()
+{
+    terrain.push(new Rectangle(800, 800, 1000, 140));
+    terrain.push(new Rectangle(200, 600, 200, 20));
+    terrain.push(new Rectangle(1400, 600, 200, 20));
+    terrain.push(new Rectangle(800, 400, 400, 20));
+    terrain.push(new Rectangle(300, 200, 300, 20));
+    terrain.push(new Rectangle(1300, 200, 300, 20));
+    terrain.push(new Rectangle(600, 0, 100, 20));
+    terrain.push(new Rectangle(1000, 0, 100, 20));
+}
+
 function reset_game(full=false){
-    // TODO
+    MOVING = true;
+    elapsed = 0;
+    for (var i = 0; i < players.length; i++)
+    {
+        if (players[i])
+        {
+            players[i].entity = new Player(PLAYER_SPAWN_X, PLAYER_SPAWN_Y, players[i].entity.color, players[i].entity.id);
+        }
+    }
+
+    terrain.splice(0, terrain.length);
+    start_terrain();
 }
 
 function send_state()
