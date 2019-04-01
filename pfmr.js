@@ -139,8 +139,6 @@ canvas.width = document.body.clientWidth;
 canvas.height = document.body.clientHeight;
 var ctx = canvas.getContext("2d");
 
-console.log(canvas.height);
-
 // Variables to control screen movement.
 var offset = {x: 0, y: 0};
 var zoom = 1.0;

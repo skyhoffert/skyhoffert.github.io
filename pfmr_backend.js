@@ -13,11 +13,13 @@ const UPDATE_RATE = 1000/60;
 // Keyboard input codes for easy reference.
 const CODE_A = 65;
 const CODE_D = 68;
+const CODE_E = 69;
 const CODE_F = 70;
 const CODE_J = 74;
 const CODE_K = 75;
 const CODE_L = 76;
 const CODE_M = 77;
+const CODE_Q = 81;
 const CODE_S = 83;
 const CODE_W = 87;
 const CODE_Z = 90;
@@ -38,6 +40,8 @@ const PLAYER_HEIGHT = 40;
 
 const PLAYER_SPAWN_X = MAX_WIDTH/2;
 const PLAYER_SPAWN_Y = MAX_HEIGHT*3/4;
+
+const WALL_SPAWN_CD = 10000;
 
 const GRAVITY = 0.0008;
 
@@ -230,6 +234,7 @@ class Player extends Entity {
         this.alive = true;
         this.has_jump = false;
         this.on_ground = false;
+        this.wall_spawn_cooldown = 0.0;
     }
 
     keydown(code){
@@ -353,6 +358,25 @@ class Player extends Entity {
         }
 
         super.tick(dur);
+
+        // placing down walls
+        if (this.wall_spawn_cooldown > 0)
+        {
+            this.wall_spawn_cooldown -= dur;
+        }
+        else
+        {
+            if (this.keys[CODE_Q])
+            {
+                this.wall_spawn_cooldown = WALL_SPAWN_CD;
+                terrain.push(new Rectangle(this.x - this.width*2, this.y, 40, 100));
+            }
+            else if (this.keys[CODE_E])
+            {
+                this.wall_spawn_cooldown = WALL_SPAWN_CD;
+                terrain.push(new Rectangle(this.x + this.width*2, this.y, 40, 100));
+            }
+        }
 
         // DEBUG
         if (this.y - this.height*2 > MAX_HEIGHT)
