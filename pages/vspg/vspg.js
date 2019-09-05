@@ -30,13 +30,14 @@ class Ship
             "dark": "#999999"
         };
         
+        this.offsetAngle = Math.PI / 180 * 15; // degrees to radians
         // offsets:
         //   offsets is a two-dimensional array of offsets for drawing the ship to the screen.
         //   It goes like [ [<dir_1> points], [<dir_2> points], ... ]
         //     where each <dir_n> is the points to be drawn when n = direction.
         //   Note that every value for each V2 is to be multiplied by the scale variable.
         // Points go from top center, clockwise.
-        this.offsetAngle = Math.PI / 180 * 15; // degrees to radians
+        // TODO: this is all ugly... make it pretty!
         this.offsets = [
             [new V2(0, -1), new V2(0.5, 0.1), new V2(0, 0.3), new V2(-0.5, 0.1)],
             [new V2(-Math.sin(this.offsetAngle), -Math.cos(this.offsetAngle)), 
@@ -87,16 +88,86 @@ class Ship
     }
 }
 
+class Asteroid
+{
+    constructor(x, y, s)
+    {
+        this.x = x;
+        this.y = y;
+        this.trueSize = s;
+        this.active = true;
+    }
+    
+    Draw()
+    {
+        ctx.fillStyle = "#cccccc";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.trueSize * (this.y - canvas.height/4) / (canvas.height*3/4), 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
 var playerShip = new Ship();
 
-playerShip.Draw();
+var objects = [];
+
+objects.push(new Asteroid(canvas.width/2, canvas.height/4+20, 50));
+
+function DrawStage()
+{
+    ctx.strokeStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.moveTo(canvas.width*1/32, canvas.height);
+    ctx.lineTo(canvas.width*15/32, canvas.height/4);
+    ctx.lineTo(canvas.width*17/32, canvas.height/4);
+    ctx.lineTo(canvas.width*31/32, canvas.height);
+    ctx.closePath();
+    ctx.stroke();
+    
+    for (let i = 0; i < objects.length; i++)
+    {
+        objects[i].Draw();
+    }
+}
+
+function MoveObjects()
+{
+    for (let i = 0; i < objects.length; i++)
+    {
+        if (objects[i].active)
+        {
+            // TODO: I don't like this formula
+            objects[i].y += (Math.pow(objects[i].y,2)) / 20000;
+            
+            // TODO: this is not fully correct
+            if (playerShip.direction == 1)
+            {
+                objects[i].x += (Math.pow(objects[i].y,2)) / 20000;
+            }
+            else if (playerShip.direction == 2)
+            {
+                objects[i].x -= (Math.pow(objects[i].y,2)) / 20000;
+            }
+        }
+        
+        if (objects[i].y - objects[i].size > canvas.height)
+        {
+            objects[i].active = false;
+        }
+    }
+}
 
 function Update()
 {
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    DrawStage();
+    
     playerShip.Draw();
+    
+    MoveObjects();
 }
 
 setInterval(Update, 1000/FPS);
