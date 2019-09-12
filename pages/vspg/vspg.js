@@ -1,10 +1,18 @@
 /*
 Sky Hoffert
 vspg javascript file.
-Last Modified: September 5, 2019
+Last Modified: September 12, 2019
 */
 
 const FPS = 24;
+const OBJ_SPEED = 0.015;
+const OBJ_LRSPEED = OBJ_SPEED*2;
+const OBJ_X_FACTOR = 1000;
+const OBJ_SPAWN_CHANCE = 0.2;
+const OBJ_SPAWN_XRANGE = 8;
+const OBJ_SPAWN_YRANGE = -1.5;
+const OBJ_SPAWN_SIZE_MIN = 50;
+const OBJ_SPAWN_SIZE_MAX = 120;
 
 var keys = []; // Keeps track of player input.
 for (let i = 0; i < 1000; i++){ keys.push(false) };
@@ -85,6 +93,14 @@ class Ship
         ctx.lineTo(this.x, this.y);
         ctx.closePath();
         ctx.fill();
+        
+        /* DEBUG *
+        ctx.strokeStyle = "#ff0000";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.scale/2, 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.stroke();
+        /* */
     }
 }
 
@@ -100,11 +116,17 @@ class Asteroid
     
     Draw()
     {
-        ctx.fillStyle = "#cccccc";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.trueSize * (this.y - canvas.height/4) / (canvas.height*3/4), 0, 2*Math.PI);
-        ctx.closePath();
-        ctx.fill();
+        if (this.y > 0 && InSensor(this))
+        {
+            ctx.fillStyle = "#cccccc";
+            ctx.beginPath();
+            ctx.arc(canvas.width/2 + (this.x * this.y**2 * OBJ_X_FACTOR), 
+                canvas.height*3/4 * this.y**2 + canvas.height/4, 
+                this.trueSize * this.y**2, 
+                0, 2*Math.PI);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
 }
 
@@ -112,7 +134,8 @@ var playerShip = new Ship();
 
 var objects = [];
 
-objects.push(new Asteroid(canvas.width/2, canvas.height/4+20, 50));
+objects.push(new Asteroid(0, -1, 100));
+objects.push(new Asteroid(0.5, -1.5, 100));
 
 function DrawStage()
 {
@@ -137,25 +160,70 @@ function MoveObjects()
     {
         if (objects[i].active)
         {
-            // TODO: I don't like this formula
-            objects[i].y += (Math.pow(objects[i].y,2)) / 20000;
+            objects[i].y += OBJ_SPEED;
             
-            // TODO: this is not fully correct
             if (playerShip.direction == 1)
             {
-                objects[i].x += (Math.pow(objects[i].y,2)) / 20000;
+                objects[i].x += OBJ_LRSPEED;
             }
             else if (playerShip.direction == 2)
             {
-                objects[i].x -= (Math.pow(objects[i].y,2)) / 20000;
+                objects[i].x -= OBJ_LRSPEED;
+            }
+            
+            if (objects[i].y - 0.2 > 1)
+            {
+                objects[i].active = false;
             }
         }
-        
-        if (objects[i].y - objects[i].size > canvas.height)
+    }
+}
+
+function Collision()
+{
+    for (let i = 0; i < objects.length; i++)
+    {
+        if (objects[i].active && objects[i].y > 0)
         {
-            objects[i].active = false;
+            let dist = Math.sqrt(objects[i].x**2 + (objects[i].y - 0.95)**2);
+                
+            if (dist < 0.1)
+            {
+                objects = [];
+                
+                // TODO
+                return;
+            }
+            
+            /* DEBUG *
+            ctx.strokeStyle = "#ff0000";
+            ctx.beginPath();
+            ctx.moveTo(playerShip.x, playerShip.y);
+            ctx.lineTo(canvas.width/2 + (objects[i].x * objects[i].y**2 * OBJ_X_FACTOR), canvas.height/4 + objects[i].y**2 * canvas.height*3/4);
+            ctx.closePath();    
+            ctx.stroke();
+            /* */
         }
     }
+}
+
+function SpawnObjects()
+{
+    if (Math.random() < OBJ_SPAWN_CHANCE)
+    {
+        objects.push(new Asteroid(OBJ_SPAWN_XRANGE * Math.random() - OBJ_SPAWN_XRANGE/2,
+            OBJ_SPAWN_YRANGE * Math.random(), 
+            Math.random() * (OBJ_SPAWN_SIZE_MAX - OBJ_SPAWN_SIZE_MIN)+ OBJ_SPAWN_SIZE_MIN));
+    }
+}
+
+/*
+obj must have obj.x and obj.y members!
+*/
+function InSensor(obj)
+{
+    // TODO - fix
+    return Math.abs(obj.x) < obj.y;
 }
 
 function Update()
@@ -168,6 +236,10 @@ function Update()
     playerShip.Draw();
     
     MoveObjects();
+    
+    Collision();
+    
+    SpawnObjects();
 }
 
 setInterval(Update, 1000/FPS);
