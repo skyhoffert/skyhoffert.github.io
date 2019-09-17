@@ -1,7 +1,7 @@
 /*
 Sky Hoffert
 vspg javascript file.
-Last Modified: September 12, 2019
+Last Modified: September 17, 2019
 */
 
 const FPS = 24;
@@ -9,6 +9,7 @@ const OBJ_SPEED = 0.015;
 const OBJ_LRSPEED = OBJ_SPEED*2;
 const OBJ_X_FACTOR = 1000;
 const OBJ_SPAWN_CHANCE = 0.2;
+const OBJ_SPAWN_PERFRAME = 4;
 const OBJ_SPAWN_XRANGE = 8;
 const OBJ_SPAWN_YRANGE = -1.5;
 const OBJ_SPAWN_SIZE_MIN = 50;
@@ -116,13 +117,13 @@ class Asteroid
     
     Draw()
     {
-        if (this.y > 0 && InSensor(this))
+        if (this.active && this.y > 0 && InSensor(this))
         {
             ctx.fillStyle = "#cccccc";
             ctx.beginPath();
-            ctx.arc(canvas.width/2 + (this.x * this.y**2 * OBJ_X_FACTOR), 
-                canvas.height*3/4 * this.y**2 + canvas.height/4, 
-                this.trueSize * this.y**2, 
+            ctx.arc(canvas.width/2 + (this.x * this.y**3 * OBJ_X_FACTOR), 
+                canvas.height*3/4 * this.y**3 + canvas.height/4, 
+                this.trueSize * this.y**3, 
                 0, 2*Math.PI);
             ctx.closePath();
             ctx.fill();
@@ -133,6 +134,14 @@ class Asteroid
 var playerShip = new Ship();
 
 var objects = [];
+
+var score = 0;
+var lastScoreUpdate = Date.now();
+
+var objSpawnPerFrameAdd = 0;
+var objSpawnChanceAdd = 0.0;
+
+var localHighScore = 0;
 
 objects.push(new Asteroid(0, -1, 100));
 objects.push(new Asteroid(0.5, -1.5, 100));
@@ -152,6 +161,49 @@ function DrawStage()
     {
         objects[i].Draw();
     }
+}
+
+function DrawUI()
+{
+    ctx.fillStyle = "#000000";
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    ctx.lineTo(canvas.width*1/32-1, canvas.height);
+    ctx.lineTo(canvas.width*15/32-1, canvas.height/4);
+    ctx.lineTo(canvas.width*15/32-1, 0);
+    ctx.lineTo(0,0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(canvas.width, 0);
+    ctx.lineTo(canvas.width*17/32+1, 0);
+    ctx.lineTo(canvas.width*17/32+1, canvas.height/4);
+    ctx.lineTo(canvas.width*31/32+1, canvas.height);
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "48px Verdana";
+    let txtlen = (""+score).length;
+    let outstr = "";
+    for (let i = 0; i < 5-txtlen; i++)
+    {
+        outstr += "0";
+    }
+    outstr += ""+score;
+    ctx.fillText(outstr, 20, 50);
+    
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "48px Verdana";
+    txtlen = (""+localHighScore).length;
+    outstr = "";
+    for (let i = 0; i < 5-txtlen; i++)
+    {
+        outstr += "0";
+    }
+    outstr += ""+localHighScore;
+    ctx.fillText(outstr, 20, 100);
 }
 
 function MoveObjects()
@@ -181,39 +233,46 @@ function MoveObjects()
 
 function Collision()
 {
+    let numdead = 0;
+    let lastActive = false;
+    
     for (let i = 0; i < objects.length; i++)
     {
-        if (objects[i].active && objects[i].y > 0)
+        if (!lastActive)
         {
-            let dist = Math.sqrt(objects[i].x**2 + (objects[i].y - 0.95)**2);
+            lastActive = objects[i].active;
+            numdead = lastActive ? numdead : i;
+        }
+        
+        if (objects[i].active && objects[i].y > 0 && objects[i].y < 0.98)
+        {
+            let dist = Math.sqrt(objects[i].x**2 + (objects[i].y - 0.98)**2);
                 
             if (dist < 0.1)
             {
-                objects = [];
+                EndGame();
                 
-                // TODO
                 return;
             }
-            
-            /* DEBUG *
-            ctx.strokeStyle = "#ff0000";
-            ctx.beginPath();
-            ctx.moveTo(playerShip.x, playerShip.y);
-            ctx.lineTo(canvas.width/2 + (objects[i].x * objects[i].y**2 * OBJ_X_FACTOR), canvas.height/4 + objects[i].y**2 * canvas.height*3/4);
-            ctx.closePath();    
-            ctx.stroke();
-            /* */
         }
+    }
+    
+    if (numdead > 100)
+    {
+        objects.splice(0,numdead);
     }
 }
 
 function SpawnObjects()
 {
-    if (Math.random() < OBJ_SPAWN_CHANCE)
+    for (let i = 0; i < OBJ_SPAWN_PERFRAME; i++)
     {
-        objects.push(new Asteroid(OBJ_SPAWN_XRANGE * Math.random() - OBJ_SPAWN_XRANGE/2,
-            OBJ_SPAWN_YRANGE * Math.random(), 
-            Math.random() * (OBJ_SPAWN_SIZE_MAX - OBJ_SPAWN_SIZE_MIN)+ OBJ_SPAWN_SIZE_MIN));
+        if (Math.random() < OBJ_SPAWN_CHANCE)
+        {
+            objects.push(new Asteroid(OBJ_SPAWN_XRANGE * Math.random() - OBJ_SPAWN_XRANGE/2,
+                OBJ_SPAWN_YRANGE * Math.random(), 
+                Math.random() * (OBJ_SPAWN_SIZE_MAX - OBJ_SPAWN_SIZE_MIN)+ OBJ_SPAWN_SIZE_MIN));
+        }
     }
 }
 
@@ -222,8 +281,32 @@ obj must have obj.x and obj.y members!
 */
 function InSensor(obj)
 {
-    // TODO - fix
-    return Math.abs(obj.x) < obj.y;
+    // TODO: fine tune bound
+    return true;
+    return Math.abs(obj.x) < 1;
+}
+
+function UpdateScore()
+{
+    if (Date.now() - lastScoreUpdate > 1000)
+    {
+        score += 1;
+        lastScoreUpdate = Date.now();
+    }
+    
+    objSpawnChanceAdd = score/1000;
+    objSpawnPerFrameAdd = score/100;
+}
+
+function EndGame()
+{
+    if (score > localHighScore)
+    {
+        localHighScore = score;
+    }
+    
+    objects = [];
+    score = 0;
 }
 
 function Update()
@@ -240,6 +323,10 @@ function Update()
     Collision();
     
     SpawnObjects();
+    
+    DrawUI();
+    
+    UpdateScore();
 }
 
 setInterval(Update, 1000/FPS);
@@ -252,4 +339,22 @@ document.addEventListener("keydown", function (evt)
 document.addEventListener("keyup", function (evt)
 {
     keys[evt.keyCode] = false;
+}, false);
+
+document.addEventListener("touchstart", function (evt)
+{
+    if (evt.targetTouches[0].screenX > canvas.width/2)
+    {
+        keys[68] = true;
+    }
+    else
+    {
+        keys[65] = true;
+    }
+}, false);
+
+document.addEventListener("touchend", function (evt)
+{
+    keys[65] = false;
+    keys[68] = false;
 }, false);
