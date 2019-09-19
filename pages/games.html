@@ -3,12 +3,18 @@
 <head>
     <meta charset="utf-8">
     <title>Sky's Games</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
     <style>
-        * { color: #ffffff; font-family: Verdana; margin: 0; padding: 0; }
+        * { color: #ffffff; font-family: Verdana; }
         html, body { background-color: #000000; text-align: center; width: 100%; height: 100%; }
-        h1 { font-size: 72px; padding: 60px 0px; width: 100%; }
-        h4 { font-size: 20px; padding: 20px 0px; width: 100%; }
-        button { width: 1080px; min-width: 200px; max-width: 90%; height: 200px; border: none; background-color: #444444; font-size: 48px; border-radius: 20px; outline: none; }
+        h1 { font-size: 72px; padding: 60px 0px; width: 100%; color: white; font-family: Verdana; }
+        h4 { font-size: 20px; padding: 20px 0px; width: 100%; color: white; font-family: Verdana; }
+        p { color: white; font-family: Verdana; }
+        button { background-color: #222222; border: none; border-radius: 6px; width: 100%; height: 400px; font-family: Verdana; }
+        a { color: white; text-decoration: none; }
+        h3 { font-size: 26px; color: white; font-family: Verdana; }
     </style>
 </head>
 <body>
@@ -31,11 +37,25 @@
     </form>
     
     <div style="height: 120px;"></div>
-    <a href="thespaceengineer/thespaceengineer.html"><button>The Space Engineer</button></a>
-    <div style="height: 50px;"></div>
-    <a href="vspg/vspg.html"><button>vspg</button></a>
-    <div style="height: 50px;"></div>
-    <a href="netimga/netimga.html"><button>netimga</button></a>
+    <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4" style="padding: 20px 20px;">
+            <a href="thespaceengineer/thespaceengineer.html">
+                <button><h3>The Space Engineer</h3></button>
+            </a>
+        </div>
+        <div class="col-md-4" style="padding: 20px 20px;">
+            <a href="vspg/vspg.html">
+                <button><h3>vspg</h3></button>
+            </a>
+        </div>
+        <div class="col-md-4" style="padding: 20px 20px;">
+            <a href="netimga/netimga.html">
+                <button><h3>netimga</h3></button>
+            </a>
+        </div>
+    </div>
+    </div>
     
     <div style="height: 50%;"></div>
 
