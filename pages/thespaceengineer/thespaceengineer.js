@@ -129,6 +129,25 @@ const LEVELS = [
     }
 },
 {
+    "name": "Bolt", 
+    "walls": [ // Format: [ x, y, w, h ] where (x, y) is center
+        [200, 376, 40, 590], [1400, 376, 40, 590], [800, 100, 1240, 40], [800, 652, 1240, 40],
+        [1519, 376, 200, 800]
+    ],
+    "bolts": [ // Format: [ x, y ]
+        [800, 500]
+    ],
+    "exit": [1300, 632 - EXIT["height"]/2, false],
+    "player_spawn": [260, 600],
+    "ship": {
+        "x": 800,
+        "y": 376,
+        "width": 1200,
+        "height": 552,
+        "image": new Image()
+    }
+},
+{
     "name": "Fin", 
     "walls": [ // Format: [ x, y, w, h ] where (x, y) is center
     ],
@@ -503,6 +522,14 @@ function FrameUpdate()
     }
     else if (level_index == 5)
     {
+        DrawRoundedRect(new V2(800, 320), new V2(600, 260), 8, "#986232");
+        DrawWord("Some levels have these", new V2(520, 210));
+        DrawWord("items here, called Bolts.", new V2(520, 256));
+        DrawWord("Collect all bolts to", new V2(520, 302));
+        DrawWord("continue on!", new V2(520, 346));
+    }
+    else if (level_index == 6)
+    {
         DrawRoundedRect(new V2(800, 352), new V2(1600, 800), 8, "#986232");
         DrawWord("To Be Continued...", new V2(450, 340), new V2(48, 64));
     }
@@ -578,6 +605,7 @@ class Player
         this.color = COLORS["player"];
         this.grounded = false;
         this.againstwall = false;
+        this.collectedBolts = 0;
     }
 
     collision()
@@ -606,6 +634,7 @@ class Player
                 {
                     bolts[i] = null;
                     console.log(LOGCODES["collectedbolt"]);
+                    this.collectedBolts++;
                 }
             }
         }
@@ -738,16 +767,19 @@ class Player
             }
             else if (keys[KEYCODES["w"]])
             {
-                if (this.position.x < LEVELS[level_index]["exit"][0] + EXIT["width"]/2 &&
-                    this.position.x > LEVELS[level_index]["exit"][0] - EXIT["width"]/2 &&
-                    this.position.y < LEVELS[level_index]["exit"][1] + EXIT["height"]/2 &&
-                    this.position.y > LEVELS[level_index]["exit"][1] - EXIT["height"]/2)
+                if (this.collectedBolts >= LEVELS[level_index]["bolts"].length)
                 {
-                    level_index = (level_index + 1) % LEVELS.length;
+                    if (this.position.x < LEVELS[level_index]["exit"][0] + EXIT["width"]/2 &&
+                        this.position.x > LEVELS[level_index]["exit"][0] - EXIT["width"]/2 &&
+                        this.position.y < LEVELS[level_index]["exit"][1] + EXIT["height"]/2 &&
+                        this.position.y > LEVELS[level_index]["exit"][1] - EXIT["height"]/2)
+                    {
+                        level_index = (level_index + 1) % LEVELS.length;
 
-                    resetting = true;
+                        resetting = true;
 
-                    console.log(LOGCODES["playerentersdoor"]);
+                        console.log(LOGCODES["playerentersdoor"]);
+                    }
                 }
             }
             else
