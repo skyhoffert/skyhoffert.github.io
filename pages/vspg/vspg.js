@@ -1,7 +1,7 @@
 /*
 Sky Hoffert
 vspg javascript file.
-Last Modified: September 17, 2019
+Last Modified: September 18, 2019
 */
 
 const FPS = 24;
@@ -22,6 +22,7 @@ var canvas = document.getElementById("mainCanvas");
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 var ctx = canvas.getContext("2d");
+ctx.lineWidth = 2;
 
 class V2{ constructor(x, y){ this.x = x; this.y = y; } }
 
@@ -113,20 +114,62 @@ class Asteroid
         this.y = y;
         this.trueSize = s;
         this.active = true;
+        this.angles = [];
+        this.dists = [];
+        this.rot = 0;
+        this.rotRate = (Math.random()-0.5) / 2;
+        
+        let cumang = 0;
+        while (true)
+        {
+            let ang = Math.random() * Math.PI/3;
+            cumang += ang;
+            
+            if (cumang >= 2*Math.PI){ break; }
+            
+            this.angles.push(ang);
+        }
+        
+        for (let i = 0; i < this.angles.length; i++)
+        {
+            this.dists.push((Math.random() * this.trueSize/2) + this.trueSize*3/4);
+        }
     }
     
     Draw()
     {
         if (this.active && this.y > 0 && InSensor(this))
         {
-            ctx.fillStyle = "#cccccc";
+            this.rot += this.rotRate;
+            
+            /* DEBUG *
+            ctx.strokeStyle = "#cccccc";
             ctx.beginPath();
             ctx.arc(canvas.width/2 + (this.x * this.y**3 * OBJ_X_FACTOR), 
                 canvas.height*3/4 * this.y**3 + canvas.height/4, 
                 this.trueSize * this.y**3, 
                 0, 2*Math.PI);
             ctx.closePath();
-            ctx.fill();
+            ctx.stroke();
+            /* */
+            
+            ctx.strokeStyle = "#cccccc";
+            ctx.beginPath();
+            let x = canvas.width/2 + (this.x * this.y**3 * OBJ_X_FACTOR);
+            let y = canvas.height*3/4 * this.y**3 + canvas.height/4;
+            let s = this.trueSize * this.y**3 / 100;
+            let cumang = this.rot;
+            ctx.moveTo(x + Math.cos(cumang + this.angles[0]) * this.dists[0] * s,
+                y + Math.sin(cumang + this.angles[0]) * this.dists[0] * s);
+            cumang += this.angles[0];
+            for (let i = 1; i < this.angles.length; i++)
+            {
+                ctx.lineTo(x + Math.cos(cumang + this.angles[i]) * this.dists[i] * s,
+                    y + Math.sin(cumang + this.angles[i]) * this.dists[i] * s);
+                cumang += this.angles[i];
+            }
+            ctx.closePath();
+            ctx.stroke();
         }
     }
 }
