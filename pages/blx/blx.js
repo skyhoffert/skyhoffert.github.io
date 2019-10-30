@@ -1,11 +1,11 @@
 /*
 Sky Hoffert
 blx javascript file.
-Last Modified: October 27, 2019
+Last Modified: October 30, 2019
 */
 
 const FPS = 24;
-const COLORS = ["red", "blue", "yellow", "green"];
+const COLORS = ["red", "blue", "green"];
 
 var keys = []; // Keeps track of player input.
 for (let i = 0; i < 1000; i++){ keys.push(false) };
@@ -14,6 +14,7 @@ var canvas = document.getElementById("mainCanvas");
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 var ctx = canvas.getContext("2d");
+var needsUpdate = true;
 
 class V2{ constructor(x, y){ this.x = x; this.y = y; } }
 
@@ -30,9 +31,12 @@ class Block {
         
         if (pt.x > this.pos.x && pt.x < this.pos.x + this.size.x &&
                 pt.y > this.pos.y && pt.y < this.pos.y + this.size.y) {
-            console.log("hit me " + this.color);
             return true;
         }
+    }
+
+    Hit() {
+        this.color = "white";
     }
 
     Draw() {
@@ -43,12 +47,19 @@ class Block {
 
 class Grid {
     constructor() {
-        this.nRows = 16;
-        this.nCols = 8;
-        this.rowHeight = 30;
-        this.colWidth = 30;
-        this.gap = 2;
-        this.pos_TL = new V2(canvas.width/2 - this.nCols/2 * this.colWidth,50);
+        this.maxWidth = canvas.width*2/3;
+        this.maxHeight = canvas.height*2/3;
+        this.rowHeight = 40;
+        this.colWidth = 40;
+        this.nRows = 128;
+        this.nCols = 64;
+        while (this.nRows*this.rowHeight > this.maxHeight || this.nCols*this.colWidth > this.maxWidth) {
+            this.nRows /= 2;
+            this.nCols /= 2;
+        }
+        this.gap = 1;
+        this.pos_TL = new V2(canvas.width/2 - this.nCols/2 * this.colWidth - this.gap*this.nCols/2, 
+            canvas.height/2 - this.nRows/2*this.rowHeight - this.gap*this.nRows/2);
         this.blocks = [];
 
         // blocks is 1d array of rows and cols. Organized so that first nCols elements are in the
@@ -83,26 +94,38 @@ class Grid {
         if (!hB) { return; }
 
         // "Hit" that block continue here after hit
-        this.HitRoutine(hPos, hClr);
+        this.HitRoutine(hPos, hClr, false);
 
         // Adjust the current blocks
         this.AdjustBlocks();
     }
 
-    HitRoutine(hPos, hClr) {
-        this.blocks[hPos].color = "white";
+    HitRoutine(hPos, hClr, hit) {
+        if (hit) { this.blocks[hPos].Hit(); }
 
         let abv = hPos % this.nRows === 0 ? -1 : hPos-1;
         let blw = hPos % this.nRows === this.nRows-1 ? -1 : hPos+1;
         let rgt = Math.floor(hPos / this.nRows) === this.nCols-1 ? -1 : hPos + this.nRows;
         let lft = Math.floor(hPos / this.nRows) === 0 ? -1 : hPos - this.nRows;
         let surround = [abv, blw, rgt, lft];
+        let hits = [0, 0, 0, 0];
         for (let i = 0; i < surround.length; i++) {
             let plc = surround[i];
             if (plc !== -1) {
                 if (this.blocks[plc].color === hClr) {
-                    this.HitRoutine(plc, hClr);
+                    hits[i] = 1;
                 }
+            }
+        }
+
+        // DO NOT proceed if not at least one adjacent hit
+        if (hits[0] + hits[1] + hits[2] + hits[3] < 1) { return; }
+
+        this.blocks[hPos].Hit();
+        
+        for (let i = 0; i < hits.length; i++) {
+            if (hits[i] === 1) {
+                this.HitRoutine(surround[i], hClr, true);
             }
         }
     }
@@ -122,7 +145,6 @@ class Grid {
                 if (this.blocks[i].color === "white") {
                     for (let j = i; j > Math.floor(i / this.nRows)*this.nRows; j--) {
                         this.blocks[j].color = this.blocks[j-1].color;
-                        console.log("removed " + j);
                     }
                     this.blocks[Math.floor(i / this.nRows)*this.nRows].color = RandomColor();
 
@@ -161,15 +183,21 @@ function DrawUI() {
 
 
 function Update() {
+    if (!needsUpdate) { return; }
+
     DrawStage();
     
     DrawUI();
+
+    needsUpdate = false;
 }
 
 setInterval(Update, 1000/FPS);
 
 function Click(x, y) {
     grid.Collision(new V2(x, y));
+
+    needsUpdate = true;
 }
 
 document.addEventListener("keydown", function (evt) {
@@ -184,9 +212,11 @@ document.addEventListener("mousedown", function (evt) {
     Click(evt.clientX, evt.clientY);
 }, false);
 
+/*
 document.addEventListener("touchstart", function (evt) {
     Click(evt.targetTouches[0].clientX, evt.targetTouches[0].clientY);
 }, false);
+*/
 
 document.addEventListener("touchend", function (evt) {
 }, false);
