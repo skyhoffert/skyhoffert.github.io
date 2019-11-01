@@ -18,11 +18,22 @@ class Ball {
     constructor(p, c) {
         this.pos = new V2(p.x, p.y);
         this.vel = new V2(0, 0);
-        this.acc = new V2(0, 0.00000001);
-        this.rad = 20;
+        this.acc = new V2(0, 0.001);
+        this.rad = 40;
         this.color = c;
 
-        this.maxVel = 0.002;
+        this.maxVel = 1;
+    }
+
+    Collision(p) {
+        let d = Math.sqrt(Math.pow(this.pos.x - p.x, 2) + Math.pow(this.pos.y - p.y, 2));
+        let c = d < this.rad*2;
+        
+        if (c) {
+            this.vel.y = -this.vel.y;
+        }
+
+        return c;
     }
 
     CutoffVel() {
@@ -35,11 +46,13 @@ class Ball {
     }
 
     Tick(dT) {
-        V2Add(this.vel, this.acc, dT);
+        this.vel.x += this.acc.x * dT;
+        this.vel.y += this.acc.y * dT;
 
         this.CutoffVel();
 
-        V2Add(this.pos, this.vel, dT);
+        this.pos.x += this.vel.x * dT;
+        this.pos.y += this.vel.y * dT;
     }
 
     Draw() {
@@ -52,6 +65,12 @@ class Ball {
 class Stage {
     constructor() {
         this.balls = [];
+    }
+
+    Collision(p) {
+        for (let i = 0; i < this.balls.length; i++) {
+            this.balls[i].Collision(p);
+        }
     }
 
     AddBall() {
@@ -79,11 +98,6 @@ stage.AddBall();
 stage.AddBall();
 
 // Functions
-
-function V2Add(v1, v2, dT) {
-    v1.x += v2.x * dT;
-    v1.y += v2.y * dT;
-}
 
 function Tick(dT) {
     stage.Tick(dT);
@@ -113,16 +127,18 @@ function Update() {
     DrawStage();
     
     DrawUI();
+
+    prevTime = curTime;
 }
 
 setInterval(Update, 1000/FPS);
 
-function Click(x, y) {
-    needsUpdate = true;
+function Click(p) {
+    stage.Collision(p);
 }
 
 document.addEventListener("mousedown", function (evt) {
-    Click(evt.clientX, evt.clientY);
+    Click(new V2(evt.clientX, evt.clientY));
 }, false);
 
 /*
