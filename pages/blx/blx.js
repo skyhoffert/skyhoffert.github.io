@@ -5,7 +5,7 @@ Last Modified: October 30, 2019
 */
 
 const FPS = 24;
-const COLORS = ["red", "blue", "green"];
+const COLORS = ["red", "blue", "green", "yellow"];
 
 var keys = []; // Keeps track of player input.
 for (let i = 0; i < 1000; i++){ keys.push(false) };
@@ -47,15 +47,15 @@ class Block {
 
 class Grid {
     constructor() {
-        this.maxWidth = canvas.width*2/3;
-        this.maxHeight = canvas.height*2/3;
+        this.maxWidth = canvas.width*3/4;
+        this.maxHeight = canvas.height*3/4;
         this.rowHeight = 40;
         this.colWidth = 40;
         this.nRows = 128;
         this.nCols = 64;
         while (this.nRows*this.rowHeight > this.maxHeight || this.nCols*this.colWidth > this.maxWidth) {
-            this.nRows /= 2;
-            this.nCols /= 2;
+            this.nRows -= 1;
+            this.nCols = Math.floor(this.nRows/2);
         }
         this.gap = 1;
         this.pos_TL = new V2(canvas.width/2 - this.nCols/2 * this.colWidth - this.gap*this.nCols/2, 
