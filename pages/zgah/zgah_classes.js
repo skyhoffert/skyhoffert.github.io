@@ -54,9 +54,9 @@ class Ship {
         this.target = null;
 
         this.scanning = false;
-        this.scanFactor = 0.0005;
+        this.scanFactor = 0.004;
         this.hitting = false;
-        this.hitFactor = 0.0001;
+        this.hitFactor = 0.002;
 
         this.trailColor = "#662222";
 
@@ -187,13 +187,13 @@ class Ship {
             ctx.stroke();
 
             if (this.target.scanpc < 1) {
-                let barwidth = 30;
+                let barwidth = 60;
                 ctx.fillStyle = "blue";
                 ctx.fillRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth * this.target.scanpc, 10);
                 ctx.strokeStyle = "white";
                 ctx.strokeRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth, 10);
             } else if (this.target.health > 0) {
-                let barwidth = 30;
+                let barwidth = 60;
                 ctx.fillStyle = this.target.color;
                 ctx.fillRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth * this.target.health, 10);
                 ctx.strokeStyle = "white";
@@ -221,7 +221,7 @@ class Ship {
 }
 
 class Asteroid {
-    constructor(x, y, s) {
+    constructor(x, y, s, t=null) {
         this.x = x;
         this.y = y;
         this.velM = 0.8;
@@ -230,19 +230,21 @@ class Asteroid {
         this.size = s;
         this.active = true;
         this.visType = -1;
-        this.type = Math.floor(3*Math.random());
+        this.type = t === null ? Math.floor(3*Math.random()) : t;
         this.color = "white";
         if (this.type === 0) {
-            this.color = "#aaffaa";
+            this.color = "#66bb66";
         } else if (this.type === 1) {
-            this.color = "#aaaaff";
+            this.color = "#6666aa";
         } else if (this.type === 2) {
-            this.color = "#ffffaa";
+            this.color = "#aaaa66";
         }
 
         this.scanpc = 0.0;
 
         this.health = 1.0;
+
+        this.minSize = 12;
 
         this.angles = [0];
         this.ds = [this.size];
@@ -266,7 +268,7 @@ class Asteroid {
         // TODO: scanning perhaps should include size of asteroid as a factor
 
         if (this.scanpc < 1) {
-            this.scanpc += amt;
+            this.scanpc += amt / this.size;
             
             if (this.scanpc >= 1) {
                 this.type = this.visType = this.type;
@@ -280,7 +282,7 @@ class Asteroid {
         // TODO: hit should DEFINITELY be a factor of size
 
         if (this.health > 0) {
-            this.health -= amt;
+            this.health -= amt / this.size;
 
             if (this.health < 0) {
                 this.active = false;
@@ -288,11 +290,12 @@ class Asteroid {
                 
                 // TODO: make this a little better
 
-                if (this.size > 20) {
-                    objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
-                        this.y + 2*this.size * Math.random() - this.size, this.size/2));
-                    objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
-                        this.y + 2*this.size * Math.random() - this.size, this.size/2));
+                if (this.size > this.minSize) {
+                    let num = Math.floor(Math.random()*2 + 2);
+                    for (let i = 0; i < num; i++) {
+                        objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
+                            this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type));
+                    }
                 }
             }
         }
