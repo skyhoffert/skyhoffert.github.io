@@ -37,26 +37,57 @@ class Lerper {
 class Ship {
     constructor() {
         this.scale = 25;
-        this.x = canvas.width/2;
-        this.y = canvas.height/2;
+        this.x = WIDTH/2;
+        this.y = HEIGHT/2;
         this.angle = 0;
         this.color = "red";
+        this.active = true;
 
         this.turnSpeed = 0.002;
         this.moveSpeed = 0.0005;
         this.minAngle = 0.02;
+        this.slowFactor = 0.0005;
 
         this.velX = 0;
         this.velY = 0;
 
         this.target = null;
-        this.beaming = false;
-        this.beamFactor = 0.0005;
+
+        this.scanning = false;
+        this.scanFactor = 0.0005;
+        this.hitting = false;
+        this.hitFactor = 0.0001;
+
+        this.trailColor = "#662222";
+
+        this.demoVel = 0.1;
+    }
+
+    Impact(obj) {
+        if (this.active && Math.abs(this.velX) + Math.abs(this.velY) > this.demoVel) {
+            let numP = 100;
+            for (let i = 0; i < numP; i++) {
+                trails.push(new Trail(this.x - offsetX + (Math.random() * 4 - 2), 
+                    this.y - offsetY + (Math.random() * 4 - 2), 
+                    this.velX * Math.random(), this.velY * Math.random(),
+                    3, Math.random() * 2 * Math.PI, this.color, 2000));
+            }
+
+            this.active = false;
+
+            lerpers.push(new Lerper(2000, function (p, d) {
+                if (d) {
+                    Init();
+                }
+            }));
+        }
     }
 
     Tick(dT) {
+        if (!this.active) { return; }
+
         // Align current angle with target angle (of mouse) depending on turn speed.
-        let targAng = -Math.atan2(mouse.y - canvas.height/2, mouse.x - canvas.width/2);
+        let targAng = -Math.atan2(mouse.y - HEIGHT/2, mouse.x - WIDTH/2);
         let diff = targAng - this.angle;
 
         if (Math.abs(diff) > Math.PI) {
@@ -70,33 +101,45 @@ class Ship {
         }
 
         // Move!
-        if (mouse.down) {
+        if (mouse.down || keys[32]) {
             this.velX -= dT * this.moveSpeed * Math.cos(this.angle);
             this.velY += dT * this.moveSpeed * Math.sin(this.angle);
 
             let skew = 0.2;
             let trailLen = 5;
-            let num = Math.floor(Math.random() * 2) + 1;
+            let num = Math.floor(Math.random() * dT/30) + 1;
             for (let i = 0; i < num; i++) {
                 trails.push(new Trail(this.x - offsetX, this.y - offsetY, this.velX, this.velY, 
-                    trailLen, this.angle + skew*Math.random() - skew/2, "#662222", 2000));
+                    trailLen, this.angle + skew*Math.random() - skew/2, this.trailColor, 2000));
             }
         } else {
-            this.velX *= 0.98;
-            this.velY *= 0.98;
+            this.velX -= this.velX * this.slowFactor * dT;
+            this.velY -= this.velY * this.slowFactor * dT;
         }
 
         offsetX += dT * this.velX;
         offsetY += dT * this.velY;
 
-        this.beaming = false;
+        this.scanning = false;
+        this.hitting = false;
         if (this.target !== null) {
             if (this.target.scanpc < 1) {
                 let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
-                if (dist < 200 && keys[81]) {
-                    this.beaming = true;
+                if (dist < 200 ) {
+                    if (keys[81]) {
+                        this.scanning = true;
 
-                    this.target.Beam(dT * this.beamFactor);
+                        this.target.Scan(dT * this.scanFactor);
+                    }
+                }
+            } else {
+                let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
+                if (dist < 200 ) {
+                    if (keys[87]) {
+                        this.hitting = true;
+
+                        this.target.Hit(dT * this.hitFactor);
+                    }
                 }
             }
         }
@@ -104,7 +147,9 @@ class Ship {
         this.target = null;
     }
     
-    Draw() {
+    Draw(ctx) {
+        if (!this.active) { return; }
+
         // q is the offset to the rear points
         let q = Math.PI*11/16;
 
@@ -147,11 +192,24 @@ class Ship {
                 ctx.fillRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth * this.target.scanpc, 10);
                 ctx.strokeStyle = "white";
                 ctx.strokeRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth, 10);
+            } else if (this.target.health > 0) {
+                let barwidth = 30;
+                ctx.fillStyle = this.target.color;
+                ctx.fillRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth * this.target.health, 10);
+                ctx.strokeStyle = "white";
+                ctx.strokeRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth, 10);
             }
 
-            // DEBUG: beam to asteroid
-            if (this.beaming) {
+            // DEBUG: scan to asteroid
+            if (this.scanning) {
                 ctx.strokeStyle = "blue";
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.target.x + offsetX, this.target.y + offsetY);
+                ctx.closePath();
+                ctx.stroke();
+            } else if (this.hitting) {
+                ctx.strokeStyle = "red";
                 ctx.beginPath();
                 ctx.moveTo(this.x, this.y);
                 ctx.lineTo(this.target.x + offsetX, this.target.y + offsetY);
@@ -173,8 +231,18 @@ class Asteroid {
         this.active = true;
         this.visType = -1;
         this.type = Math.floor(3*Math.random());
+        this.color = "white";
+        if (this.type === 0) {
+            this.color = "#aaffaa";
+        } else if (this.type === 1) {
+            this.color = "#aaaaff";
+        } else if (this.type === 2) {
+            this.color = "#ffffaa";
+        }
 
-        this.scanpc = 0;
+        this.scanpc = 0.0;
+
+        this.health = 1.0;
 
         this.angles = [0];
         this.ds = [this.size];
@@ -193,7 +261,10 @@ class Asteroid {
         this.ds.splice(this.ds.length-1);
     }
 
-    Beam(amt) {
+    Scan(amt) {
+        
+        // TODO: scanning perhaps should include size of asteroid as a factor
+
         if (this.scanpc < 1) {
             this.scanpc += amt;
             
@@ -202,6 +273,39 @@ class Asteroid {
                 this.scanpc = 1;
             }
         }
+    }
+
+    Hit(amt) {
+
+        // TODO: hit should DEFINITELY be a factor of size
+
+        if (this.health > 0) {
+            this.health -= amt;
+
+            if (this.health < 0) {
+                this.active = false;
+                this.health = 0;
+                
+                // TODO: make this a little better
+
+                if (this.size > 20) {
+                    objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
+                        this.y + 2*this.size * Math.random() - this.size, this.size/2));
+                    objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
+                        this.y + 2*this.size * Math.random() - this.size, this.size/2));
+                }
+            }
+        }
+    }
+
+    Collision(x, y) {
+        if (!this.active) { return false; }
+
+        if (Distance(x, y, this.x + offsetX, this.y + offsetY) < this.size) {
+            return true;
+        }
+
+        return false;
     }
 
     Tick(dT) {
@@ -221,19 +325,17 @@ class Asteroid {
         this.y += this.velY;
     }
     
-    Draw() {
+    Draw(ctx) {
         if (!this.active) { return; }
 
-        if (this.x + this.size + offsetX > 0 && this.x - this.size + offsetX < canvas.width &&
-            this.y + this.size + offsetY > 0 && this.y - this.size + offsetY < canvas.height)
+        if (this.x + this.size + offsetX > 0 && this.x - this.size + offsetX < WIDTH &&
+            this.y + this.size + offsetY > 0 && this.y - this.size + offsetY < HEIGHT)
         {
-            if (this.visType === 0) {
-                ctx.strokeStyle = "#aaffaa";
-            } else if (this.visType === 1) {
-                ctx.strokeStyle = "#aaaaff";
-            } else if (this.visType === 2) {
-                ctx.strokeStyle = "#ffffaa";
-            } else { ctx.strokeStyle = "white"; }
+            if (this.visType !== -1) {
+                ctx.strokeStyle = this.color;
+            } else {
+                ctx.strokeStyle = "white";
+            }
 
             /* TODO: remove old way
             ctx.beginPath();
@@ -243,7 +345,6 @@ class Asteroid {
             */
 
             ctx.beginPath();
-            console.log("" + (this.x + this.ds[0] * Math.cos(this.angles[0]) + offsetX));
             ctx.moveTo(this.x + this.ds[0] * Math.cos(this.angles[0]) + offsetX, 
                 this.y + this.ds[0] * Math.sin(this.angles[0]) + offsetY);
             for (let i = 1; i < this.angles.length; i++) {
@@ -289,7 +390,7 @@ class Trail {
         this.y -= (0.1 * this.sin + this.velY) * dT;
     }
 
-    Draw() {
+    Draw(ctx) {
         if (!this.active) { return; }
 
         ctx.strokeStyle = this.color;
