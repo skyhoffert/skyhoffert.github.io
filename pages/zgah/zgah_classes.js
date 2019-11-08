@@ -78,8 +78,12 @@ class Ship {
             let trailLen = 5;
             let num = Math.floor(Math.random() * 2) + 1;
             for (let i = 0; i < num; i++) {
-                trails.push(new Trail(this.x - offsetX, this.y - offsetY, trailLen, this.angle + skew*Math.random() - skew/2, this.color, 1000));
+                trails.push(new Trail(this.x - offsetX, this.y - offsetY, this.velX, this.velY, 
+                    trailLen, this.angle + skew*Math.random() - skew/2, "#662222", 2000));
             }
+        } else {
+            this.velX *= 0.98;
+            this.velY *= 0.98;
         }
 
         offsetX += dT * this.velX;
@@ -162,12 +166,31 @@ class Asteroid {
     constructor(x, y, s) {
         this.x = x;
         this.y = y;
+        this.velM = 0.8;
+        this.velX = this.velM * Math.random() - this.velM/2;
+        this.velY = this.velM * Math.random() - this.velM/2;
         this.size = s;
         this.active = true;
         this.visType = -1;
         this.type = Math.floor(3*Math.random());
 
         this.scanpc = 0;
+
+        this.angles = [0];
+        this.ds = [this.size];
+
+        this.rotRate = 0.02 * Math.random();
+        
+        let i = 0;
+
+        while (this.angles[this.angles.length-1] < 2*Math.PI) {
+            this.angles.push(this.angles[i] + Math.random() * Math.PI/3 + Math.PI/8);
+            this.ds.push(Math.random() * this.size/5 + this.size*9/10);
+            i++;
+        }
+
+        this.angles.splice(this.angles.length-1, 1);
+        this.ds.splice(this.ds.length-1);
     }
 
     Beam(amt) {
@@ -189,6 +212,13 @@ class Asteroid {
         if (dist < this.size) {
             playerShip.target = this;
         }
+
+        for (let i = 0; i < this.angles.length; i++) {
+            this.angles[i] += this.rotRate;
+        }
+
+        this.x += this.velX;
+        this.y += this.velY;
     }
     
     Draw() {
@@ -205,8 +235,21 @@ class Asteroid {
                 ctx.strokeStyle = "#ffffaa";
             } else { ctx.strokeStyle = "white"; }
 
+            /* TODO: remove old way
             ctx.beginPath();
             ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
+            ctx.closePath();
+            ctx.stroke();
+            */
+
+            ctx.beginPath();
+            console.log("" + (this.x + this.ds[0] * Math.cos(this.angles[0]) + offsetX));
+            ctx.moveTo(this.x + this.ds[0] * Math.cos(this.angles[0]) + offsetX, 
+                this.y + this.ds[0] * Math.sin(this.angles[0]) + offsetY);
+            for (let i = 1; i < this.angles.length; i++) {
+                ctx.lineTo(this.x + this.ds[i] * Math.cos(this.angles[i]) + offsetX, 
+                    this.y + this.ds[i] * Math.sin(this.angles[i]) + offsetY);
+            }
             ctx.closePath();
             ctx.stroke();
         }
@@ -214,14 +257,20 @@ class Asteroid {
 }
 
 class Trail {
-    constructor(x, y, len, ang, c, life) {
+    constructor(x, y, velX, velY, len, ang, c, life) {
         this.x = x;
         this.y = y;
+        this.velX = velX;
+        this.velY = velY;
         this.len = len;
         this.ang = ang;
         this.color = c;
         this.life = life;
         this.active = true;
+
+        this.size = 3;
+
+        this.type = 1;
         
         this.cos = this.len * Math.cos(-this.ang);
         this.sin = this.len * Math.sin(-this.ang);
@@ -236,18 +285,25 @@ class Trail {
             this.active = false;
         }
 
-        this.x -= 0.1 * this.cos * dT;
-        this.y -= 0.1 * this.sin * dT;
+        this.x -= (0.1 * this.cos + this.velX) * dT;
+        this.y -= (0.1 * this.sin + this.velY) * dT;
     }
 
     Draw() {
         if (!this.active) { return; }
 
         ctx.strokeStyle = this.color;
-        ctx.beginPath();
-        ctx.moveTo(this.x - this.cos + offsetX, this.y - this.sin + offsetY);
-        ctx.lineTo(this.x + this.cos + offsetX, this.y + this.sin + offsetY);
-        ctx.closePath();
-        ctx.stroke();
+        if (this.type === 0) {
+            ctx.beginPath();
+            ctx.moveTo(this.x - this.cos + offsetX, this.y - this.sin + offsetY);
+            ctx.lineTo(this.x + this.cos + offsetX, this.y + this.sin + offsetY);
+            ctx.closePath();
+            ctx.stroke();
+        } else if (this.type === 1) {
+            ctx.beginPath();
+            ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
+            ctx.closePath();
+            ctx.stroke();
+        }
     }
 }
