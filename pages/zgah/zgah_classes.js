@@ -13,17 +13,20 @@ class Mouse {
 // entire Lerp duration has completed. Lerpers are stored in a global array and handled in the
 // main update function. The callback can also optionally have a second parameter that is only
 // given as "true" on the final call.
+// TODO: test this class
 class Lerper {
     constructor(dur, cb) {
         this.dur = dur;
         this.cb = cb;
         this.elapsed = 0;
+        this.active = true;
     }
 
     Tick(dT) {
         // On the final tick, call the callback with an argument of 1 = 100%.
         if (this.elapsed + dT > this.dur) {
             this.cb(1, true);
+            this.active = false;
             return;
         }
 
@@ -34,6 +37,23 @@ class Lerper {
     }
 }
 
+// Lurker is similar to lerper, but it will run continuously until the callback returns a value
+// of "false". At that point it will no longer call the callback.
+// TODO: test this class
+class Lurker {
+    constructor(cb) {
+        this.cb = cb;
+        this.active = true;
+    }
+
+    Tick(dT) {
+        if (!this.active) { return; }
+
+        this.active = this.cb(dT);
+    }
+}
+
+// Ship represents a player's ship.
 class Ship {
     constructor() {
         this.scale = 25;
@@ -54,13 +74,15 @@ class Ship {
         this.target = null;
 
         this.scanning = false;
-        this.scanFactor = 0.004;
+        this.scanFactor = 0.004 * 10;
         this.hitting = false;
-        this.hitFactor = 0.002;
+        this.hitFactor = 0.002 * 10;
 
         this.trailColor = "#662222";
 
         this.demoVel = 0.1;
+
+        this.scoreLossOnDeath = 20;
     }
 
     Impact(obj) {
@@ -77,7 +99,8 @@ class Ship {
 
             lerpers.push(new Lerper(2000, function (p, d) {
                 if (d) {
-                    Init();
+                    let min = score - playerShip.scoreLossOnDeath < 0 ? 0 : score - playerShip.scoreLossOnDeath;
+                    Init(min);
                 }
             }));
         }
@@ -288,6 +311,14 @@ class Asteroid {
                 this.active = false;
                 this.health = 0;
                 
+                let numP = this.size;
+                for (let i = 0; i < numP; i++) {
+                    trails.push(new Trail(this.x + (Math.random() * 4 - 2), 
+                        this.y + (Math.random() * 4 - 2), 
+                        (this.velX * Math.random()), (this.velY * Math.random()),
+                        3, Math.random() * 2 * Math.PI, this.color, 5000, 0.05));
+                }
+                
                 // TODO: make this a little better
 
                 if (this.size > this.minSize) {
@@ -296,6 +327,8 @@ class Asteroid {
                         objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
                             this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type));
                     }
+                } else {
+                    score += Math.floor(this.size);
                 }
             }
         }
@@ -361,7 +394,7 @@ class Asteroid {
 }
 
 class Trail {
-    constructor(x, y, velX, velY, len, ang, c, life) {
+    constructor(x, y, velX, velY, len, ang, c, life, angFac=0.1) {
         this.x = x;
         this.y = y;
         this.velX = velX;
@@ -371,6 +404,7 @@ class Trail {
         this.color = c;
         this.life = life;
         this.active = true;
+        this.angFac = angFac;
 
         this.size = 3;
 
@@ -389,8 +423,8 @@ class Trail {
             this.active = false;
         }
 
-        this.x -= (0.1 * this.cos + this.velX) * dT;
-        this.y -= (0.1 * this.sin + this.velY) * dT;
+        this.x -= (this.angFac * this.cos + this.velX) * dT;
+        this.y -= (this.angFac * this.sin + this.velY) * dT;
     }
 
     Draw(ctx) {

@@ -24,6 +24,7 @@ var playerShip = new Ship();
 var objects = [];
 var deadObjs = [];
 var lerpers = [];
+var lurkers = [];
 var trails = [];
 
 var score = 0;
@@ -48,7 +49,7 @@ for (let i = 0; i < 3000; i++) {
     objects.push(new Asteroid(x, y, 50*Math.random() + 10));
 }
 
-function Init() {
+function Init(s=0) {
     mouse = new Mouse();
     playerShip = new Ship();
     
@@ -56,7 +57,7 @@ function Init() {
     lerpers = [];
     trails = [];
     
-    score = 0;
+    score = s;
 
     offsetX = 0;
     offsetY = 0;
@@ -83,7 +84,6 @@ function Tick(dT) {
     for (let i = 0; i < objects.length; i++) {
         objects[i].Tick(dT);
 
-        // TODO "garbage collection"
         if (!objects[i].active) {
             if (!deadObjs.includes(i)) {
                 deadObjs.push(i);
@@ -97,6 +97,30 @@ function Tick(dT) {
 
     for (let i = 0; i < trails.length; i++) {
         trails[i].Tick(dT);
+    }
+
+    // Garbage collection
+    if (deadObjs.length > 0) {
+        objects.splice(deadObjs[0], 1);
+        deadObjs.splice(0, 1);
+    }
+    for (let i = 0; i < lerpers.length; i++) {
+        if (!lerpers[i].active) {
+            lerpers.splice(i, 1);
+            break;
+        }
+    }
+    for (let i = 0; i < lurkers.length; i++) {
+        if (!lurkers[i].active) {
+            lurkers.splice(i, 1);
+            break;
+        }
+    }
+    for (let i = 0; i < trails.length; i++) {
+        if (!trails[i].active) {
+            trails.splice(i, 1);
+            break;
+        }
     }
 }
 
@@ -133,6 +157,10 @@ function DrawStage() {
 }
 
 function DrawUI() {
+    context.font = "30px Verdana";
+    context.fillStyle = "#aaaacc";
+    let digs = score < 10 ? 1 : score < 100 ? 2 : score < 1000 ? 3 : 4;
+    context.fillText("" + score, WIDTH - digs*30, 30);
 }
 
 function Update() {
