@@ -60,7 +60,7 @@ class Ship {
         this.x = WIDTH/2;
         this.y = HEIGHT/2;
         this.angle = 0;
-        this.color = "red";
+        this.color = "#ff8888";
         this.active = true;
 
         this.turnSpeed = 0.002;
@@ -74,15 +74,29 @@ class Ship {
         this.target = null;
 
         this.scanning = false;
-        this.scanFactor = 0.004 * 10;
+        this.scanFactor = 0.004 * 100;
+        this.scanDist = 200;
+
         this.hitting = false;
-        this.hitFactor = 0.002 * 10;
+        this.hitFactor = 0.002 * 100;
+        this.hitDist = 200;
 
         this.trailColor = "#662222";
 
         this.demoVel = 0.1;
 
         this.scoreLossOnDeath = 20;
+    }
+
+    EnterGodMode() {
+        this.turnSpeed = 0.01;
+        this.moveSpeed = 0.001;
+        this.slowFactor = 0.001;
+        this.scanFactor = 1;
+        this.scanDist = 1000;
+        this.hitFactor = 1;
+        this.hitDist = 1000;
+        this.demoVel = 100;
     }
 
     Impact(obj) {
@@ -148,7 +162,7 @@ class Ship {
         if (this.target !== null) {
             if (this.target.scanpc < 1) {
                 let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
-                if (dist < 200 ) {
+                if (dist < this.scanDist) {
                     if (keys[81]) {
                         this.scanning = true;
 
@@ -157,7 +171,7 @@ class Ship {
                 }
             } else {
                 let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
-                if (dist < 200 ) {
+                if (dist < this.hitDist) {
                     if (keys[87]) {
                         this.hitting = true;
 
@@ -255,19 +269,23 @@ class Asteroid {
         this.visType = -1;
         this.type = t === null ? Math.floor(3*Math.random()) : t;
         this.color = "white";
+        this.explosionColor = "white";
         if (this.type === 0) {
             this.color = "#66bb66";
+            this.explosionColor = "#338833";
         } else if (this.type === 1) {
             this.color = "#6666aa";
+            this.explosionColor = "#333377";
         } else if (this.type === 2) {
             this.color = "#aaaa66";
+            this.explosionColor = "#777733";
         }
 
         this.scanpc = 0.0;
 
         this.health = 1.0;
 
-        this.minSize = 12;
+        this.minSize = 14;
 
         this.angles = [0];
         this.ds = [this.size];
@@ -316,10 +334,8 @@ class Asteroid {
                     trails.push(new Trail(this.x + (Math.random() * 4 - 2), 
                         this.y + (Math.random() * 4 - 2), 
                         (this.velX * Math.random()), (this.velY * Math.random()),
-                        3, Math.random() * 2 * Math.PI, this.color, 5000, 0.05));
+                        3, Math.random() * 2 * Math.PI, this.explosionColor, 5000, 0.05));
                 }
-                
-                // TODO: make this a little better
 
                 if (this.size > this.minSize) {
                     let num = Math.floor(Math.random()*2 + 2);

@@ -35,6 +35,9 @@ var devFrameTimer = 1000;
 var devFPS = 0;
 var devFPSDisplay = true;
 
+var devEndGame = false;
+var devGoal = 100;
+
 var offsetX = 0;
 var offsetY = 0;
 
@@ -122,6 +125,14 @@ function Tick(dT) {
             break;
         }
     }
+
+    // TODO: other stuff
+    if (!devEndGame) {
+        if (score > devGoal) {
+            devEndGame = true;
+            playerShip.EnterGodMode();
+        }
+    }
 }
 
 function Collision() {
@@ -157,10 +168,12 @@ function DrawStage() {
 }
 
 function DrawUI() {
-    context.font = "30px Verdana";
+    let fsize = 30;
+    context.font = "" + fsize + "px Verdana";
     context.fillStyle = "#aaaacc";
-    let digs = score < 10 ? 1 : score < 100 ? 2 : score < 1000 ? 3 : 4;
-    context.fillText("" + score, WIDTH - digs*30, 30);
+    let txt = "" + score + "/" + devGoal;
+    let wid = context.measureText(txt).width + 5;
+    context.fillText(txt, WIDTH - wid, fsize);
 }
 
 function Update() {
