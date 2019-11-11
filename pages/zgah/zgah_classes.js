@@ -56,7 +56,7 @@ class Lurker {
 // Ship represents a player's ship.
 class Ship {
     constructor() {
-        this.scale = 25;
+        this.size = 25;
         this.x = WIDTH/2;
         this.y = HEIGHT/2;
         this.angle = 0;
@@ -64,7 +64,11 @@ class Ship {
         this.active = true;
 
         this.turnSpeed = 0.002;
+        this.turnSpeedUpgradeFactor = 1.01;
+
         this.moveSpeed = 0.0005;
+        this.moveSpeedUpgradeFactor = 1.005;
+
         this.minAngle = 0.02;
         this.slowFactor = 0.0005;
 
@@ -74,12 +78,19 @@ class Ship {
         this.target = null;
 
         this.scanning = false;
-        this.scanFactor = 0.004 * 100;
-        this.scanDist = 200;
+        this.scanFactor = 0.004 * 1; // TODO: remove adjustment
+        this.scanUpgradeFactor = 1.008;
+        this.scanDist = 150;
+        this.scanDistUpgradeFactor = 1.008;
 
         this.hitting = false;
-        this.hitFactor = 0.002 * 100;
-        this.hitDist = 200;
+        this.hitFactor = 0.002 * 1; // TODO: remove adjustment
+        this.hitUpgradeFactor = 1.006;
+        this.hitDist = 125;
+        this.hitDistUpgradeFactor = 1.006;
+
+        this.attractDist = 200;
+        this.attractDistUpgradeFactor = 1.005;
 
         this.trailColor = "#662222";
 
@@ -96,7 +107,26 @@ class Ship {
         this.scanDist = 1000;
         this.hitFactor = 1;
         this.hitDist = 1000;
+        this.attractDist = 1000;
         this.demoVel = 100;
+    }
+
+    // Used for collecting Materials.
+    // @param t (int): type of material collected
+    Collect(t) {
+        if (t === 0) {
+            this.scanDist *= this.scanDistUpgradeFactor;
+            this.scanFactor *= this.scanUpgradeFactor;
+        } else if (t === 1) {
+            this.hitDist *= this.hitDistUpgradeFactor;
+            this.hitFactor *= this.hitUpgradeFactor;
+        } else if (t === 2) {
+            this.turnSpeed *= this.turnSpeedUpgradeFactor;
+        } else if (t === 3) {
+            this.attractDist *= this.attractDistUpgradeFactor;
+        } else if (t === 4) {
+            this.moveSpeed *= this.moveSpeedUpgradeFactor;
+        }
     }
 
     Impact(obj) {
@@ -161,22 +191,22 @@ class Ship {
         this.hitting = false;
         if (this.target !== null) {
             if (this.target.scanpc < 1) {
-                let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
-                if (dist < this.scanDist) {
-                    if (keys[81]) {
+                if (keys[81]) {
+                    let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
+                    if (dist < this.scanDist) {
                         this.scanning = true;
 
                         this.target.Scan(dT * this.scanFactor);
                     }
                 }
-            } else {
+            }
+
+            if (keys[87]) {
                 let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
                 if (dist < this.hitDist) {
-                    if (keys[87]) {
-                        this.hitting = true;
+                    this.hitting = true;
 
-                        this.target.Hit(dT * this.hitFactor);
-                    }
+                    this.target.Hit(dT * this.hitFactor);
                 }
             }
         }
@@ -192,15 +222,43 @@ class Ship {
 
         ctx.strokeStyle = this.color;
         ctx.beginPath();
-        ctx.moveTo(this.x + this.scale*Math.cos(this.angle), this.y - this.scale*Math.sin(this.angle));
-        ctx.lineTo(this.x + this.scale*3/4*Math.cos(this.angle + q), this.y - this.scale*3/4*Math.sin(this.angle + q));
-        ctx.lineTo(this.x + this.scale*1/6*Math.cos(this.angle + Math.PI), this.y - this.scale*1/6*Math.sin(this.angle + Math.PI));
-        ctx.lineTo(this.x + this.scale*3/4*Math.cos(this.angle - q), this.y - this.scale*3/4*Math.sin(this.angle - q));
+        ctx.moveTo(this.x + this.size*Math.cos(this.angle), this.y - this.size*Math.sin(this.angle));
+        ctx.lineTo(this.x + this.size*3/4*Math.cos(this.angle + q), this.y - this.size*3/4*Math.sin(this.angle + q));
+        ctx.lineTo(this.x + this.size*1/6*Math.cos(this.angle + Math.PI), this.y - this.size*1/6*Math.sin(this.angle + Math.PI));
+        ctx.lineTo(this.x + this.size*3/4*Math.cos(this.angle - q), this.y - this.size*3/4*Math.sin(this.angle - q));
         ctx.closePath();
         ctx.stroke();
 
+        // Prepare for drawing distances around the ship.
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 5]);
+
+        // Draw the "scan" distance
+        ctx.strokeStyle = "#050511";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.scanDist, 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Draw the "hit" distance
+        ctx.strokeStyle = "#110505";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.hitDist, 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Draw the "attract" distance
+        ctx.strokeStyle = "#070707";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.attractDist, 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Go back to normal drawing type
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+
         if (this.target !== null) {
-            // DEBUG: draw a highlight if cursor is hovering.
             let l = this.target.x + offsetX - this.target.size - 2;
             let r = this.target.x + offsetX + this.target.size + 2;
             let t = this.target.y + offsetY - this.target.size - 2;
@@ -223,7 +281,7 @@ class Ship {
             ctx.closePath();
             ctx.stroke();
 
-            if (this.target.scanpc < 1) {
+            if (this.target.lastAction === "scan") {
                 let barwidth = 60;
                 ctx.fillStyle = "blue";
                 ctx.fillRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth * this.target.scanpc, 10);
@@ -231,13 +289,12 @@ class Ship {
                 ctx.strokeRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth, 10);
             } else if (this.target.health > 0) {
                 let barwidth = 60;
-                ctx.fillStyle = this.target.color;
+                ctx.fillStyle = "red";
                 ctx.fillRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth * this.target.health, 10);
                 ctx.strokeStyle = "white";
                 ctx.strokeRect(this.target.x + offsetX - barwidth/2, t - 14, barwidth, 10);
             }
 
-            // DEBUG: scan to asteroid
             if (this.scanning) {
                 ctx.strokeStyle = "blue";
                 ctx.beginPath();
@@ -261,25 +318,17 @@ class Asteroid {
     constructor(x, y, s, t=null) {
         this.x = x;
         this.y = y;
-        this.velM = 0.8;
+        this.velM = 0.08;
         this.velX = this.velM * Math.random() - this.velM/2;
         this.velY = this.velM * Math.random() - this.velM/2;
         this.size = s;
         this.active = true;
         this.visType = -1;
-        this.type = t === null ? Math.floor(3*Math.random()) : t;
-        this.color = "white";
-        this.explosionColor = "white";
-        if (this.type === 0) {
-            this.color = "#66bb66";
-            this.explosionColor = "#338833";
-        } else if (this.type === 1) {
-            this.color = "#6666aa";
-            this.explosionColor = "#333377";
-        } else if (this.type === 2) {
-            this.color = "#aaaa66";
-            this.explosionColor = "#777733";
-        }
+        this.type = t === null ? Math.floor(5*Math.random()) : t;
+        this.color = ColorsForType(this.type)[0];
+        this.explosionColor = ColorsForType(this.type)[1];
+
+        this.lastAction = "scan"; // could be scan or hit
 
         this.scanpc = 0.0;
 
@@ -290,7 +339,10 @@ class Asteroid {
         this.angles = [0];
         this.ds = [this.size];
 
-        this.rotRate = 0.02 * Math.random();
+        this.rotRate = 0.0015 * Math.random();
+
+        this.targetFactor = 2;
+        this.minTargetDistance = 50;
         
         let i = 0;
 
@@ -305,11 +357,10 @@ class Asteroid {
     }
 
     Scan(amt) {
-        
-        // TODO: scanning perhaps should include size of asteroid as a factor
-
         if (this.scanpc < 1) {
             this.scanpc += amt / this.size;
+
+            this.lastAction = "scan";
             
             if (this.scanpc >= 1) {
                 this.type = this.visType = this.type;
@@ -319,11 +370,10 @@ class Asteroid {
     }
 
     Hit(amt) {
-
-        // TODO: hit should DEFINITELY be a factor of size
-
         if (this.health > 0) {
             this.health -= amt / this.size;
+
+            this.lastAction = "hit";
 
             if (this.health < 0) {
                 this.active = false;
@@ -340,11 +390,15 @@ class Asteroid {
                 if (this.size > this.minSize) {
                     let num = Math.floor(Math.random()*2 + 2);
                     for (let i = 0; i < num; i++) {
-                        objects.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
+                        asteroids.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
                             this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type));
                     }
                 } else {
-                    score += Math.floor(this.size);
+                    let numM = this.size;
+                    for (let i = 0; i < numM; i++) {
+                        materials.push(new Material(this.x + 2*this.size * Math.random() - this.size,
+                            this.y + 2*this.size * Math.random() - this.size, this.type));
+                    }
                 }
             }
         }
@@ -365,16 +419,16 @@ class Asteroid {
 
         // DEBUG: targeting
         let dist = Distance(this.x + offsetX, this.y + offsetY, mouse.x, mouse.y);
-        if (dist < this.size) {
+        if (dist < this.minTargetDistance || dist < this.size * this.targetFactor) {
             playerShip.target = this;
         }
 
         for (let i = 0; i < this.angles.length; i++) {
-            this.angles[i] += this.rotRate;
+            this.angles[i] += this.rotRate * dT;
         }
 
-        this.x += this.velX;
-        this.y += this.velY;
+        this.x += this.velX * dT;
+        this.y += this.velY * dT;
     }
     
     Draw(ctx) {
@@ -388,13 +442,6 @@ class Asteroid {
             } else {
                 ctx.strokeStyle = "white";
             }
-
-            /* TODO: remove old way
-            ctx.beginPath();
-            ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
-            ctx.closePath();
-            ctx.stroke();
-            */
 
             ctx.beginPath();
             ctx.moveTo(this.x + this.ds[0] * Math.cos(this.angles[0]) + offsetX, 
@@ -422,7 +469,7 @@ class Trail {
         this.active = true;
         this.angFac = angFac;
 
-        this.size = 3;
+        this.size = 2;
 
         this.type = 1;
         
@@ -459,5 +506,69 @@ class Trail {
             ctx.closePath();
             ctx.stroke();
         }
+    }
+}
+
+class Material {
+    constructor(x, y, t) {
+        this.x = x;
+        this.y = y;
+        this.type = t;
+        this.color = ColorsForType(this.type)[0];
+        this.size = 3;
+        this.active = true;
+
+        this.moveSpeed = 0.1;
+        this.minMove = 0.05;
+    }
+
+    Tick(dT) {
+        if (!this.active) { return; }
+
+        let d = Distance(this.x + offsetX, this.y + offsetY, playerShip.x, playerShip.y);
+        if (d < playerShip.size/2) {
+            this.active = false;
+            score += 1;
+            playerShip.Collect(this.type);
+        } else if (d < playerShip.attractDist) {
+            let dx = playerShip.x - (this.x + offsetX) + this.minMove;
+            let dy = playerShip.y - (this.y + offsetY) + this.minMove;
+            let mag = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+
+            this.x += this.moveSpeed * dx/mag * dT;
+            this.y += this.moveSpeed * dy/mag * dT;
+        }
+    }
+
+    Draw(ctx) {
+        if (!this.active) { return; }
+
+        ctx.strokeStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.stroke();
+    }
+}
+
+class Star {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = Math.floor(2*Math.random() + 1.1);
+        this.moveFactor = 0.15;
+
+        let d = 4;
+        let b = 9;
+        let p = Math.floor(Math.random() * (b - d) + d);
+        this.color = "#";
+        for (let i = 0; i < 6; i++) {
+            this.color += ("" + b);
+        }
+    }
+
+    Draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x + offsetX*this.moveFactor, this.y + offsetY*this.moveFactor, this.size, this.size);
     }
 }
