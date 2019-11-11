@@ -19,7 +19,7 @@ var WIDTH = canvas.width;
 var HEIGHT = canvas.height;
 
 var mouse = new Mouse();
-var playerShip = new Ship();
+var playerShip = null;
 
 var asteroids = [];
 var deadObjs = [];
@@ -27,6 +27,8 @@ var lerpers = [];
 var lurkers = [];
 var trails = [];
 var materials = [];
+
+var uiButtons = [];
 
 var stars = [];
 
@@ -49,39 +51,215 @@ var devGoal = 100 * 2; // TODO: remove adjustment
 var offsetX = 0;
 var offsetY = 0;
 
-Init();
+Init(0, "shipSelect");
 
-function Init(s=0) {
-    mouse = new Mouse();
-    playerShip = new Ship();
-    
-    asteroids = [];
-    lerpers = [];
-    trails = [];
-    
-    score = s;
-
-    offsetX = 0;
-    offsetY = 0;
-
-    for (let i = 0; i < 3000; i++) {
-        let x = Math.random() * canvas.width*20 - canvas.width*10;
-        let y = Math.random() * canvas.height*20 - canvas.height*10;
+function Init(s=0, m="randomField", t=0) {
+    if (m === "randomField") {
+        mouse = new Mouse();
+        playerShip = new Ship(t);
         
-        // Don't spawn asteroids on the player
-        while (Math.abs(x - canvas.width/2) < 100) { x += 20*Math.random(); }
-        while (Math.abs(y - canvas.height/2) < 100) { y += 20*Math.random(); }
+        asteroids = [];
+        deadObjs = [];
+        lerpers = [];
+        lurkers = [];
+        trails = [];
+        materials = [];
 
-        asteroids.push(new Asteroid(x, y, 50*Math.random() + 10));
-    }
-
-    for (let i = 0; i < 2000; i++) {
-        let x = Math.random() * canvas.width*10 - canvas.width*5;
-        let y = Math.random() * canvas.height*10 - canvas.height*5;
+        uiButtons = [];
         
-        // Don't spawn asteroids on the player
+        score = s;
 
-        stars.push(new Star(x, y));
+        offsetX = 0;
+        offsetY = 0;
+
+        for (let i = 0; i < 3000; i++) {
+            let x = Math.random() * canvas.width*20 - canvas.width*10;
+            let y = Math.random() * canvas.height*20 - canvas.height*10;
+            
+            // Don't spawn asteroids on the player
+            while (Math.abs(x - canvas.width/2) < 100) { x += 20*Math.random(); }
+            while (Math.abs(y - canvas.height/2) < 100) { y += 20*Math.random(); }
+
+            asteroids.push(new Asteroid(x, y, 50*Math.random() + 10));
+        }
+
+        for (let i = 0; i < 2000; i++) {
+            let x = Math.random() * canvas.width*10 - canvas.width*5;
+            let y = Math.random() * canvas.height*10 - canvas.height*5;
+            
+            // Don't spawn asteroids on the player
+
+            stars.push(new Star(x, y));
+        }
+    } else if (m === "same") {
+        playerShip = new Ship(t);
+        
+        uiButtons = [];
+        
+        score = s;
+
+        offsetX = 0;
+        offsetY = 0;
+    } else if (m === "shipSelect") {
+        uiButtons.push(new UIButton(WIDTH/4 - 20, HEIGHT/2, WIDTH/4 - 20, HEIGHT*3/4, 0, function (ctx) {
+            ctx.strokeStyle = "#c72422";
+            ctx.lineWidth = 4;
+
+            let q = Math.PI*11/16;
+
+            let s = 100;
+            s *= this.hover ? 1.05 : 1;
+            let a = Math.PI/4
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + s*Math.cos(a), this.y - s*Math.sin(a));
+            ctx.lineTo(this.x + s*3/4*Math.cos(a + q), this.y - s*3/4*Math.sin(a + q));
+            ctx.lineTo(this.x + s*1/6*Math.cos(a + Math.PI), this.y - s*1/6*Math.sin(a + Math.PI));
+            ctx.lineTo(this.x + s*3/4*Math.cos(a - q), this.y - s*3/4*Math.sin(a - q));
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.lineWidth = 2;
+            
+            let fsize = 24;
+            fsize *= this.hover ? 1.05 : 1
+            ctx.font = "" + fsize + "px Verdana";
+            ctx.fillStyle = "white";
+
+            let txt = "Standard";
+            let wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y - this.h/4, this.w);
+            
+            fsize = 18;
+            fsize *= this.hover ? 1.05 : 1;
+            ctx.font = "" + fsize + "px Verdana";
+            
+            txt = " - average speed";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4, this.w);
+            
+            txt = " - average mining";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*2, this.w);
+
+            txt = " - average scanning";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*4, this.w);
+        }));
+        uiButtons.push(new UIButton(WIDTH/2, HEIGHT/2, WIDTH/4 - 20, HEIGHT*3/4, 1, function (ctx) {
+            ctx.strokeStyle = "#923acc";
+            ctx.lineWidth = 4;
+
+            let qf = Math.PI*3/16;
+            let ff = 3/4;
+            let qr = Math.PI*11/16
+            let fr = 7/8;
+            let fe = 1/8;
+
+            let s = 100;
+            s *= this.hover ? 1.05 : 1;
+            let a = Math.PI/2;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + s*Math.cos(a), this.y - s*Math.sin(a));
+            ctx.lineTo(this.x + s*ff*Math.cos(a + qf), this.y - s*ff*Math.sin(a + qf));
+            ctx.lineTo(this.x + s*fr*Math.cos(a + qr), this.y - s*fr*Math.sin(a + qr));
+            ctx.lineTo(this.x + s*fe*Math.cos(a + Math.PI), this.y - s*fe*Math.sin(a + Math.PI));
+            ctx.lineTo(this.x + s*fr*Math.cos(a - qr), this.y - s*fr*Math.sin(a - qr));
+            ctx.lineTo(this.x + s*ff*Math.cos(a - qf), this.y - s*ff*Math.sin(a - qf));
+            ctx.closePath();
+            ctx.stroke();
+            
+            ctx.lineWidth = 2;
+            
+            let fsize = 24;
+            fsize *= this.hover ? 1.05 : 1;
+            ctx.font = "" + fsize + "px Verdana";
+            ctx.fillStyle = "white";
+
+            let txt = "Miner";
+            let wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y - this.h/4, this.w);
+            
+            fsize = 18;
+            fsize *= this.hover ? 1.05 : 1;
+            ctx.font = "" + fsize + "px Verdana";
+            
+            txt = " - slow speed";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4, this.w);
+            
+            txt = " - good mining";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*2, this.w);
+
+            txt = " - poor scanning";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*4, this.w);
+        }));
+        uiButtons.push(new UIButton(WIDTH*3/4 + 20, HEIGHT/2, WIDTH/4 - 20, HEIGHT*3/4, 2, function (ctx) {
+            ctx.strokeStyle = "#cf5e2a";
+            ctx.lineWidth = 4;
+
+            let qf = Math.PI*3/8;
+            let ff = 1/2;
+            let qf2 = Math.PI*1/4;
+            let ff2 = 3/4;
+            let qs = Math.PI*1/2;
+            let fs = 3/4;
+            let qr = Math.PI*11/16
+            let fr = 7/8;
+            let qb = Math.PI*11/16;
+            let fb = 3/8;
+            let fe = 5/8;
+
+            let s = 100;
+            s *= this.hover ? 1.05 : 1;
+            let a = Math.PI*3/4;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + s*Math.cos(a), this.y - s*Math.sin(a));
+            ctx.lineTo(this.x + s*ff*Math.cos(a + qf), this.y - s*ff*Math.sin(a + qf));
+            ctx.lineTo(this.x + s*ff2*Math.cos(a + qf2), this.y - s*ff2*Math.sin(a + qf2));
+            ctx.lineTo(this.x + s*fs*Math.cos(a + qs), this.y - s*fs*Math.sin(a + qs));
+            ctx.lineTo(this.x + s*fr*Math.cos(a + qr), this.y - s*fr*Math.sin(a + qr));
+            ctx.lineTo(this.x + s*fb*Math.cos(a + qb), this.y - s*fb*Math.sin(a + qb));
+            ctx.lineTo(this.x + s*fe*Math.cos(a + Math.PI), this.y - s*fe*Math.sin(a + Math.PI));
+            ctx.lineTo(this.x + s*fb*Math.cos(a - qb), this.y - s*fb*Math.sin(a - qb));
+            ctx.lineTo(this.x + s*fr*Math.cos(a - qr), this.y - s*fr*Math.sin(a - qr));
+            ctx.lineTo(this.x + s*fs*Math.cos(a - qs), this.y - s*fs*Math.sin(a - qs));
+            ctx.lineTo(this.x + s*ff2*Math.cos(a - qf2), this.y - s*ff2*Math.sin(a - qf2));
+            ctx.lineTo(this.x + s*ff*Math.cos(a - qf), this.y - s*ff*Math.sin(a - qf));
+            ctx.closePath();
+            ctx.stroke();
+            
+            ctx.lineWidth = 2;
+
+            let fsize = 24;
+            fsize *= this.hover ? 1.05 : 1;
+            ctx.font = "" + fsize + "px Verdana";
+            ctx.fillStyle = "white";
+
+            let txt = "Scout";
+            let wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y - this.h/4, this.w);
+            
+            fsize = 18;
+            fsize *= this.hover ? 1.05 : 1;
+            ctx.font = "" + fsize + "px Verdana";
+            
+            txt = " - fast speed";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4, this.w);
+            
+            txt = " - good scanning";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*2, this.w);
+
+            txt = " - poor mining";
+            wid = ctx.measureText(txt).width;
+            ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*4, this.w);
+        }));
     }
 }
 
@@ -110,7 +288,9 @@ function ColorsForType(t) {
 }
 
 function Tick(dT) {
-    playerShip.Tick(dT);
+    if (playerShip) {
+        playerShip.Tick(dT);
+    }
 
     for (let i = 0; i < asteroids.length; i++) {
         asteroids[i].Tick(dT);
@@ -164,7 +344,7 @@ function Tick(dT) {
         }
     }
 
-    // TODO: other stuff
+    // TODO: other dev stuff
     if (!devEndGame) {
         if (score > devGoal) {
             devEndGame = true;
@@ -205,7 +385,9 @@ function DrawStage() {
         stars[i].Draw(context);
     }
 
-    playerShip.Draw(context);
+    if (playerShip) {
+        playerShip.Draw(context);
+    }
 
     for (let i = 0; i < asteroids.length; i++) {
         asteroids[i].Draw(context);
@@ -221,33 +403,35 @@ function DrawStage() {
 }
 
 function DrawUI() {
-    let fsize = 30;
-    let pad = 5;
-    
-    context.font = "" + fsize + "px Verdana";
-    let txt = "Materials: " + score + "/" + devGoal;
-    let wid = context.measureText(txt).width + pad;
+    if (playerShip) {
+        let fsize = 30;
+        let pad = 5;
 
-    context.fillStyle = "#827eeb";
-    context.beginPath();
-    context.moveTo(WIDTH, 0);
-    context.lineTo(WIDTH, fsize+pad+4)
-    context.lineTo(WIDTH - (wid+pad*2+4), fsize+pad+4);
-    context.lineTo(WIDTH - (wid+pad*2+20+4), 0);
-    context.closePath();
-    context.fill();
+        context.font = "" + fsize + "px Verdana";
+        let txt = "Materials: " + score + "/" + devGoal;
+        let wid = context.measureText(txt).width + pad;
 
-    context.fillStyle = "#6d69d6";
-    context.beginPath();
-    context.moveTo(WIDTH, 0);
-    context.lineTo(WIDTH, fsize+pad)
-    context.lineTo(WIDTH - (wid+pad*2), fsize+pad);
-    context.lineTo(WIDTH - (wid+pad*2+20), 0);
-    context.closePath();
-    context.fill();
+        context.fillStyle = "#827eeb";
+        context.beginPath();
+        context.moveTo(WIDTH, 0);
+        context.lineTo(WIDTH, fsize+pad+4)
+        context.lineTo(WIDTH - (wid+pad*2+4), fsize+pad+4);
+        context.lineTo(WIDTH - (wid+pad*2+20+4), 0);
+        context.closePath();
+        context.fill();
 
-    context.fillStyle = "#dddddd";
-    context.fillText(txt, WIDTH - wid, fsize);
+        context.fillStyle = "#6d69d6";
+        context.beginPath();
+        context.moveTo(WIDTH, 0);
+        context.lineTo(WIDTH, fsize+pad)
+        context.lineTo(WIDTH - (wid+pad*2), fsize+pad);
+        context.lineTo(WIDTH - (wid+pad*2+20), 0);
+        context.closePath();
+        context.fill();
+
+        context.fillStyle = "#dddddd";
+        context.fillText(txt, WIDTH - wid, fsize);
+    }
 
     if (devFPSDisplay) {
         context.fillStyle = "#222240";
@@ -272,11 +456,15 @@ function DrawUI() {
     }
 
     if (devGodModeDisplay) {
-        if (playerShip.scanFactor > 0.9) {
+        if (playerShip && playerShip.scanFactor > 0.9) {
             context.font = "12px Verdana";
             context.fillStyle = "#aaddaa";
             context.fillText("God Mod Enabled", 0, 10);
         }
+    }
+
+    for (let i = 0; i < uiButtons.length; i++) {
+        uiButtons[i].Draw(context);
     }
 }
 
@@ -320,6 +508,10 @@ document.addEventListener("keyup", function (evt) {
 canvas.addEventListener("mousemove", function (evt) {
     mouse.x = evt.x;
     mouse.y = evt.y;
+
+    for (let i = 0; i < uiButtons.length; i++) {
+        uiButtons[i].Hover(mouse.x, mouse.y);
+    }
 }, false);
 
 canvas.addEventListener("mousedown", function (evt) {
@@ -328,4 +520,8 @@ canvas.addEventListener("mousedown", function (evt) {
 
 canvas.addEventListener("mouseup", function (evt) {
     mouse.down = false;
+    
+    for (let i = 0; i < uiButtons.length; i++) {
+        uiButtons[i].Click(mouse.x, mouse.y);
+    }
 }, false);

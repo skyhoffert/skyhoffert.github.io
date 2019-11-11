@@ -173,7 +173,7 @@ class Ship {
             lerpers.push(new Lerper(2000, function (p, d) {
                 if (d) {
                     let min = score - playerShip.scoreLossOnDeath < 0 ? 0 : score - playerShip.scoreLossOnDeath;
-                    Init(min);
+                    Init(min, "same", playerShip.type);
                 }
             }));
         }
@@ -389,7 +389,7 @@ class Ship {
 }
 
 class Asteroid {
-    constructor(x, y, s, t=null) {
+    constructor(x, y, s, t=null, known=false) {
         this.x = x;
         this.y = y;
         this.velM = 0.08;
@@ -399,7 +399,7 @@ class Asteroid {
         this.active = true;
         this.type = t === null ? Math.floor(5*Math.random()) : t;
         this.color = "white";
-        this.explosionColor = "white";
+        this.explosionColor = "#aaaaaa";
 
         this.lastAction = "scan"; // could be scan or hit
 
@@ -427,6 +427,13 @@ class Asteroid {
 
         this.angles.splice(this.angles.length-1, 1);
         this.ds.splice(this.ds.length-1);
+        
+        if (known) {
+            this.scanpc = 1;
+            this.lastAction = "hit";
+            this.color = ColorsForType(this.type)[0];
+            this.explosionColor = ColorsForType(this.type)[1];
+        }
     }
 
     Scan(amt) {
@@ -467,7 +474,7 @@ class Asteroid {
                     let num = Math.floor(Math.random()*2 + 2);
                     for (let i = 0; i < num; i++) {
                         asteroids.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
-                            this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type));
+                            this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type, true));
                     }
                 } else {
                     let numM = this.size;
@@ -642,5 +649,43 @@ class Star {
     Draw(ctx) {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x + offsetX*this.moveFactor, this.y + offsetY*this.moveFactor, this.size, this.size);
+    }
+}
+
+class UIButton {
+    constructor(x, y, w, h, st, dm=function(ctx){}) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.bgColor = "#101010";
+        this.hover = false;
+
+        this.shipType = st;
+
+        this.drawMore = dm;
+    }
+
+    Hover(x, y) {
+        this.hover = false;
+        if (x > this.x - this.w/2 && x < this.x + this.w/2 &&
+            y > this.y - this.h/2 && y < this.y + this.h/2) {
+            this.hover = true;
+        }
+    }
+
+    Click(x, y) {
+        if (x > this.x - this.w/2 && x < this.x + this.w/2 &&
+            y > this.y - this.h/2 && y < this.y + this.h/2) {
+            Init(0, "randomField", this.shipType);
+        }
+    }
+
+    Draw(ctx) {
+        let fac = this.hover ? 1.05 : 1;
+        ctx.fillStyle = this.bgColor;
+        ctx.fillRect(this.x - fac*this.w/2, this.y - fac*this.h/2, fac*this.w, fac*this.h);
+
+        this.drawMore(ctx);
     }
 }
