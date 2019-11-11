@@ -55,14 +55,23 @@ class Lurker {
 
 // Ship represents a player's ship.
 class Ship {
-    constructor() {
+    constructor(t=0) {
         this.size = 25;
         this.x = WIDTH/2;
         this.y = HEIGHT/2;
         this.angle = 0;
-        this.color = "#ff8888";
         this.active = true;
+        this.type = t;
 
+        if (this.type === 0) {
+            this.color = "#c72422";
+        } else if (this.type === 1) {
+            this.color = "#923acc";
+        } else if (this.type === 2) {
+            this.color = "#cf5e2a";
+        }
+
+        // Set traits to average (type === 0)
         this.turnSpeed = 0.002;
         this.turnSpeedUpgradeFactor = 1.01;
 
@@ -97,6 +106,26 @@ class Ship {
         this.demoVel = 0.1;
 
         this.scoreLossOnDeath = 20;
+
+        if (this.type === 1) {
+            this.turnSpeed = 0.001;
+            this.moveSpeed = 0.00025;
+            this.scanFactor = 0.002;
+            this.scanDist = 125;
+            this.slowFactor = 0.001;
+            this.hitFactor = 0.004;
+            this.hitDist = 135;
+            this.attractDist = 190;
+        } else if (this.type === 2) {
+            this.turnSpeed = 0.003;
+            this.moveSpeed = 0.001;
+            this.scanFactor = 0.006;
+            this.scanDist = 175;
+            this.slowFactor = 0.00025;
+            this.hitFactor = 0.001;
+            this.hitDist = 100;
+            this.attractDist = 220;
+        }
     }
 
     EnterGodMode() {
@@ -217,20 +246,66 @@ class Ship {
     Draw(ctx) {
         if (!this.active) { return; }
 
-        // q is the offset to the rear points
-        let q = Math.PI*11/16;
-
+        // Draw the ship. Depends on type.
         ctx.strokeStyle = this.color;
-        ctx.beginPath();
-        ctx.moveTo(this.x + this.size*Math.cos(this.angle), this.y - this.size*Math.sin(this.angle));
-        ctx.lineTo(this.x + this.size*3/4*Math.cos(this.angle + q), this.y - this.size*3/4*Math.sin(this.angle + q));
-        ctx.lineTo(this.x + this.size*1/6*Math.cos(this.angle + Math.PI), this.y - this.size*1/6*Math.sin(this.angle + Math.PI));
-        ctx.lineTo(this.x + this.size*3/4*Math.cos(this.angle - q), this.y - this.size*3/4*Math.sin(this.angle - q));
-        ctx.closePath();
-        ctx.stroke();
+        if (this.type === 0) {
+            // q is the offset to the rear points
+            let q = Math.PI*11/16;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.size*Math.cos(this.angle), this.y - this.size*Math.sin(this.angle));
+            ctx.lineTo(this.x + this.size*3/4*Math.cos(this.angle + q), this.y - this.size*3/4*Math.sin(this.angle + q));
+            ctx.lineTo(this.x + this.size*1/6*Math.cos(this.angle + Math.PI), this.y - this.size*1/6*Math.sin(this.angle + Math.PI));
+            ctx.lineTo(this.x + this.size*3/4*Math.cos(this.angle - q), this.y - this.size*3/4*Math.sin(this.angle - q));
+            ctx.closePath();
+            ctx.stroke();
+        } else if (this.type === 1) {
+            let qf = Math.PI*3/16;
+            let ff = 3/4;
+            let qr = Math.PI*11/16
+            let fr = 7/8;
+            let fe = 1/8;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.size*Math.cos(this.angle), this.y - this.size*Math.sin(this.angle));
+            ctx.lineTo(this.x + this.size*ff*Math.cos(this.angle + qf), this.y - this.size*ff*Math.sin(this.angle + qf));
+            ctx.lineTo(this.x + this.size*fr*Math.cos(this.angle + qr), this.y - this.size*fr*Math.sin(this.angle + qr));
+            ctx.lineTo(this.x + this.size*fe*Math.cos(this.angle + Math.PI), this.y - this.size*fe*Math.sin(this.angle + Math.PI));
+            ctx.lineTo(this.x + this.size*fr*Math.cos(this.angle - qr), this.y - this.size*fr*Math.sin(this.angle - qr));
+            ctx.lineTo(this.x + this.size*ff*Math.cos(this.angle - qf), this.y - this.size*ff*Math.sin(this.angle - qf));
+            ctx.closePath();
+            ctx.stroke();
+        } else if (this.type === 2) {
+            let qf = Math.PI*3/8;
+            let ff = 1/2;
+            let qf2 = Math.PI*1/4;
+            let ff2 = 3/4;
+            let qs = Math.PI*1/2;
+            let fs = 3/4;
+            let qr = Math.PI*11/16
+            let fr = 7/8;
+            let qb = Math.PI*11/16;
+            let fb = 3/8;
+            let fe = 5/8;
+
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.size*Math.cos(this.angle), this.y - this.size*Math.sin(this.angle));
+            ctx.lineTo(this.x + this.size*ff*Math.cos(this.angle + qf), this.y - this.size*ff*Math.sin(this.angle + qf));
+            ctx.lineTo(this.x + this.size*ff2*Math.cos(this.angle + qf2), this.y - this.size*ff2*Math.sin(this.angle + qf2));
+            ctx.lineTo(this.x + this.size*fs*Math.cos(this.angle + qs), this.y - this.size*fs*Math.sin(this.angle + qs));
+            ctx.lineTo(this.x + this.size*fr*Math.cos(this.angle + qr), this.y - this.size*fr*Math.sin(this.angle + qr));
+            ctx.lineTo(this.x + this.size*fb*Math.cos(this.angle + qb), this.y - this.size*fb*Math.sin(this.angle + qb));
+            ctx.lineTo(this.x + this.size*fe*Math.cos(this.angle + Math.PI), this.y - this.size*fe*Math.sin(this.angle + Math.PI));
+            ctx.lineTo(this.x + this.size*fb*Math.cos(this.angle - qb), this.y - this.size*fb*Math.sin(this.angle - qb));
+            ctx.lineTo(this.x + this.size*fr*Math.cos(this.angle - qr), this.y - this.size*fr*Math.sin(this.angle - qr));
+            ctx.lineTo(this.x + this.size*fs*Math.cos(this.angle - qs), this.y - this.size*fs*Math.sin(this.angle - qs));
+            ctx.lineTo(this.x + this.size*ff2*Math.cos(this.angle - qf2), this.y - this.size*ff2*Math.sin(this.angle - qf2));
+            ctx.lineTo(this.x + this.size*ff*Math.cos(this.angle - qf), this.y - this.size*ff*Math.sin(this.angle - qf));
+            ctx.closePath();
+            ctx.stroke();
+        }
 
         // Prepare for drawing distances around the ship.
-        ctx.lineWidth = 2;
         ctx.setLineDash([10, 5]);
 
         // Draw the "scan" distance
@@ -255,7 +330,6 @@ class Ship {
         ctx.stroke();
 
         // Go back to normal drawing type
-        ctx.lineWidth = 2;
         ctx.setLineDash([]);
 
         if (this.target !== null) {
@@ -323,10 +397,9 @@ class Asteroid {
         this.velY = this.velM * Math.random() - this.velM/2;
         this.size = s;
         this.active = true;
-        this.visType = -1;
         this.type = t === null ? Math.floor(5*Math.random()) : t;
-        this.color = ColorsForType(this.type)[0];
-        this.explosionColor = ColorsForType(this.type)[1];
+        this.color = "white";
+        this.explosionColor = "white";
 
         this.lastAction = "scan"; // could be scan or hit
 
@@ -363,8 +436,11 @@ class Asteroid {
             this.lastAction = "scan";
             
             if (this.scanpc >= 1) {
-                this.type = this.visType = this.type;
                 this.scanpc = 1;
+
+                // only reveal colors after being fully scanned
+                this.color = ColorsForType(this.type)[0];
+                this.explosionColor = ColorsForType(this.type)[1];
             }
         }
     }
@@ -437,11 +513,7 @@ class Asteroid {
         if (this.x + this.size + offsetX > 0 && this.x - this.size + offsetX < WIDTH &&
             this.y + this.size + offsetY > 0 && this.y - this.size + offsetY < HEIGHT)
         {
-            if (this.visType !== -1) {
-                ctx.strokeStyle = this.color;
-            } else {
-                ctx.strokeStyle = "white";
-            }
+            ctx.strokeStyle = this.color;
 
             ctx.beginPath();
             ctx.moveTo(this.x + this.ds[0] * Math.cos(this.angles[0]) + offsetX, 
