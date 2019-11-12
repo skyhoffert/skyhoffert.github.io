@@ -1,3 +1,6 @@
+// Sky Hoffert
+// zgah classes file.
+// Last modified November 12, 2019
 
 class V2{ constructor(x, y){ this.x = x; this.y = y; } }
 
@@ -14,9 +17,10 @@ class Mouse {
 // main update function. The callback can also optionally have a second parameter that is only
 // given as "true" on the final call.
 class Lerper {
-    constructor(dur, cb) {
+    constructor(dur, cb, d=function(ctx){}) {
         this.dur = dur;
         this.cb = cb;
+        this.d = d;
         this.elapsed = 0;
         this.active = true;
     }
@@ -34,13 +38,18 @@ class Lerper {
 
         this.cb(this.elapsed / this.dur, false);
     }
+
+    Draw(ctx) {
+        this.d(ctx);
+    }
 }
 
 // Lurker is similar to lerper, but it will run continuously until the callback returns a value
 // of "false". At that point it will no longer call the callback.
 class Lurker {
-    constructor(cb) {
+    constructor(cb, d=function(ctx){}) {
         this.cb = cb;
+        this.d = d;
         this.elapsed = 0;
         this.active = true;
     }
@@ -48,7 +57,13 @@ class Lurker {
     Tick(dT) {
         if (!this.active) { return; }
 
+        this.elapsed += dT;
+
         this.active = this.cb(dT);
+    }
+
+    Draw(ctx) {
+        this.d(ctx);
     }
 }
 
@@ -129,7 +144,7 @@ class Ship {
             this.hitDist = 110;
             this.attractDist = 220;
         } else if (this.type === -1) {
-            // Tutorial type
+            // Tutorial.
             this.turnSpeed = 0.004;
             this.moveSpeed = 0.0003;
             this.scanFactor = 0.008;
@@ -139,7 +154,7 @@ class Ship {
             this.slowFactor = 0.001;
             this.attractDist = 200;
             
-            // Tutorial begins without player control
+            // Tutorial begins without player control.
             this.canCollect = false;
             this.canImpact = false;
             this.canTurn = false;
@@ -178,7 +193,16 @@ class Ship {
         this.hitFactor = 1;
         this.hitDist = 1000;
         this.attractDist = 1000;
+        
+        this.canCollect = true;
         this.canImpact = false;
+        this.canTurn = true;
+        this.canMove = true;
+        this.canSlow = true;
+        this.canTarget = true;
+        this.canScan = true;
+        this.canHit = true;
+        this.canAttract = true;
     }
 
     // Used for collecting Materials.
@@ -455,9 +479,13 @@ class Asteroid {
 
         this.lastAction = "scan"; // could be scan or hit
 
+        this.targetable = true;
+
         this.scanpc = 0.0;
+        this.scannable = true;
 
         this.health = 1.0;
+        this.hitable = true;
 
         this.minSize = 14;
 
@@ -489,6 +517,8 @@ class Asteroid {
     }
 
     Scan(amt) {
+        if (!this.scannable){ return; }
+
         if (this.scanpc < 1) {
             this.scanpc += amt / this.size;
 
@@ -505,6 +535,8 @@ class Asteroid {
     }
 
     Hit(amt) {
+        if (!this.hitable) { return; }
+
         if (this.health > 0) {
             this.health -= amt / this.size;
 
@@ -554,9 +586,11 @@ class Asteroid {
 
         // DEBUG: targeting
         if (playerShip.canTarget) {
-            let dist = Distance(this.x + offsetX, this.y + offsetY, mouse.x, mouse.y);
-            if (dist < this.minTargetDistance || dist < this.size * this.targetFactor) {
-                playerShip.target = this;
+            if (this.targetable){
+                let dist = Distance(this.x + offsetX, this.y + offsetY, mouse.x, mouse.y);
+                if (dist < this.minTargetDistance || dist < this.size * this.targetFactor) {
+                    playerShip.target = this;
+                }
             }
         }
 
@@ -709,13 +743,14 @@ class Star {
 }
 
 class UIButton {
-    constructor(x, y, w, h, st, dm=function(ctx){}) {
+    constructor(x, y, w, h, st, dm=function(ctx){}, hf=1.05) {
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
         this.bgColor = "#101010";
         this.hover = false;
+        this.hoverFac = hf;
 
         this.shipType = st;
 
@@ -733,12 +768,16 @@ class UIButton {
     Click(x, y) {
         if (x > this.x - this.w/2 && x < this.x + this.w/2 &&
             y > this.y - this.h/2 && y < this.y + this.h/2) {
-            Init(0, "randomField", this.shipType);
+                this.ClickAction();
         }
     }
 
+    ClickAction() {
+        Init(0, "randomField", this.shipType);
+    }
+
     Draw(ctx) {
-        let fac = this.hover ? 1.05 : 1;
+        let fac = this.hover ? this.hoverFac : 1;
         ctx.fillStyle = this.bgColor;
         ctx.fillRect(this.x - fac*this.w/2, this.y - fac*this.h/2, fac*this.w, fac*this.h);
 

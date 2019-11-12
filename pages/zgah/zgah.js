@@ -1,8 +1,6 @@
-/*
-Sky Hoffert
-zgah javascript file.
-Last Modified: November 7, 2019
-*/
+// Sky Hoffert
+// zgah javascript file.
+// Last Modified: November 12, 2019
 
 const FPS = 35;
 
@@ -117,9 +115,18 @@ function Init(s=0, m="tutorial", t=0) {
         asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 150, 20, 1));
         asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 90, 10, 0));
 
+        asteroids[0].scannable = false;
+        asteroids[0].hitable = false;
+        asteroids[0].targetable = false;
+        asteroids[1].scannable = false;
+        asteroids[1].hitable = false;
+        asteroids[1].targetable = false;
+        asteroids[2].scannable = false;
+        asteroids[2].hitable = false;
+
         for (let i = 0; i < 100; i++) {
-            let x = Math.random() * canvas.width*4 - canvas.width*2;
-            let y = Math.random() * canvas.height*4 - canvas.height*2;
+            let x = Math.random() * canvas.width*2 - canvas.width;
+            let y = Math.random() * canvas.height*2- canvas.height;
 
             stars.push(new Star(x, y));
         }
@@ -128,8 +135,6 @@ function Init(s=0, m="tutorial", t=0) {
         // that the player does not fly off screen, sets all asteroid velocities to 0 -
         // periodically, etc.
         lurkers.push(new Lurker(function (dT) {
-            this.elapsed += dT;
-
             if (Math.abs(offsetX) > WIDTH*5/8) {
                 offsetX = -offsetX;
             } else if (Math.abs(offsetY) > HEIGHT*3/4) {
@@ -147,7 +152,10 @@ function Init(s=0, m="tutorial", t=0) {
             return (levelName === "tutorial");
         }));
 
-        // TODO: add periodic addition of abilities for the player.
+        // Entire tutorial is captured in this lurker push. The first lurker creates another
+        // lurker when it is completed, which then creates another lurker... and so on until
+        // the entire tutorial has been completed.
+        lurkers.push(tut_lurkers[0]);
         
         // This lurker defines the end of the tutorial... this occurs when all asteroids have been
         // eliminated. Note that it creates a lerper.
@@ -478,6 +486,14 @@ function DrawStage() {
 
     for (let i = 0; i < materials.length; i++) {
         materials[i].Draw(context);
+    }
+
+    for (let i = 0; i < lerpers.length; i++) {
+        lerpers[i].Draw(context);
+    }
+
+    for (let i = 0; i < lurkers.length; i++) {
+        lurkers[i].Draw(context);
     }
 }
 
