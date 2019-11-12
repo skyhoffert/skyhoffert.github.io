@@ -496,8 +496,8 @@ function DrawStage() {
 
 function DrawUI() {
     if (levelName === "randomField") {
-        let fsize = 30;
-        let pad = 5;
+        let fsize = 36;
+        let pad = 10;
 
         context.font = "" + fsize + "px Verdana";
         let txt = "Materials: " + score + "/" + devGoal;

@@ -40,9 +40,10 @@ function DrawTutText(ctx, txt) {
 }
 
 var tut_lurkers = [];
+var tut_TEXT_TIME = 6000;
 
 tut_lurkers[0] = new Lurker(function (dT) {
-    if (this.elapsed > 5000) {
+    if (this.elapsed > tut_TEXT_TIME) {
         lurkers.push(tut_lurkers[1]);
         return false;
     }
@@ -186,9 +187,9 @@ ship. Blue improves scanning. Scan the next largest asteroid.");
 });
 
 tut_lurkers[6] = new Lurker(function (dT) {
-    if (this.elapsed >= 5000) {
+    if (this.elapsed >= tut_TEXT_TIME/2) {
         playerShip.canMove = true;
-        playerShip.respawnTime = 5000;
+        playerShip.respawnTime = tut_TEXT_TIME/2;
         lurkers.push(tut_lurkers[7]);
         return false;
     }
@@ -221,7 +222,7 @@ tut_lurkers[8] = new Lurker(function (dT) {
 });
 
 tut_lurkers[9] = new Lurker(function (dT) {
-    if (this.elapsed >= 5000) {
+    if (this.elapsed >= tut_TEXT_TIME) {
         asteroids[0].hitable = true;
         playerShip.canHit = true;
         lurkers.push(tut_lurkers[10]);
@@ -257,7 +258,7 @@ them to collect your upgrades!");
 });
 
 tut_lurkers[12] = new Lurker(function (dT) {
-    if (this.elapsed > 5000) {
+    if (this.elapsed > tut_TEXT_TIME) {
         asteroids[0].hitable = true;
         lurkers.push(tut_lurkers[13]);
         return false;
@@ -314,7 +315,7 @@ to continue to the real challenge.");
 });
 
 tut_lurkers[17] = new Lurker(function (dT) {
-    if (this.elapsed > 5000) {
+    if (this.elapsed > tut_TEXT_TIME) {
         Init(0, "shipSelect");
         return false;
     }

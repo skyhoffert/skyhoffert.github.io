@@ -23,6 +23,7 @@ class Lerper {
         this.d = d;
         this.elapsed = 0;
         this.active = true;
+        this.vals = {good:false}; // Can hold additional values per lerper.
     }
 
     Tick(dT) {
@@ -52,6 +53,7 @@ class Lurker {
         this.d = d;
         this.elapsed = 0;
         this.active = true;
+        this.vals = {good:false}; // Can hold additional values per lurker.
     }
 
     Tick(dT) {
@@ -104,6 +106,8 @@ class Ship {
         this.hitDist = 125;
         this.hitDistUpgradeFactor = 1.006;
 
+        this.attractFactor = 1;
+        this.attractUpgradeFactor = 1.005;
         this.attractDist = 200;
         this.attractDistUpgradeFactor = 1.005;
 
@@ -122,6 +126,11 @@ class Ship {
         this.canScan = true;
         this.canHit = true;
         this.canAttract = true;
+
+        // Displays upgrades on the screen for a time.
+        this.upgrades = [];
+        this.upgradesTimes = [];
+        this.upgradesTimeMax = 1500;
 
         if (this.type === 1) {
             // Miner.
@@ -210,19 +219,30 @@ class Ship {
     Collect(t) {
         if (!this.canCollect) { return; }
 
+        let txt = "";
+
         if (t === 0) {
             this.scanDist *= this.scanDistUpgradeFactor;
             this.scanFactor *= this.scanUpgradeFactor;
+            txt = "+ scanning";
         } else if (t === 1) {
             this.hitDist *= this.hitDistUpgradeFactor;
             this.hitFactor *= this.hitUpgradeFactor;
+            txt = "+ mining";
         } else if (t === 2) {
             this.turnSpeed *= this.turnSpeedUpgradeFactor;
+            txt = "+ turning";
         } else if (t === 3) {
+            this.attractFactor *= this.attractUpgradeFactor;
             this.attractDist *= this.attractDistUpgradeFactor;
+            txt = "+ attractor";
         } else if (t === 4) {
             this.moveSpeed *= this.moveSpeedUpgradeFactor;
+            txt = "+ movement";
         }
+
+        this.upgrades.push(txt);
+        this.upgradesTimes.push(this.upgradesTimeMax);
     }
 
     // On collision with an asteroid, this function is called.
@@ -317,6 +337,16 @@ class Ship {
         }
 
         this.target = null;
+
+        // For on screen displays of upgrades.
+        for (let i = 0; i < this.upgrades.length; i++) {
+            this.upgradesTimes[i] -= dT;
+
+            if (this.upgradesTimes[i] <= 0) {
+                this.upgrades.splice(i, 1);
+                this.upgradesTimes.splice(i, 1);
+            }
+        }
     }
     
     Draw(ctx) {
@@ -460,6 +490,36 @@ class Ship {
                 ctx.closePath();
                 ctx.stroke();
             }
+        }
+
+        // Drawing upgrades around the user ship.
+        let tmpUpgrades = [];
+        let tmpUpgradesTimes = [];
+        for (let i = this.upgrades.length-1; i >= 0; i--) {
+            if (!tmpUpgrades.includes(this.upgrades[i])) {
+                tmpUpgrades.push(this.upgrades[i]);
+                tmpUpgradesTimes.push(this.upgradesTimes[i]);
+            }
+        }
+        for (let i = 0; i < tmpUpgrades.length; i++) {
+            if (tmpUpgrades[i].includes("scanning")) {
+                ctx.fillStyle = ColorsForType(0)[0];
+            } else if (tmpUpgrades[i].includes("mining")) {
+                ctx.fillStyle = ColorsForType(1)[0];
+            } else if (tmpUpgrades[i].includes("turning")) {
+                ctx.fillStyle = ColorsForType(2)[0];
+            } else if (tmpUpgrades[i].includes("attractor")) {
+                ctx.fillStyle = ColorsForType(3)[0];
+            } else if (tmpUpgrades[i].includes("movement")) {
+                ctx.fillStyle = ColorsForType(4)[0];
+            } else {
+                ctx.fillStyle = "white";
+            }
+            let fsize = 14;
+            ctx.font = "" + fsize + "px Verdana";
+            ctx.globalAlpha = tmpUpgradesTimes[i] / this.upgradesTimeMax;
+            ctx.fillText(tmpUpgrades[i], this.x + this.size/2, this.y + this.size + fsize*i);
+            ctx.globalAlpha = 1.0;
         }
     }
 }
@@ -705,12 +765,13 @@ class Material {
             }
         } else if (d < playerShip.attractDist) {
             if (playerShip.canAttract) {
+                // Normalize attractor speed with mag.
                 let dx = playerShip.x - (this.x + offsetX) + this.minMove;
                 let dy = playerShip.y - (this.y + offsetY) + this.minMove;
                 let mag = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
 
-                this.x += this.moveSpeed * dx/mag * dT;
-                this.y += this.moveSpeed * dy/mag * dT;
+                this.x += this.moveSpeed * playerShip.attractFactor * dx/mag * dT;
+                this.y += this.moveSpeed * playerShip.attractFactor * dy/mag * dT;
             }
         }
     }
