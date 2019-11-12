@@ -103,27 +103,39 @@ class Ship {
 
         this.trailColor = "#662222";
 
-        this.demoVel = 0.1;
+        this.demoVel = 0.2;
 
         this.scoreLossOnDeath = 20;
 
+        this.canCollect = true;
+        this.canImpact = true;
+        this.canTurn = true;
+        this.canMove = true;
+        this.canSlow = true;
+        this.canTarget = true;
+        this.canScan = true;
+        this.canHit = true;
+        this.canAttract = true;
+
         if (this.type === 1) {
+            // Miner.
             this.turnSpeed = 0.001;
             this.moveSpeed = 0.00025;
             this.scanFactor = 0.002;
             this.scanDist = 125;
-            this.slowFactor = 0.001;
+            this.slowFactor = 0.0008;
             this.hitFactor = 0.004;
             this.hitDist = 135;
             this.attractDist = 190;
         } else if (this.type === 2) {
+            // Scout.
             this.turnSpeed = 0.003;
-            this.moveSpeed = 0.001;
+            this.moveSpeed = 0.0008;
             this.scanFactor = 0.006;
             this.scanDist = 175;
-            this.slowFactor = 0.00025;
+            this.slowFactor = 0.0004;
             this.hitFactor = 0.001;
-            this.hitDist = 100;
+            this.hitDist = 110;
             this.attractDist = 220;
         }
     }
@@ -137,12 +149,14 @@ class Ship {
         this.hitFactor = 1;
         this.hitDist = 1000;
         this.attractDist = 1000;
-        this.demoVel = 100;
+        this.canImpact = false;
     }
 
     // Used for collecting Materials.
     // @param t (int): type of material collected
     Collect(t) {
+        if (!this.canCollect) { return; }
+
         if (t === 0) {
             this.scanDist *= this.scanDistUpgradeFactor;
             this.scanFactor *= this.scanUpgradeFactor;
@@ -158,7 +172,11 @@ class Ship {
         }
     }
 
+    // On collision with an asteroid, this function is called.
+    // @param obj: object being collided with
     Impact(obj) {
+        if (!this.canImpact) { return; }
+
         if (this.active && Math.abs(this.velX) + Math.abs(this.velY) > this.demoVel) {
             let numP = 100;
             for (let i = 0; i < numP; i++) {
@@ -182,22 +200,24 @@ class Ship {
     Tick(dT) {
         if (!this.active) { return; }
 
-        // Align current angle with target angle (of mouse) depending on turn speed.
-        let targAng = -Math.atan2(mouse.y - HEIGHT/2, mouse.x - WIDTH/2);
-        let diff = targAng - this.angle;
+        if (this.canTurn) {
+            // Align current angle with target angle (of mouse) depending on turn speed.
+            let targAng = -Math.atan2(mouse.y - HEIGHT/2, mouse.x - WIDTH/2);
+            let diff = targAng - this.angle;
 
-        if (Math.abs(diff) > Math.PI) {
-            diff -= 2*Math.PI * Math.sign(diff);
-        }
+            if (Math.abs(diff) > Math.PI) {
+                diff -= 2*Math.PI * Math.sign(diff);
+            }
 
-        if (Math.abs(diff) > this.minAngle) {
-            this.angle += diff * this.turnSpeed * dT;
+            if (Math.abs(diff) > this.minAngle) {
+                this.angle += diff * this.turnSpeed * dT;
 
-            this.angle += this.angle < -Math.PI ? 2*Math.PI : this.angle > Math.PI ? -2*Math.PI : 0;
+                this.angle += this.angle < -Math.PI ? 2*Math.PI : this.angle > Math.PI ? -2*Math.PI : 0;
+            }
         }
 
         // Move!
-        if (mouse.down || keys[32]) {
+        if (this.canMove && (mouse.down || keys[32])) {
             this.velX -= dT * this.moveSpeed * Math.cos(this.angle);
             this.velY += dT * this.moveSpeed * Math.sin(this.angle);
 
@@ -209,8 +229,10 @@ class Ship {
                     trailLen, this.angle + skew*Math.random() - skew/2, this.trailColor, 2000));
             }
         } else {
-            this.velX -= this.velX * this.slowFactor * dT;
-            this.velY -= this.velY * this.slowFactor * dT;
+            if (this.canSlow) {
+                this.velX -= this.velX * this.slowFactor * dT;
+                this.velY -= this.velY * this.slowFactor * dT;
+            }
         }
 
         offsetX += dT * this.velX;
@@ -219,18 +241,16 @@ class Ship {
         this.scanning = false;
         this.hitting = false;
         if (this.target !== null) {
-            if (this.target.scanpc < 1) {
-                if (keys[81]) {
-                    let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
-                    if (dist < this.scanDist) {
-                        this.scanning = true;
+            if (this.canScan && this.target.scanpc < 1 && keys[81]) {
+                let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
+                if (dist < this.scanDist) {
+                    this.scanning = true;
 
-                        this.target.Scan(dT * this.scanFactor);
-                    }
+                    this.target.Scan(dT * this.scanFactor);
                 }
             }
 
-            if (keys[87]) {
+            if (this.canHit && keys[87]) {
                 let dist = Distance(this.x, this.y, this.target.x + offsetX, this.target.y + offsetY);
                 if (dist < this.hitDist) {
                     this.hitting = true;
@@ -474,7 +494,7 @@ class Asteroid {
                     let num = Math.floor(Math.random()*2 + 2);
                     for (let i = 0; i < num; i++) {
                         asteroids.push(new Asteroid(this.x + 2*this.size * Math.random() - this.size,
-                            this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type, true));
+                            this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type, this.scanpc >= 1));
                     }
                 } else {
                     let numM = this.size;
@@ -501,9 +521,11 @@ class Asteroid {
         if (!this.active) { return; }
 
         // DEBUG: targeting
-        let dist = Distance(this.x + offsetX, this.y + offsetY, mouse.x, mouse.y);
-        if (dist < this.minTargetDistance || dist < this.size * this.targetFactor) {
-            playerShip.target = this;
+        if (playerShip.canTarget) {
+            let dist = Distance(this.x + offsetX, this.y + offsetY, mouse.x, mouse.y);
+            if (dist < this.minTargetDistance || dist < this.size * this.targetFactor) {
+                playerShip.target = this;
+            }
         }
 
         for (let i = 0; i < this.angles.length; i++) {
@@ -604,18 +626,20 @@ class Material {
     Tick(dT) {
         if (!this.active) { return; }
 
-        let d = Distance(this.x + offsetX, this.y + offsetY, playerShip.x, playerShip.y);
-        if (d < playerShip.size/2) {
-            this.active = false;
-            score += 1;
-            playerShip.Collect(this.type);
-        } else if (d < playerShip.attractDist) {
-            let dx = playerShip.x - (this.x + offsetX) + this.minMove;
-            let dy = playerShip.y - (this.y + offsetY) + this.minMove;
-            let mag = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+        if (playerShip.canAttract) {
+            let d = Distance(this.x + offsetX, this.y + offsetY, playerShip.x, playerShip.y);
+            if (d < playerShip.size/2) {
+                this.active = false;
+                score += 1;
+                playerShip.Collect(this.type);
+            } else if (d < playerShip.attractDist) {
+                let dx = playerShip.x - (this.x + offsetX) + this.minMove;
+                let dy = playerShip.y - (this.y + offsetY) + this.minMove;
+                let mag = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
 
-            this.x += this.moveSpeed * dx/mag * dT;
-            this.y += this.moveSpeed * dy/mag * dT;
+                this.x += this.moveSpeed * dx/mag * dT;
+                this.y += this.moveSpeed * dy/mag * dT;
+            }
         }
     }
 

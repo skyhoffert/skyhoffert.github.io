@@ -41,7 +41,7 @@ var devFPS = 0;
 var devFPSDisplay = true;
 
 var devBuildDisplay = true;
-var devBuild = " DEVELEOPMENT Build 0.1 ";
+var devBuild = " v0.2 ";
 
 var devGodModeDisplay = true;
 
