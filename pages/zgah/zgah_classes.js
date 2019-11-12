@@ -110,7 +110,7 @@ class Ship {
         this.trailColor = "#662222";
 
         this.demoVel = 0.2;
-
+        this.respawnTime = 2000;
         this.scoreLossOnDeath = 20;
 
         this.canCollect = true;
@@ -148,7 +148,7 @@ class Ship {
             this.turnSpeed = 0.004;
             this.moveSpeed = 0.0003;
             this.scanFactor = 0.008;
-            this.scanDist = 180;
+            this.scanDist = 300;
             this.hitFactor = 0.005;
             this.hitDist = 150;
             this.slowFactor = 0.001;
@@ -156,10 +156,10 @@ class Ship {
             
             // Tutorial begins without player control.
             this.canCollect = false;
-            this.canImpact = false;
+            this.canImpact = true;
             this.canTurn = false;
             this.canMove = false;
-            this.canSlow = false;
+            this.canSlow = true;
             this.canTarget = false;
             this.canScan = false;
             this.canHit = false;
@@ -241,7 +241,7 @@ class Ship {
 
             this.active = false;
 
-            lerpers.push(new Lerper(2000, function (p, d) {
+            lerpers.push(new Lerper(this.respawnTime, function (p, d) {
                 if (d) {
                     let min = score - playerShip.scoreLossOnDeath < 0 ? 0 : score - playerShip.scoreLossOnDeath;
                     score = min;
@@ -659,19 +659,23 @@ class Trail {
 
     Draw(ctx) {
         if (!this.active) { return; }
-
-        ctx.strokeStyle = this.color;
-        if (this.type === 0) {
-            ctx.beginPath();
-            ctx.moveTo(this.x - this.cos + offsetX, this.y - this.sin + offsetY);
-            ctx.lineTo(this.x + this.cos + offsetX, this.y + this.sin + offsetY);
-            ctx.closePath();
-            ctx.stroke();
-        } else if (this.type === 1) {
-            ctx.beginPath();
-            ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
-            ctx.closePath();
-            ctx.stroke();
+        
+        if (this.x + offsetX > 0 && this.x + offsetX < WIDTH &&
+            this.y + offsetY > 0 && this.y + offsetY < HEIGHT)
+        {
+            ctx.strokeStyle = this.color;
+            if (this.type === 0) {
+                ctx.beginPath();
+                ctx.moveTo(this.x - this.cos + offsetX, this.y - this.sin + offsetY);
+                ctx.lineTo(this.x + this.cos + offsetX, this.y + this.sin + offsetY);
+                ctx.closePath();
+                ctx.stroke();
+            } else if (this.type === 1) {
+                ctx.beginPath();
+                ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
+                ctx.closePath();
+                ctx.stroke();
+            }
         }
     }
 }
@@ -692,13 +696,15 @@ class Material {
     Tick(dT) {
         if (!this.active) { return; }
 
-        if (playerShip.canAttract) {
-            let d = Distance(this.x + offsetX, this.y + offsetY, playerShip.x, playerShip.y);
-            if (d < playerShip.size/2) {
+        let d = Distance(this.x + offsetX, this.y + offsetY, playerShip.x, playerShip.y);
+        if (d < playerShip.size/2) {
+            if (playerShip.canCollect) {
                 this.active = false;
                 score += 1;
                 playerShip.Collect(this.type);
-            } else if (d < playerShip.attractDist) {
+            }
+        } else if (d < playerShip.attractDist) {
+            if (playerShip.canAttract) {
                 let dx = playerShip.x - (this.x + offsetX) + this.minMove;
                 let dy = playerShip.y - (this.y + offsetY) + this.minMove;
                 let mag = Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
@@ -712,11 +718,15 @@ class Material {
     Draw(ctx) {
         if (!this.active) { return; }
 
-        ctx.strokeStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
-        ctx.closePath();
-        ctx.stroke();
+        if (this.x + offsetX > 0 && this.x + offsetX < WIDTH &&
+            this.y + offsetY > 0 && this.y + offsetY < HEIGHT)
+        {
+            ctx.strokeStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x + offsetX, this.y + offsetY, this.size, 0, 2*Math.PI);
+            ctx.closePath();
+            ctx.stroke();
+        }
     }
 }
 
@@ -737,8 +747,13 @@ class Star {
     }
 
     Draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x + offsetX*this.moveFactor, this.y + offsetY*this.moveFactor, this.size, this.size);
+        if (this.x + offsetX*this.moveFactor > 0 && this.x + offsetX*this.moveFactor < WIDTH &&
+            this.y + offsetY*this.moveFactor > 0 && this.y + offsetY*this.moveFactor < HEIGHT)
+        {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x + offsetX*this.moveFactor, this.y + offsetY*this.moveFactor, 
+                this.size, this.size);
+        }
     }
 }
 

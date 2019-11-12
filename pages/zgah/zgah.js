@@ -39,7 +39,7 @@ var devFPS = 0;
 var devFPSDisplay = true;
 
 var devBuildDisplay = true;
-var devBuild = " v0.2 ";
+var devBuild = " v0.3 ";
 
 var devGodModeDisplay = true;
 
@@ -93,6 +93,17 @@ function Init(s=0, m="tutorial", t=0) {
 
             stars.push(new Star(x, y));
         }
+
+        lerpers.push(new Lerper(5000, function (dT) {}, function (ctx) {
+            ctx.strokeStyle = "white";
+            ctx.beginPath();
+            ctx.moveTo(WIDTH - 400*5/8, HEIGHT - 200*5/8);
+            ctx.lineTo(WIDTH-100, 0);
+            ctx.closePath();
+            ctx.stroke();
+
+            DrawTutText(ctx, "Mine 250 materials to beat the game and acquire super upgrades.");
+        }))
     } else if (m === "tutorial") {
         mouse = new Mouse();
         playerShip = new Ship(-1);
@@ -111,18 +122,13 @@ function Init(s=0, m="tutorial", t=0) {
         offsetX = 0;
         offsetY = 0;
 
-        asteroids.push(new Asteroid(WIDTH/2 - 100, HEIGHT/2 - 100, 30, 4));
-        asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 150, 20, 1));
         asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 90, 10, 0));
+        asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 150, 20, 1));
+        asteroids.push(new Asteroid(WIDTH/2 - 100, HEIGHT/2 - 100, 30, 4));
 
-        asteroids[0].scannable = false;
-        asteroids[0].hitable = false;
-        asteroids[0].targetable = false;
-        asteroids[1].scannable = false;
-        asteroids[1].hitable = false;
         asteroids[1].targetable = false;
-        asteroids[2].scannable = false;
-        asteroids[2].hitable = false;
+        asteroids[1].hitable = false;
+        asteroids[2].targetable = false;
 
         for (let i = 0; i < 100; i++) {
             let x = Math.random() * canvas.width*2 - canvas.width;
@@ -156,22 +162,6 @@ function Init(s=0, m="tutorial", t=0) {
         // lurker when it is completed, which then creates another lurker... and so on until
         // the entire tutorial has been completed.
         lurkers.push(tut_lurkers[0]);
-        
-        // This lurker defines the end of the tutorial... this occurs when all asteroids have been
-        // eliminated. Note that it creates a lerper.
-        lurkers.push(new Lurker(function (dT) {
-            if (asteroids.length === 0) {
-                lerpers.push(new Lerper(2000, function (dT, done) {
-                    if (done) {
-                        Init(0, "shipSelect");
-                    }
-                }));
-
-                return false;
-            }
-
-            return true;
-        }));
     } else if (m === "shipSelect") {
         // Remove stuff
         asteroids = [];
@@ -335,11 +325,11 @@ function Init(s=0, m="tutorial", t=0) {
             wid = ctx.measureText(txt).width;
             ctx.fillText(txt, this.x - wid/2, this.y + this.h/4, this.w);
             
-            txt = " - good scanning";
+            txt = " - poor mining";
             wid = ctx.measureText(txt).width;
             ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*2, this.w);
 
-            txt = " - poor mining";
+            txt = " - good scanning";
             wid = ctx.measureText(txt).width;
             ctx.fillText(txt, this.x - wid/2, this.y + this.h/4 + fsize*4, this.w);
         }));
@@ -443,6 +433,13 @@ function Tick(dT) {
     if (keys[219] && keys[221]) {
         if (playerShip.scanFactor < 0.9) {
             playerShip.EnterGodMode();
+        }
+    }
+
+    // TODO: think about removing the tutorial skip.
+    if (keys[191]) {
+        if (levelName === "tutorial") {
+            Init(0, "shipSelect");
         }
     }
 }
