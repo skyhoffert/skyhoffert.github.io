@@ -13,7 +13,6 @@ class Mouse {
 // entire Lerp duration has completed. Lerpers are stored in a global array and handled in the
 // main update function. The callback can also optionally have a second parameter that is only
 // given as "true" on the final call.
-// TODO: test this class
 class Lerper {
     constructor(dur, cb) {
         this.dur = dur;
@@ -39,10 +38,10 @@ class Lerper {
 
 // Lurker is similar to lerper, but it will run continuously until the callback returns a value
 // of "false". At that point it will no longer call the callback.
-// TODO: test this class
 class Lurker {
     constructor(cb) {
         this.cb = cb;
+        this.elapsed = 0;
         this.active = true;
     }
 
@@ -63,14 +62,6 @@ class Ship {
         this.active = true;
         this.type = t;
 
-        if (this.type === 0) {
-            this.color = "#c72422";
-        } else if (this.type === 1) {
-            this.color = "#923acc";
-        } else if (this.type === 2) {
-            this.color = "#cf5e2a";
-        }
-
         // Set traits to average (type === 0)
         this.turnSpeed = 0.002;
         this.turnSpeedUpgradeFactor = 1.01;
@@ -87,13 +78,13 @@ class Ship {
         this.target = null;
 
         this.scanning = false;
-        this.scanFactor = 0.004 * 1; // TODO: remove adjustment
+        this.scanFactor = 0.004 ;
         this.scanUpgradeFactor = 1.008;
         this.scanDist = 150;
         this.scanDistUpgradeFactor = 1.008;
 
         this.hitting = false;
-        this.hitFactor = 0.002 * 1; // TODO: remove adjustment
+        this.hitFactor = 0.002;
         this.hitUpgradeFactor = 1.006;
         this.hitDist = 125;
         this.hitDistUpgradeFactor = 1.006;
@@ -137,7 +128,45 @@ class Ship {
             this.hitFactor = 0.001;
             this.hitDist = 110;
             this.attractDist = 220;
+        } else if (this.type === -1) {
+            // Tutorial type
+            this.turnSpeed = 0.004;
+            this.moveSpeed = 0.0003;
+            this.scanFactor = 0.008;
+            this.scanDist = 180;
+            this.hitFactor = 0.005;
+            this.hitDist = 150;
+            this.slowFactor = 0.001;
+            this.attractDist = 200;
+            
+            // Tutorial begins without player control
+            this.canCollect = false;
+            this.canImpact = false;
+            this.canTurn = false;
+            this.canMove = false;
+            this.canSlow = false;
+            this.canTarget = false;
+            this.canScan = false;
+            this.canHit = false;
+            this.canAttract = false;
         }
+        
+        if (this.type === 0 || this.type === -1) {
+            this.color = "#c72422";
+        } else if (this.type === 1) {
+            this.color = "#923acc";
+        } else if (this.type === 2) {
+            this.color = "#cf5e2a";
+        }
+    }
+    
+    Reset() {
+        this.velX = 0;
+        this.velY = 0;
+        this.active = true;
+        this.target = null;
+        this.scanning = false;
+        this.hitting = false;
     }
 
     EnterGodMode() {
@@ -191,7 +220,10 @@ class Ship {
             lerpers.push(new Lerper(2000, function (p, d) {
                 if (d) {
                     let min = score - playerShip.scoreLossOnDeath < 0 ? 0 : score - playerShip.scoreLossOnDeath;
-                    Init(min, "same", playerShip.type);
+                    score = min;
+                    playerShip.Reset();
+                    offsetX = 0;
+                    offsetY = 0;
                 }
             }));
         }
@@ -268,7 +300,7 @@ class Ship {
 
         // Draw the ship. Depends on type.
         ctx.strokeStyle = this.color;
-        if (this.type === 0) {
+        if (this.type === 0 || this.type === -1) {
             // q is the offset to the rear points
             let q = Math.PI*11/16;
 

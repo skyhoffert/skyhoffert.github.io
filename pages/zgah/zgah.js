@@ -46,14 +46,18 @@ var devBuild = " v0.2 ";
 var devGodModeDisplay = true;
 
 var devEndGame = false;
-var devGoal = 100 * 2; // TODO: remove adjustment
+var devGoal = 250;
 
 var offsetX = 0;
 var offsetY = 0;
 
-Init(0, "shipSelect");
+var levelName = "tutorial";
 
-function Init(s=0, m="randomField", t=0) {
+Init(0);
+
+function Init(s=0, m="tutorial", t=0) {
+    levelName = m;
+
     if (m === "randomField") {
         mouse = new Mouse();
         playerShip = new Ship(t);
@@ -91,16 +95,87 @@ function Init(s=0, m="randomField", t=0) {
 
             stars.push(new Star(x, y));
         }
-    } else if (m === "same") {
-        playerShip = new Ship(t);
-        
+    } else if (m === "tutorial") {
+        mouse = new Mouse();
+        playerShip = new Ship(-1);
+
+        asteroids = [];
+        deadObjs = [];
+        lerpers = [];
+        lurkers = [];
+        trails = [];
+        materials = [];
+
         uiButtons = [];
         
         score = s;
 
         offsetX = 0;
         offsetY = 0;
+
+        asteroids.push(new Asteroid(WIDTH/2 - 100, HEIGHT/2 - 100, 30, 4));
+        asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 150, 20, 1));
+        asteroids.push(new Asteroid(WIDTH/2 - 150, HEIGHT/2 - 90, 10, 0));
+
+        for (let i = 0; i < 100; i++) {
+            let x = Math.random() * canvas.width*4 - canvas.width*2;
+            let y = Math.random() * canvas.height*4 - canvas.height*2;
+
+            stars.push(new Star(x, y));
+        }
+
+        // This lurker performs some key background functions of the tutorial level. It makes sure
+        // that the player does not fly off screen, sets all asteroid velocities to 0 -
+        // periodically, etc.
+        lurkers.push(new Lurker(function (dT) {
+            this.elapsed += dT;
+
+            if (Math.abs(offsetX) > WIDTH*5/8) {
+                offsetX = -offsetX;
+            } else if (Math.abs(offsetY) > HEIGHT*3/4) {
+                offsetY = -offsetY;
+            }
+
+            if (this.elapsed > 100) {
+                this.elapsed = 0;
+                for (let i = 0; i < asteroids.length; i++) {
+                    asteroids[i].velX = 0;
+                    asteroids[i].velY = 0;
+                }
+            }
+
+            return (levelName === "tutorial");
+        }));
+
+        // TODO: add periodic addition of abilities for the player.
+        
+        // This lurker defines the end of the tutorial... this occurs when all asteroids have been
+        // eliminated. Note that it creates a lerper.
+        lurkers.push(new Lurker(function (dT) {
+            if (asteroids.length === 0) {
+                lerpers.push(new Lerper(2000, function (dT, done) {
+                    if (done) {
+                        Init(0, "shipSelect");
+                    }
+                }));
+
+                return false;
+            }
+
+            return true;
+        }));
     } else if (m === "shipSelect") {
+        // Remove stuff
+        asteroids = [];
+        deadObjs = [];
+        lerpers = [];
+        lurkers = [];
+        trails = [];
+        materials = [];
+
+        uiButtons = [];
+        
+        // Get some buttons on the screen.
         uiButtons.push(new UIButton(WIDTH/4 - 20, HEIGHT/2, WIDTH/4 - 20, HEIGHT*3/4, 0, function (ctx) {
             ctx.strokeStyle = "#c72422";
             ctx.lineWidth = 4;
@@ -306,6 +381,10 @@ function Tick(dT) {
         lerpers[i].Tick(dT);
     }
 
+    for (let i = 0; i < lurkers.length; i++) {
+        lurkers[i].Tick(dT);
+    }
+
     for (let i = 0; i < trails.length; i++) {
         trails[i].Tick(dT);
     }
@@ -403,7 +482,7 @@ function DrawStage() {
 }
 
 function DrawUI() {
-    if (playerShip) {
+    if (levelName === "randomField") {
         let fsize = 30;
         let pad = 5;
 
