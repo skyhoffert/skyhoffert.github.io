@@ -164,12 +164,14 @@ function Init(s=0, m="tutorial", t=0) {
         lurkers.push(tut_lurkers[0]);
     } else if (m === "shipSelect") {
         // Remove stuff
+        playerShip = null;
         asteroids = [];
         deadObjs = [];
         lerpers = [];
         lurkers = [];
         trails = [];
         materials = [];
+        stars = [];
 
         uiButtons = [];
         

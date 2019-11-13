@@ -87,7 +87,7 @@ class Ship {
         this.moveSpeedUpgradeFactor = 1.005;
 
         this.minAngle = 0.02;
-        this.slowFactor = 0.0005;
+        this.slowFactor = 0.0006;
 
         this.velX = 0;
         this.velY = 0;
@@ -97,13 +97,13 @@ class Ship {
         this.scanning = false;
         this.scanFactor = 0.004 ;
         this.scanUpgradeFactor = 1.008;
-        this.scanDist = 150;
+        this.scanDist = 170;
         this.scanDistUpgradeFactor = 1.008;
 
         this.hitting = false;
-        this.hitFactor = 0.002;
+        this.hitFactor = 0.0045;
         this.hitUpgradeFactor = 1.006;
-        this.hitDist = 125;
+        this.hitDist = 130;
         this.hitDistUpgradeFactor = 1.006;
 
         this.attractFactor = 1;
@@ -137,20 +137,20 @@ class Ship {
             this.turnSpeed = 0.001;
             this.moveSpeed = 0.00025;
             this.scanFactor = 0.002;
-            this.scanDist = 125;
+            this.scanDist = 140;
             this.slowFactor = 0.0008;
-            this.hitFactor = 0.004;
-            this.hitDist = 135;
+            this.hitFactor = 0.006;
+            this.hitDist = 140;
             this.attractDist = 190;
         } else if (this.type === 2) {
             // Scout.
             this.turnSpeed = 0.003;
             this.moveSpeed = 0.0008;
-            this.scanFactor = 0.006;
-            this.scanDist = 175;
+            this.scanFactor = 0.012;
+            this.scanDist = 210;
             this.slowFactor = 0.0004;
-            this.hitFactor = 0.001;
-            this.hitDist = 110;
+            this.hitFactor = 0.003;
+            this.hitDist = 120;
             this.attractDist = 220;
         } else if (this.type === -1) {
             // Tutorial.
@@ -160,7 +160,7 @@ class Ship {
             this.scanDist = 300;
             this.hitFactor = 0.005;
             this.hitDist = 150;
-            this.slowFactor = 0.001;
+            this.slowFactor = 0.0008;
             this.attractDist = 200;
             
             // Tutorial begins without player control.
