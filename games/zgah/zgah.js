@@ -348,18 +348,18 @@ function Distance(x, y, xx, yy) {
 //      [main color, explosion color]
 function ColorsForType(t) {
     if (t === 0) {
-        return ["#6666bb", "#333388"];
+        return ["#6666bb", "#000055"];
     } else if (t === 1) {
-        return ["#bb6666", "#883333"];
+        return ["#bb6666", "#550000"];
     } else if (t === 2) {
-        return ["#66bb66", "#338833"];
+        return ["#66bb66", "#005500"];
     } else if (t === 3) {
-        return ["#fff27b", "#a69c4f"];
+        return ["#fff27b", "#73691c"];
     } else if (t === 4) {
-        return ["#32d6d3", "#28a6a2"];
+        return ["#32d6d3", "#145756"];
     }
 
-    return ["white", "white"];
+    return ["white", "#444444"];
 }
 
 function Tick(dT) {

@@ -534,8 +534,8 @@ class Asteroid {
         this.size = s;
         this.active = true;
         this.type = t === null ? Math.floor(5*Math.random()) : t;
-        this.color = "white";
-        this.explosionColor = "#aaaaaa";
+        this.color = ColorsForType(-1)[0];
+        this.explosionColor = ColorsForType(-1)[1];
 
         this.lastAction = "scan"; // could be scan or hit
 
@@ -627,6 +627,34 @@ class Asteroid {
                             this.y + 2*this.size * Math.random() - this.size, this.type));
                     }
                 }
+
+                // Camera shake lerper.
+                let ASTSIZE = this.size;
+                lerpers.push(new Lerper(500, function (p, d) {
+                    if (!this.vals.good) {
+                        this.vals.good = true;
+                        this.vals.x = 0;
+                        this.vals.y = 0;
+                        this.vals.mag = ASTSIZE/5;
+                    }
+
+                    // Return to center.
+                    offsetX -= this.vals.x;
+                    offsetY -= this.vals.y;
+
+                    // Nothing else if done.
+                    if (d) { return; }
+
+                    // Shake the camera.
+                    let env = (1 - p) * this.vals.mag;
+                    let f = 10;
+                    let offX = env * Math.cos(2*Math.PI*f*p) * (2*Math.random()-1);
+                    let offY = env* Math.cos(2*Math.PI*f*p) * (2*Math.random()-1);
+                    this.vals.x = offX;
+                    this.vals.y = offY;
+                    offsetX += offX;
+                    offsetY += offY;
+                }));
             }
         }
     }
@@ -795,7 +823,7 @@ class Star {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.size = Math.floor(2*Math.random() + 1.1);
+        this.size = Math.floor(3*Math.random() + 1.1);
         this.moveFactor = 0.15;
 
         let d = 4;
