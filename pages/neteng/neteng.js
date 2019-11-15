@@ -6,7 +6,7 @@ Last Modified on Nov 13, 2019
 
 // Constants for this program.
 const DEV = false; // toggles dev mode. Should be false when pushing code!
-const FPS = 24;
+const FPS = 24; // TODO: not used
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 const IP = DEV ? "localhost" : "100.16.230.232";
@@ -53,9 +53,24 @@ ws.onerror = function err() {
 function HandleMessage(obj) {
     if (obj.type === "connected") {
         myID = obj.id;
+
+        // DEBUG
         console.log("Received id of " + myID);
     } else if (obj.type === "neObj") {
-        neObjs.push(JSON.parse(JSON.stringify(obj)));
+        let updated = false;
+
+        for (let i = 0; i < neObjs.length; i++) {
+            if (neObjs[i].id === obj.id) {
+                neObjs[i] = JSON.parse(JSON.stringify(obj));
+                updated = true;
+                break;
+            }
+        }
+
+        if (!updated) {
+            neObjs.push(JSON.parse(JSON.stringify(obj)));
+        }
+
         Draw();
     } else if (obj.type === "neObjRm") {
         for (let i = 0; i < neObjs.length; i++) {
@@ -82,18 +97,24 @@ function Draw() {
 
     for (let i = 0; i < neObjs.length; i++) {
         obj = neObjs[i];
-        if (!obj.active) { continue; }
 
         if (obj.which === "text") {
             ctx.font = obj.font;
             ctx.fillStyle = obj.color;
             ctx.fillText(obj.text, obj.x, obj.y);
+        } else if (obj.which === "circle") {
+            ctx.fillStyle = obj.color;
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, obj.radius, 0, 2*Math.PI);
+            ctx.closePath();
+            ctx.fill();
         }
     }
 }
 
 Init();
 
+// TODO: is this needed?
 //setInterval(Draw, 1000/FPS);
 
 document.addEventListener("mousedown", function (evt) {
