@@ -4,14 +4,29 @@
 
 var scene = new THREE.Scene();
 
-// Create a basic perspective camera.
-var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-camera.position.z = 5;
-
 var renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setClearColor("#000000");
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
+
+// Create a basic perspective camera.
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+// Creat a "ship".
+const SHIPSIZE = 0.5;
+var shipGeom = new THREE.BoxGeometry(SHIPSIZE, SHIPSIZE, SHIPSIZE);
+var shipMat = new THREE.MeshPhongMaterial({color: 0x00ff00});
+var ship = new THREE.Mesh(shipGeom, shipMat);
+ship.add(camera);
+scene.add(ship);
+camera.position.z = 5;
+camera.position.y = 2;
+camera.rotation.x = -Math.PI/8;
+
+// Debug
+var dir = new THREE.Vector3(1, 2, 0).normalize();
+var devArrow = new THREE.ArrowHelper(dir, new THREE.Vector3(0, 0, 0), 1, 0xffff00);
+scene.add(devArrow);
 
 // Create a Cube Mesh with basic material.
 var geometry = new THREE.IcosahedronGeometry(1, 1);
@@ -39,22 +54,28 @@ var keys = {};
 
 function Tick(dT) {
     if (keys["d"]) {
-        camera.translateX(0.001 * dT);
+        ship.translateX(0.001 * dT);
     } else if (keys["a"]) {
-        camera.translateX(-0.001 * dT);
+        ship.translateX(-0.001 * dT);
     } else if (keys["w"]) {
-        camera.translateY(0.001 * dT);
+        ship.translateZ(-0.001 * dT);
     } else if (keys["s"]) {
-        camera.translateY(-0.001 * dT);
+        ship.translateZ(0.001 * dT);
     } else if (keys["A"]) {
-        camera.rotateY(0.001 * dT);
+        ship.rotateY(0.001 * dT);
     } else if (keys["D"]) {
-        camera.rotateY(-0.001 * dT);
+        ship.rotateY(-0.001 * dT);
     } else if (keys["W"]) {
-        camera.rotateX(0.001 * dT);
+        //ship.rotateX(0.001 * dT);
     } else if (keys["S"]) {
-        camera.rotateX(-0.001 * dT);
+        //ship.rotateX(-0.001 * dT);
     }
+
+    devArrow.position.set(ship.position.x, ship.position.y, ship.position.z);
+    let dir = new THREE.Vector3(Math.sin(ship.rotation.y), 0, -Math.cos(ship.rotation.y));
+    devArrow.setLength(dir.length());
+    devArrow.setDirection(dir.normalize());
+    console.log(dir);
 }
 
 var render = function () {
