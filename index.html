@@ -7,17 +7,21 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
     <style>
-        * { color: #ffffff; font-family: Verdana; margin: 0; padding: 0; }
+        * { color: #ffffff; font-family: Verdana; margin: 0; padding: 0; z-index: 1; position: relative; }
         html, body { background-color: #000000; text-align: center; width: 100%; height: 100%; }
         h1 { font-size: 72px; padding: 60px 0px; width: 100%; color: white; font-family: Verdana; }
         h4 { font-size: 20px; padding: 20px 0px; width: 100%; color: white; font-family: Verdana; }
-        button { width: 1080px; min-width: 200px; max-width: 60%; height: 160px; border: none; background-color: #444444; font-size: 48px; border-radius: 20px; outline: none; transition: 0.2s; color: white; }
+        button { width: 1080px; min-width: 200px; max-width: 60%; height: 160px; border: none; background-color: #212121;
+            font-size: 48px; border-radius: 20px; outline: none; transition: 0.2s; color: white; box-shadow: 8px 8px 8px #080808; }
         button:hover { transform: scale(1.1); }
+        #bgImage { position: absolute; left: 50%; width: 512px; height: 512px; margin-left: -256px; z-index: 0; }
     </style>
 
     <script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 </head>
 <body>
+    <img id="bgImage" src="gfx/rocket.png">
+
     <h1>Sky Hoffert</h1>
     
     <div style="width: 100%; height: 20px;"></div>
@@ -49,5 +53,6 @@
         <div style="width: 100%; height: 30px;"></div>
         <p style="font-size: 20px;">&copy; 2019 Sky Hoffert</p>
     </div>
+
 </body>
 </html>
