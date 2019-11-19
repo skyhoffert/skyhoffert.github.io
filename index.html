@@ -1,58 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta charset="utf-8">
-    <title>Sky Hoffert Personal Website</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
-    <style>
-        * { color: #ffffff; font-family: Verdana; margin: 0; padding: 0; z-index: 1; position: relative; }
-        html, body { background-color: #000000; text-align: center; width: 100%; height: 100%; }
-        h1 { font-size: 72px; padding: 60px 0px; width: 100%; color: white; font-family: Verdana; }
-        h4 { font-size: 20px; padding: 20px 0px; width: 100%; color: white; font-family: Verdana; }
-        button { width: 1080px; min-width: 200px; max-width: 60%; height: 160px; border: none; background-color: #212121;
-            font-size: 48px; border-radius: 20px; outline: none; transition: 0.2s; color: white; box-shadow: 8px 8px 8px #080808; }
-        button:hover { transform: scale(1.1); }
-        #bgImage { position: absolute; left: 50%; width: 512px; height: 512px; margin-left: -256px; z-index: 0; }
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sky Hoffert</title>
+    <style media="screen and (min-device-width: 800px)">
+        * { font-family: "Verdana"; color: white; }
+        body, html { width: 100%; height: 100%; margin: 0; padding: 0; background-color: black; text-align: center; }
+        h1 { font-size: 5vw; }
+        h2 { font-size: 3vw; }
+        #donateDiv { text-align: center; }
+        @keyframes brighten{0%{opacity:0.2;} 100%{opacity:0.8;}}
+        #sunImage { width: 100%; animation-name: brighten; animation-duration: 1.5s; animation-delay: 0.2s; animation-fill-mode: forwards; opacity: 0.2; }
+        @keyframes appear{0%{opacity:0;} 100%{opacity:1;}}
+        #mainContent { width: auto; height: auto; margin: 10px; padding: 0px 10px; opacity: 0; animation-delay: 1.2s; animation-duration: 2s; animation-name: appear; animation-fill-mode: forwards; }
+        .spacer-80 { width: 100%; height: 80px; }
+        .spacer-160 { width: 100%; height: 160px; }
+        .linkPanel { width: auto; height: 400px; max-height: 20%; margin: 100px; transition: transform 0.7s; }
+        .linkPanel:hover { transform: scale(1.1); }
+        .linkImg { width: 33%; max-width: 400px; float: left; }
+        .linkContent { width: 66%; height: 400px; float: left; border: solid 1px #5AA1E2; border-radius: 20px; }
+        .linkDescription { font-size: 1vw; padding: 0 100px; opacity: 0; transition: opacity 0.6s; }
+        .linkPanel:hover .linkDescription { opacity: 1; }
+    </style>
+    <style media="screen and (max-device-width: 800px)">
+        * { font-family: "Verdana"; color: white; }
+        body, html { width: 100%; height: 100%; margin: 0; padding: 0; background-color: black; text-align: center; }
+        h1 { font-size: 6vw; }
+        h2 { font-size: 4vw; }
+        #donateDiv { text-align: center; }
+        @keyframes brighten{0%{opacity:0.2;} 100%{opacity:0.8;}}
+        #sunImage { width: 100%; animation-name: brighten; animation-duration: 2s; animation-delay: 0.2s; animation-fill-mode: forwards; opacity: 0.2; }
+        @keyframes appear{0%{opacity:0;} 100%{opacity:1;}}
+        #mainContent { width: auto; height: auto; margin: 10px; padding: 0px 10px; opacity: 0; animation-delay: 1s; animation-duration: 3s; animation-name: appear; animation-fill-mode: forwards; }
+        .spacer-80 { width: 100%; height: 80px; }
+        .spacer-160 { width: 100%; height: 160px; }
+        .linkPanel { width: auto; height: 256px; margin: 10px; }
+        .linkImg { width: 49%; float: left; }
+        .linkContent { width: 49%; float: left; border: solid 1px #5AA1E2; border-radius: 20px; }
+        .linkDescription { font-size: 2vw; margin-bottom: 20px; }
     </style>
 
-    <script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!--<script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>-->
 </head>
 <body>
-    <img id="bgImage" src="gfx/rocket.png">
+    <img id="sunImage" src="gfx/sun.png">
 
-    <h1>Sky Hoffert</h1>
-    
-    <div style="width: 100%; height: 20px;"></div>
-    
-    <h4>Welcome! Choose a category below.</h4>
-    
-    <div style="height: 120px;"></div>
-    <a href="games.html"><button>Games</button></a>
-    <div style="height: 40px;"></div>
-    <a href="art.html"><button>Art</button></a>
-    <div style="height: 40px;"></div>
-    <a href="lit.html"><button>Literature</button></a>
-    
-    <div style="height: 30%;"></div>
-    <!-- Ideally ads would go here -->
-    <div style="height: 30%;"></div>
-    
-    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-    <input type="hidden" name="cmd" value="_donations" />
-    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
-    <input type="hidden" name="currency_code" value="USD" />
-    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-    </form>
-
-    <div style="width: 100%; height: 50px;"></div>
-    
-    <div style="width: 100%; height: 80px; background-color: #222222;">
-        <div style="width: 100%; height: 30px;"></div>
-        <p style="font-size: 20px;">&copy; 2019 Sky Hoffert</p>
+    <div id="mainContent">
+        <h1>Sky's Solar System</h1>
+        <div class="spacer-80"></div>
+        <div class="linkPanel" onclick="location.href = 'games.html';">
+            <img class="linkImg" src="gfx/planet_1.png">
+            <div class="linkContent">
+                <h2>Game-ymede</h2>
+                <p class="linkDescription">Games that I have created.<br><br><a>Click to Travel</a></p>
+            </div>
+        </div>
+        <div class="linkPanel" onclick="location.href = 'lit.html';">
+            <div class="linkContent">
+                <h2>Short Staries</h2>
+                <p class="linkDescription">Works of literature that I have written.<br><br><a>Click to Travel</a></p>
+            </div>
+            <img class="linkImg" src="gfx/planet_2.png">
+        </div>
+        <div class="linkPanel" onclick="location.href = 'art.html';">
+            <img class="linkImg" src="gfx/planet_3.png">
+            <div class="linkContent">
+                <h2>Visual Meteors</h2>
+                <p class="linkDescription">Visual Media, from my drawings to my paintings.<br><br><a>Click to Travel</a></p>
+            </div>
+        </div>
     </div>
 
+    <div class="spacer-160"></div>
+
+    <div id="donateDiv">
+        <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+        <input type="hidden" name="cmd" value="_donations" />
+        <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
+        <input type="hidden" name="currency_code" value="USD" />
+        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+        </form>
+    </div>
+
+    <div class="spacer-80"></div>
+    <p>Email me: skyhoffert@gmail.com</p>
+    <div class="spacer-80"></div>
+    
+    <div style="width: 100%; height: 80px; background-color: #222222; text-align: center;">
+        <div style="width: 100%; height: 10px;"></div>
+        <p style="font-size: 16px;">&copy; 2019 Sky Hoffert</p>
+    </div>
 </body>
 </html>
