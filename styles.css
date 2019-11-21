@@ -1,0 +1,55 @@
+
+* {
+    font-family: Verdana;
+    color: white;
+}
+
+body, html {
+    position: relative;
+    margin: 0;
+    padding: 20px;
+    background-color: black; 
+    overflow-x: none;
+}
+
+h1 {
+    font-size: 100px;
+    margin: 0px;
+}
+a {
+    margin: 0;
+    padding: 0;
+}
+button {
+    position: relative;
+    border: none;
+    width: 100%;
+    background-color: black; 
+    text-align: left;
+    font-size: 70px;
+    padding-top: 10px;
+    padding-bottom: 0;
+    transition: font-size 0.4s;
+}
+
+button:hover {
+    font-size: 100px;
+}
+
+button p {
+    margin: 0;
+    padding: 0; 
+    transition: font-size 0.4s;
+    font-size: 16px;
+}
+
+button:hover p {
+    font-size: 20px;
+}
+
+.spacer-20 { height: 20px; }
+.spacer-40 { height: 40px; }
+.spacer-120 { height: 120px; }
+
+#finalButton { color: black; }
+#finalButton:hover { font-size: 70px; }
