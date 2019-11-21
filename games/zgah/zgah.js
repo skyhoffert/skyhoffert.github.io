@@ -46,6 +46,8 @@ var devGodModeDisplay = true;
 var devEndGame = false;
 var devGoal = 250;
 
+var devExplodeTip = false;
+
 var offsetX = 0;
 var offsetY = 0;
 
@@ -357,6 +359,8 @@ function ColorsForType(t) {
         return ["#fff27b", "#73691c"];
     } else if (t === 4) {
         return ["#32d6d3", "#145756"];
+    } else if (t === 5) {
+        return ["red", "red"];
     }
 
     return ["white", "#444444"];
@@ -471,12 +475,12 @@ function DrawStage() {
         stars[i].Draw(context);
     }
 
-    if (playerShip) {
-        playerShip.Draw(context);
-    }
-
     for (let i = 0; i < asteroids.length; i++) {
         asteroids[i].Draw(context);
+    }
+
+    if (playerShip) {
+        playerShip.Draw(context);
     }
 
     for (let i = 0; i < trails.length; i++) {

@@ -251,26 +251,32 @@ class Ship {
         if (!this.canImpact) { return; }
 
         if (this.active && Math.abs(this.velX) + Math.abs(this.velY) > this.demoVel) {
-            let numP = 100;
-            for (let i = 0; i < numP; i++) {
-                trails.push(new Trail(this.x - offsetX + (Math.random() * 4 - 2), 
-                    this.y - offsetY + (Math.random() * 4 - 2), 
-                    this.velX * Math.random(), this.velY * Math.random(),
-                    3, Math.random() * 2 * Math.PI, this.color, 2000));
-            }
-
-            this.active = false;
-
-            lerpers.push(new Lerper(this.respawnTime, function (p, d) {
-                if (d) {
-                    let min = score - playerShip.scoreLossOnDeath < 0 ? 0 : score - playerShip.scoreLossOnDeath;
-                    score = min;
-                    playerShip.Reset();
-                    offsetX = 0;
-                    offsetY = 0;
-                }
-            }));
+            this.Die();
         }
+    }
+
+    Die() {
+        console.log("Player died.");
+
+        let numP = 100;
+        for (let i = 0; i < numP; i++) {
+            trails.push(new Trail(this.x - offsetX + (Math.random() * 4 - 2), 
+                this.y - offsetY + (Math.random() * 4 - 2), 
+                this.velX * Math.random(), this.velY * Math.random(),
+                3, Math.random() * 2 * Math.PI, this.color, 2000));
+        }
+
+        this.active = false;
+
+        lerpers.push(new Lerper(this.respawnTime, function (p, d) {
+            if (d) {
+                let min = score - playerShip.scoreLossOnDeath < 0 ? 0 : score - playerShip.scoreLossOnDeath;
+                score = min;
+                playerShip.Reset();
+                offsetX = 0;
+                offsetY = 0;
+            }
+        }));
     }
 
     Tick(dT) {
@@ -533,7 +539,7 @@ class Asteroid {
         this.velY = this.velM * Math.random() - this.velM/2;
         this.size = s;
         this.active = true;
-        this.type = t === null ? Math.floor(5*Math.random()) : t;
+        this.type = t === null ? Math.floor(6*Math.random()) : t;
         this.color = ColorsForType(-1)[0];
         this.explosionColor = ColorsForType(-1)[1];
 
@@ -556,6 +562,8 @@ class Asteroid {
 
         this.targetFactor = 2;
         this.minTargetDistance = 50;
+
+        this.blastRadius = 50 + this.size*3;
         
         let i = 0;
 
@@ -621,10 +629,32 @@ class Asteroid {
                             this.y + 2*this.size * Math.random() - this.size, this.size/num, this.type, this.scanpc >= 1));
                     }
                 } else {
-                    let numM = this.size;
-                    for (let i = 0; i < numM; i++) {
-                        materials.push(new Material(this.x + 2*this.size * Math.random() - this.size,
-                            this.y + 2*this.size * Math.random() - this.size, this.type));
+                    // Type 5 is a "dangerous" asteroid that damages the player.
+                    if (this.type !== 5) {
+                        let numM = this.size;
+                        for (let i = 0; i < numM; i++) {
+                            materials.push(new Material(this.x + 2*this.size * Math.random() - this.size,
+                                this.y + 2*this.size * Math.random() - this.size, this.type));
+                        }
+                    }
+                }
+
+                if (this.type === 5) {
+                    if (Distance(this.x + offsetX, this.y + offsetY, playerShip.x, playerShip.y) < this.blastRadius) {
+                        playerShip.Die();
+
+                        if (!devExplodeTip) {
+                            devExplodeTip = true;
+                            
+                            lurkers.push(new Lurker(function (dT) {
+                                if (this.elapsed > 10000) {
+                                    return false;
+                                }
+                                return true;
+                            }, function (ctx) {
+                                DrawTutText(ctx, "Look out! Certain asteroids explode violently when destroyed. Scanning before mining or keeping your distance is a good idea!");
+                            }));
+                        }
                     }
                 }
 
@@ -696,6 +726,7 @@ class Asteroid {
         if (this.x + this.size + offsetX > 0 && this.x - this.size + offsetX < WIDTH &&
             this.y + this.size + offsetY > 0 && this.y - this.size + offsetY < HEIGHT)
         {
+            ctx.fillStyle = "black";
             ctx.strokeStyle = this.color;
 
             ctx.beginPath();
@@ -706,6 +737,7 @@ class Asteroid {
                     this.y + this.ds[i] * Math.sin(this.angles[i]) + offsetY);
             }
             ctx.closePath();
+            ctx.fill();
             ctx.stroke();
         }
     }
