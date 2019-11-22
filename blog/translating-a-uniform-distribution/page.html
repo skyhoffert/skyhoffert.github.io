@@ -77,12 +77,14 @@
     calculator, you would find a value of 0.25. What about 0.9<sup>2</sup>? What about 
     0.1<sup>2</sup>? I'll write down some common values below.
     <br><br>
+    <i>
     0<sup>2</sup> = 0<br>
     0.1<sup>2</sup> = 0.01<br>
     0.2<sup>2</sup> = 0.04<br>
     0.5<sup>2</sup> = 0.25<br>
     0.9<sup>2</sup> = 0.81<br>
     1<sup>2</sup> = 1
+    </i>
     <br><br>
     The moral of the story is, when you square a value between 0 and 1, it becomes 
     <strong>smaller</strong>. With this logic, it is more likely that the value is small than large.
@@ -98,7 +100,7 @@
     With a little intuition, you may reason that the final distribution should look something like
     this:
     <br><br>
-    <img src="laplace_basic.png">
+    <img src="laplace_basic.png" width="400px">
     <br><br>
     This shows that by taking the original uniform distribution in the range -1 to 1 and squaring
     it, we are <i>much</i> more likely to find values closer to 0 than we are near 1 or -1.
@@ -108,15 +110,76 @@
     Laplace-like), but the point is that we have <i>emulated</i> a certain probability distribution
     with a simple translation from a uniform distribution. How fascinating!
     <br><br>
-    Now we could take it upon ourselves to modify this even more! Say we want a range of -4 to 4.
+    We could take it upon ourselves to modify this even more! Say we want a range of -4 to 4.
     Multiplying by 4 would suffice! We could even square the value again to get a <i>tighter</i>
     slope around 0, which makes values near 0 <strong>very</strong> likely. The world is your
     playground!
     <br><br>
-    Now, for the final part of this blog post: the <strong>Normal</strong> Distribution. The
+    Now, for the final part of this blog post: the 
+    <a href="https://en.wikipedia.org/wiki/Normal_distribution">Normal Distribution</a>. The
     normal, or Gaussian, distribution is a very common distribution that we observe in the real
     world. What I want to cover here is how to convert from a uniform distribution to a normal
     distribution.
+    <br><br>
+    The simplest way I have found to <i>emulate</i> a normal distribution is with the tangent
+    function. The plot of tangent is shown below.
+    <br><br>
+    <img src="tangent.png" width="400px">
+    <br><br>
+    The range of the input to tangent should be between (-0.5*pi) and (0.5*pi). Using methods
+    towards the beginning of this post, we can change our range to match this quite easily. First,
+    subtract 0.5 to change the range to -0.5 to 0.5. Then simply multiply by pi!
+    <br><br>
+    <i>
+    uniform = rand();<br>
+    mod_uniform = (uniform - 0.5) * pi;
+    </i>
+    <br><br>
+    Consider now that the value we found within the new range of tangent is going to be used as the
+    input to the tangent function. What output value from tangent should we expect? Well most of
+    the time, the value will be near <strong>0</strong>. Only rarely (when the input is near an 
+    extreme) will the value stray significantly away from 0. And to add another new phenomena, the
+    output range has been extended to <i>infinity</i>. Woah.
+    <br><br>
+    <i>
+    normal = Tangent(mod_uniform);
+    </i>
+    <br><br>
+    If you run many samples through this random generator and plot them, you will find an output
+    that <i>resembles</i> this curve (the <strong>Bell Curve</strong>).
+    <br><br>
+    <img src="normal.png" width="400px">
+    <br><br>
+    Values near zero are <strong>extremely</strong> likely, but there is a small chance of values
+    outside the typical range of -1 to 1 or even -0.5*pi to 0.5*pi. You could even find a value of
+    100 every once in a great long while, but it is <i>extremely unlikely</i>.
+    <br><br>
+    So, we have arrived! The normal distribution appears <i>all over the place</i> in the real 
+    world, especially where probability and random processes are concerned. One example I can think
+    of is, say you are programming a tree generation system. Well, it turns out that 
+    <strong>most</strong> trees grow to be a certain height, but there are occasional odd-balls.
+    Maybe you want some trees to grow shorter and some to grow taller, but rarely. Well guess what,
+    the normal distribution may be exactly what you are looking for!
+    <br><br>
+    Many programming languages include the capability to pull directly from a normal distribution.
+    randn exists in python and MATLAB. But some popular languages do not have this option.
+    Javascript and C/C++ are examples. By implementing a <i>simple</i> funciton with Tangent, you
+    can achieve your desired result.
+    <br><br>
+    If you would like to see this in action, I threw together a quick demonstration using the
+    method I discussed in this article found at
+    <a href="https://scisky.github.io/distribs.html">this link</a>.
+    <br><br>
+    <strong>A brief disclaimer</strong>: this distribution is 
+    <strong>NOT precisly normal</strong>. It does not have the correct value of standard deviation.
+    If you are looking for a more precise distribution, check out the 
+    <a href="https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform">Box-Muller Transform</a>.
+    It is similar, but with more precise control. It does require more computation though.
+    <br><br>
+    I hope you learned something! Random number generation is a very interesting topic, we are only
+    scratching the surface.
+    <br><br>
+    Be Curious!
     </p>
     
     <div class="spacer-120"></div>
