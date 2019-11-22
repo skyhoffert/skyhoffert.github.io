@@ -54,7 +54,7 @@
     seem trivial to you. But now I'll provide some more interesting insight.
     <br><br>
     No matter what we do - add, subtract, multiply, divide by constants - we will always retain 
-    this property of <strong>equal</strong> (or better yet, Uniform) likelihood. But there are ways
+    this property of <strong>equal</strong> (or better yet, uniform) likelihood. But there are ways
     that we can change this property to some other, what is called, <i>distribution</i>.
     <br><br>
     A simple example is if we take the first value from the range of 0 to 1 and multiply it by
@@ -68,6 +68,55 @@
     out in your mind that small values in the range 0 to 1 are more likely to find our falling
     finger. The area near the right end (at 1) is <strong>much</strong> smaller than the area
     around 0.
+    <br><br>
+    Now, you should be wondering <i>why exactly</i> value are more likely to be near 0 than 1. Time
+    for some math - but don't worry, <strong>it is simple math!</strong> What is the value of 0,
+    squared (I'll use this notation: 0<sup>2</sup>)? Well multiplying 0 x 0 results in a value of
+    ... well 0! What about 1<sup>2</sup>? 1 x 1 = 1. This math is super simple. Now for a more
+    interesting multiplication. What is (0.5)<sup>2</sup>? Well if you plugged this in your
+    calculator, you would find a value of 0.25. What about 0.9<sup>2</sup>? What about 
+    0.1<sup>2</sup>? I'll write down some common values below.
+    <br><br>
+    0<sup>2</sup> = 0<br>
+    0.1<sup>2</sup> = 0.01<br>
+    0.2<sup>2</sup> = 0.04<br>
+    0.5<sup>2</sup> = 0.25<br>
+    0.9<sup>2</sup> = 0.81<br>
+    1<sup>2</sup> = 1
+    <br><br>
+    The moral of the story is, when you square a value between 0 and 1, it becomes 
+    <strong>smaller</strong>. With this logic, it is more likely that the value is small than large.
+    I have made it a point to emphasize what is going on here because, well, it is important to
+    understand how we will be working with the uniform distribution.
+    <br><br>
+    Now, time for something cool. Remember the "<i>*modified *modified Uniform Distribution</i>" from
+    above? Well recall that it was a uniform distrubtion taking values between -1 and 1. Consider 
+    any value in that range, <strong>squared</strong>. We just figured out what the graph will look
+    like between 0 and 1. If you know anything about negative numbers, it should at least be that a
+    negative times a negative becomes a positive.
+    <br><br>
+    With a little intuition, you may reason that the final distribution should look something like
+    this:
+    <br><br>
+    <img src="laplace_basic.png">
+    <br><br>
+    This shows that by taking the original uniform distribution in the range -1 to 1 and squaring
+    it, we are <i>much</i> more likely to find values closer to 0 than we are near 1 or -1.
+    <br><br>
+    This looks like a Laplace Distribution. The name of this isn't so important, and truth be told
+    it is not even the correct equation to find this particular distribution (I call it
+    Laplace-like), but the point is that we have <i>emulated</i> a certain probability distribution
+    with a simple translation from a uniform distribution. How fascinating!
+    <br><br>
+    Now we could take it upon ourselves to modify this even more! Say we want a range of -4 to 4.
+    Multiplying by 4 would suffice! We could even square the value again to get a <i>tighter</i>
+    slope around 0, which makes values near 0 <strong>very</strong> likely. The world is your
+    playground!
+    <br><br>
+    Now, for the final part of this blog post: the <strong>Normal</strong> Distribution. The
+    normal, or Gaussian, distribution is a very common distribution that we observe in the real
+    world. What I want to cover here is how to convert from a uniform distribution to a normal
+    distribution.
     </p>
     
     <div class="spacer-120"></div>
