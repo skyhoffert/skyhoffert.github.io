@@ -26,10 +26,47 @@
     I don't mean to assume I know anything about you, but that is probably exactly what you wanted
     to do :)
     <br><br>
-    A uniform distribution looks like this:
+    <img src="uniform_basic.png" width="50%">
     <br><br>
-    <img src="uniform_basic.jpg" width="500px" height="375px">
+    Imagine closing your eyes and placing your finger somewhere in the shaded region in this image.
+    Notice that at <strong>any</strong> point in the range from 0 to 1, there is an 
+    <strong>equal</strong> likelihood that your finger will be above a given point. There is
+    <strong>NO</strong> chance you will place your finger outside the range, you are skilled with
+    your eyes closed!
     <br><br>
+    Now conveniently, we can use math to modify the value that we place our finger above.
+    Say we <strong>multiply</strong> whatever value we receive by <strong>2</strong>. How have we
+    affected the
+    result? Well put simply, we have increased the <strong>range</strong> of our value. Now instead
+    of being between 0 and 1, the value will be between 0 and 2. But we retain the property that
+    any value in this range is <strong>equally</strong> likely.
+    <br><br>
+    <img src="uniform_x2.png" width="50%">
+    <br><br>
+    Cool! So that makes sense. You can twist and turn this range all you want by adding,
+    subtracting, etc. For example, if we <strong>subtract 1</strong> from this new range, we manage
+    to shift it down by, you guessed it, 1.
+    <br><br>
+    <img src="uniform_x2-1.png" width="50%">
+    <br><br>
+    Straightforward, right? If you are an experienced programmer or you know math well, this may
+    seem trivial to you. But now I'll provide some more interesting insight.
+    <br><br>
+    No matter what we do - add, subtract, multiply, divide - we will always retain this property
+    of <strong>equal</strong> (or better yet, Uniform) likelihood. But there are ways that we can
+    change this property to some other, what is called, <i>distribution</i>.
+    <br><br>
+    A simple example is if we take the first value from the range of 0 to 1 and multiply it by
+    <strong>itself</strong>. You may know this as... not triangling or circling... but
+    <i>squaring</i> the value. This will cause an important change in the graph.
+    <br><br>
+    <img src="quadratic_basic.png" width="50%">
+    <br><br>
+    <i>Well would you look at that!</i> We no longer have the flat line representing the
+    likelihood. Now, it is a <strong>curve</strong>. If you examine the graph, you should be able to work
+    out in your mind that small values in the range 0 to 1 are more likely to find our falling
+    finger. The area near the right end (at 1) is <strong>much</strong> smaller than the area
+    around 0.
     </p>
     
     <div class="spacer-120"></div>
