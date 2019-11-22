@@ -12,14 +12,20 @@ body, html {
     overflow-x: none;
 }
 
+video {
+    margin-top: 0;
+}
+
 h1 {
     font-size: 100px;
     margin: 0px;
 }
+
 a {
     margin: 0;
     padding: 0;
 }
+
 button {
     position: relative;
     border: none;
@@ -48,6 +54,37 @@ button:hover p {
     font-size: 20px;
 }
 
+button img {
+    position: relative;
+    height: 70px;
+    transition: height 0.4s;
+    border: 1px solid #aaaaaa;
+}
+
+button:hover img {
+    height: 256px;
+}
+
+.grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: auto;
+}
+
+.grid-container img {
+    height: 200px;
+    transition: height 0.4s;
+}
+
+.grid-container img:hover {
+    height: 220px;
+}
+
+.grid-container a {
+    margin: 20px;
+}
+
 p { font-size: 16px; }
 strong { font-size: 20px; }
 
@@ -57,3 +94,4 @@ strong { font-size: 20px; }
 
 #finalButton { color: black; }
 #finalButton:hover { font-size: 70px; }
+#noHover { font-size: 70px; }

@@ -3,35 +3,119 @@
 <head>
     <meta charset="utf-8">
     <title>Sky's Art</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
-    <style>
-        * { color: #ffffff; font-family: Verdana; }
-        html, body { background-color: #000000; text-align: center; width: 100%; height: 100%; }
-        h1 { font-size: 72px; padding: 60px 0px; width: 100%; color: white; font-family: Verdana; }
-        h4 { font-size: 20px; padding: 20px 0px; width: 100%; color: white; font-family: Verdana; background-color: #161616; text-align: left; padding: 20px 60px; }
-        p { color: white; font-family: Verdana; }
-        button { background-color: #222222; border: none; border-radius: 6px; width: 100%; min-height: 500px; font-family: Verdana; transition: 0.2s; }
-        button:hover { transform: scale(1.1); }
-        a { color: white; text-decoration: none; font-family: Verdana; }
-        h3 { font-size: 22px; color: white; font-family: Verdana; }
-        img { max-width: 100%; max-height: 200px; transition: 0.2s; }
-        img:hover { transform: scale(1.1); }
-    </style>
-    
+    <link rel="stylesheet" href="styles.css"></style>
+
     <script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 </head>
 <body>
-    <h1>Sky's Art</h1>
-    
     <a href="index_static.html"><p>Home</p></a>
     
-    <div style="width: 100%; height: 20px;"></div>
+    <div class="spacer-40"></div>
+
+    <h1>Sky's Art</h1>
+    <hr>
+
+    <div class="spacer-40"></div>
     
-    <h3>All art is free! Feel free to donate with the button below.</h3>
+    <div class="spacer-120"></div>
+    <button id="noHover">Digital</button>
+    <div class="grid-container">
+        <a href="art/dig_galaxy.jpg">
+            <img src="art/dig_galaxy.jpg"></img>
+        </a>
+        <a href="art/dig_mercury.png">
+            <img src="art/dig_mercury.png"></img>
+        </a>
+        <a href="art/dig_venus.png">
+            <img src="art/dig_venus.png"></img>
+        </a>
+        <a href="art/dig_earth.png">
+            <img src="art/dig_earth.png"></img>
+        </a>
+        <a href="art/dig_mars.png">
+            <img src="art/dig_mars.png"></img>
+        </a>
+        <a href="art/dig_jupiter.png">
+            <img src="art/dig_jupiter.png"></img>
+        </a>
+        <a href="art/dig_saturn.png">
+            <img src="art/dig_saturn.png"></img>
+        </a>
+        <a href="art/dig_uranus.png">
+            <img src="art/dig_uranus.png"></img>
+        </a>
+        <a href="art/dig_neptune.png">
+            <img src="art/dig_neptune.png"></img>
+        </a>
+        <a href="art/dig_pluto.png">
+            <img src="art/dig_pluto.png"></img>
+        </a>
+    </div>
+
+    <div class="spacer-40"></div>
+    <button id="noHover">Modeling</button>
+    <div class="grid-container">
+        <a href="art/modeling_FloatingIsland.png">
+            <img src="art/modeling_FloatingIsland.png"></img>
+        </a>
+        <a href="art/modeling_saturn.png">
+            <img src="art/modeling_saturn.png"></img>
+        </a>
+    </div>
     
-    <div style="height: 20px;"></div>
+    <div class="spacer-40"></div>
+    <button id="noHover">Paint</button>
+    <div class="grid-container">
+        <a href="art/paint_mountain.jpg">
+            <img src="art/paint_mountain.jpg"></img>
+        </a>
+    </div>
+    
+    <div class="spacer-40"></div>
+    <button id="noHover">Ink</button>
+    <div class="grid-container">
+        <a href="art/ink_cabin.jpg">
+            <img src="art/ink_cabin.jpg"></img>
+        </a>
+    </div>
+    
+    <div class="spacer-40"></div>
+    <button id="noHover">Pencil</button>
+    <div class="grid-container">
+        <a href="art/pencil_me.jpg">
+            <img src="art/pencil_me.jpg"></img>
+        </a>
+        <a href="art/pencil_mario.jpg">
+            <img src="art/pencil_mario.jpg"></img>
+        </a>
+        <a href="art/pencil_asteroids.jpg">
+            <img src="art/pencil_asteroids.jpg"></img>
+        </a>
+        <a href="art/pencil_bunny.jpg">
+            <img src="art/pencil_bunny.jpg"></img>
+        </a>
+        <a href="art/pencil_hollowknight.jpg">
+            <img src="art/pencil_hollowknight.jpg"></img>
+        </a>
+        <a href="art/pencil_link.jpg">
+            <img src="art/pencil_link.jpg"></img>
+        </a>
+        <a href="art/pencil_pikachu.jpg">
+            <img src="art/pencil_pikachu.jpg"></img>
+        </a>
+        <a href="art/pencil_random.jpg">
+            <img src="art/pencil_random.jpg"></img>
+        </a>
+        <a href="art/pencil_street.jpg">
+            <img src="art/pencil_street.jpg"></img>
+        </a>
+        <a href="art/pencil_toad.jpg">
+            <img src="art/pencil_toad.jpg"></img>
+        </a>
+    </div>
+    <button id="finalButton">a</button>
+    
+    <div class="spacer-120"></div>
     
     <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
     <input type="hidden" name="cmd" value="_donations" />
@@ -41,164 +125,7 @@
     <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
     </form>
     
-    <div style="height: 120px;"></div>
-    <h4>Digital</h4>
-    <div class="container-fluid">
-    <div class="row">
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_galaxy.jpg">
-                <img src="art/dig_galaxy.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_mercury.png">
-                <img src="art/dig_mercury.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_venus.png">
-                <img src="art/dig_venus.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_earth.png">
-                <img src="art/dig_earth.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_mars.png">
-                <img src="art/dig_mars.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_jupiter.png">
-                <img src="art/dig_jupiter.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_saturn.png">
-                <img src="art/dig_saturn.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_uranus.png">
-                <img src="art/dig_uranus.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_neptune.png">
-                <img src="art/dig_neptune.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/dig_pluto.png">
-                <img src="art/dig_pluto.png"></img>
-            </a>
-        </div>
-    </div>
-    </div>
-
-    <div style="height: 40px;"></div>
-    <h4>Modeling</h4>
-    <div class="container-fluid">
-    <div class="row">
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/modeling_FloatingIsland.png">
-                <img src="art/modeling_FloatingIsland.png"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/modeling_saturn.png">
-                <img src="art/modeling_saturn.png"></img>
-            </a>
-        </div>
-    </div>
-    </div>
-    
-    <div style="height: 40px;"></div>
-    <h4>Paint</h4>
-    <div class="container-fluid">
-    <div class="row">
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/paint_mountain.jpg">
-                <img src="art/paint_mountain.jpg"></img>
-            </a>
-        </div>
-    </div>
-    </div>
-    
-    <div style="height: 40px;"></div>
-    <h4>Ink</h4>
-    <div class="container-fluid">
-    <div class="row">
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/ink_cabin.jpg">
-                <img src="art/ink_cabin.jpg"></img>
-            </a>
-        </div>
-    </div>
-    </div>
-    
-    <div style="height: 40px;"></div>
-    <h4>Pencil</h4>
-    <div class="container-fluid">
-    <div class="row">
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_me.jpg">
-                <img src="art/pencil_me.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_mario.jpg">
-                <img src="art/pencil_mario.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_asteroids.jpg">
-                <img src="art/pencil_asteroids.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_bunny.jpg">
-                <img src="art/pencil_bunny.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_hollowknight.jpg">
-                <img src="art/pencil_hollowknight.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_link.jpg">
-                <img src="art/pencil_link.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_pikachu.jpg">
-                <img src="art/pencil_pikachu.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_random.jpg">
-                <img src="art/pencil_random.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_street.jpg">
-                <img src="art/pencil_street.jpg"></img>
-            </a>
-        </div>
-        <div class="col-xs-6 col-lg-2" style="padding: 20px 20px;">
-            <a href="art/pencil_toad.jpg">
-                <img src="art/pencil_toad.jpg"></img>
-            </a>
-        </div>
-    </div>
-    </div>
-    
-    <div style="height: 50%;"></div>
-
-    <div style="width: 100%; height: 50px;"></div>
+    <div class="spacer-120"></div>
     
     <p>&copy; 2019 Sky Hoffert</p>
 </body>
