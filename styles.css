@@ -30,6 +30,7 @@ button {
     padding-top: 10px;
     padding-bottom: 0;
     transition: font-size 0.4s;
+    outline: none;
 }
 
 button:hover {
