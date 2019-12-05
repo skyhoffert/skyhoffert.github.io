@@ -15,7 +15,7 @@ const COLORS = {"background": "#222222", "player": "#123456", "walls": "#505070"
     "bolts": "#247890", "exit": "#324908"};
 const PLAYER = {
     "width": 42, "height": 70, 
-    "cardinal_velocity": 6.5, 
+    "cardinal_velocity": 5, 
     "images": {
         "still": [],
         "falling": [],
@@ -822,7 +822,7 @@ class Player
             {
                 ctx.save();
                 ctx.scale(sh, sv);
-                ctx.drawImage(PLAYER["images"]["still"][Math.floor(game_ticks/10)%2],
+                ctx.drawImage(PLAYER["images"]["still"][Math.floor(game_ticks/12)%2],
                     sh * (this.position.x - this.size.x/2) * scale.x, 
                     sv * (this.position.y - this.size.y/2) * scale.y, 
                     sh * this.size.x * scale.x, sv * this.size.y * scale.y);
@@ -832,7 +832,7 @@ class Player
             {
                 ctx.save();
                 ctx.scale(sh, sv);
-                ctx.drawImage(PLAYER["images"]["running"][Math.floor(game_ticks/6)%4],
+                ctx.drawImage(PLAYER["images"]["running"][Math.floor(game_ticks/8)%4],
                     sh * (this.position.x - this.size.x/2) * scale.x, 
                     sv * (this.position.y - this.size.y/2) * scale.y, 
                     sh * this.size.x * scale.x, sv * this.size.y * scale.y);
