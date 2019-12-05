@@ -4,31 +4,82 @@
 // new version of The Space Engineer
 //
 
+var keys = {};
+const canvas = document.getElementById("canvas");
+
+// DEV
+var player = {
+    flipRdy: true,
+    mvR: true,
+    size: 64
+};
+
+// Set scaling to NearestNeighbor to avoid blur.
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-const app = new PIXI.Application();
-document.body.appendChild(app.view);
-
-// load the texture we need
-app.loader.add("guy", 'gfx2/still_1.png').load((loader, resources) => {
-    const guy = new PIXI.Sprite(resources.guy.texture);
-
-    guy.scale.set(4, 4);
-
-    // Setup the position of the bunny
-    guy.x = app.renderer.width / 2;
-    guy.y = app.renderer.height / 2;
-
-    // Rotate around the center
-    guy.anchor.x = 0.5;
-    guy.anchor.y = 1;
-
-    // Add the bunny to the scene we are building
-    app.stage.addChild(guy);
-
-    // Listen for frame updates
-    app.ticker.add(() => {
-         // each frame we spin the bunny around a bit
-        guy.rotation += 0.01;
-        guy.x += 0.1;
-    });
+// Create the PIXI application.
+const renderer = new PIXI.Renderer({
+    view: canvas,
+    width: window.innerWidth,
+    height: window.innerHeight
 });
+const stage = new PIXI.Container();
+
+const guyTex = PIXI.Texture.from("gfx2/still_1.png");
+const guy = new PIXI.Sprite(guyTex);
+
+guy.width = player.size;
+guy.height = player.size;
+guy.x = renderer.width / 2;
+guy.y = renderer.height / 2;
+
+// Anchor at center of guy.
+guy.anchor.x = 0.5;
+guy.anchor.y = 0.5;
+
+stage.addChild(guy);
+
+const ticker = new PIXI.Ticker();
+ticker.add(Update);
+ticker.start();
+
+function Update() {
+    if (keys["a"]) {
+        guy.x -= 4;
+        if (player.mvR) {
+            guy.scale.x = -guy.scale.x;
+            player.mvR = false;
+        }
+    } else if (keys["d"]) {
+        guy.x += 4;
+        if (!player.mvR) {
+            guy.scale.x = -guy.scale.x;
+            player.mvR = true;
+        }
+    }
+    if (keys["w"]) {
+        guy.y -= 4;
+    } else if (keys["s"]) {
+        guy.y += 4;
+    }
+    
+    if (player.flipRdy) {
+        if (keys[" "]) {
+            guy.height = -guy.height;
+            player.flipRdy = false;
+        }
+    } else {
+        if (!keys[" "]) {
+            player.flipRdy = true;
+        }
+    }
+
+    renderer.render(stage);
+}
+
+document.addEventListener("keydown", function(evt) {
+    keys[evt.key] = true;
+}, false);
+
+document.addEventListener("keyup", function(evt) {
+    keys[evt.key] = false;
+}, false);
