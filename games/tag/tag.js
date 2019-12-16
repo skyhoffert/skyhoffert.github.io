@@ -33,6 +33,7 @@ function DrawPlayer(p) {
 function DrawPlayers() {
     for (let i = 0; i < players.length; i++) {
         if (!players[i].active){ continue; }
+
         DrawPlayer(players[i]);
     }
 }
@@ -59,13 +60,23 @@ function Draw() {
 
 Draw();
 
+function Update() {
+    if (ws.readyState === WebSocket.OPEN && clientNum !== -1) {
+        ws.send(JSON.stringify({type:"tick", timeSent:Date.now(), keys:keys, clientNum:clientNum}));
+    }
+}
+
+const UR = 30;
 var wsConnected = false;
 var clientNum = -1;
-var frameCounter = 0;
-var frameRate = 60;
+var pingCounter = 0;
+var pingTotal = 0;
 var ip = IP;
 var keys = {a:false, d:false};
 var ws = new WebSocket("ws://"+ip+":"+PORT);
+console.log("Attempting to connect to " + IP);
+
+setInterval(Update, 1000/UR);
 
 ws.addEventListener("error", function (err) {
     if (ip !== IP) {
@@ -90,14 +101,23 @@ ws.onmessage = function (message) {
             break;
         case "tick":
             players = obj.players;
+            let deadPlayers = 0;
+            for (let i = 0; i < players.length; i++) {
+                if (players[i].active === false) {
+                    deadPlayers++;
+                }
+            }
             Draw();
             break;
         case "tock":
-            if (frameCounter % frameRate == 0) {
-                console.log("Ping: " + (Date.now() - obj.timeSent) + " ms");
-                frameCounter = 0;
+            if (pingCounter === UR) {
+                console.log("Ping: " + Math.round(pingTotal / pingCounter) + " ms");
+                pingTotal = 0;
+                pingCounter = 0;
             } else {
-                frameCounter++;
+                pingCounter++;
+                let curPing = (Date.now() - obj.timeSent);
+                pingTotal += curPing;
             }
             break;
         default:
@@ -117,7 +137,6 @@ document.addEventListener("keydown", function (evt) {
     if (ws.readyState === WebSocket.OPEN &&
         (evt.key === "a" || evt.key === "d" || evt.key === " " || evt.key === "0")) {
         keys[evt.key] = true;
-        ws.send(JSON.stringify({type:"tick", timeSent:Date.now(), keys:keys, clientNum:clientNum}));
     }
 });
 
@@ -125,8 +144,5 @@ document.addEventListener("keyup", function (evt) {
     if (ws.readyState === WebSocket.OPEN && 
         (evt.key === "a" || evt.key === "d" || evt.key === " " || evt.key === "0")) {
         keys[evt.key] = false;
-        ws.send(JSON.stringify({type:"tick", timeSent:Date.now(), keys:keys, clientNum:clientNum}));
-    } else {
-        console.log(evt.key);
     }
 });
