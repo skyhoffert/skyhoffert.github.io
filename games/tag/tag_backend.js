@@ -8,6 +8,7 @@ const wss = new WebSocket.Server({ port: 5016 });
 
 var nClients = 0;
 var players = [];
+var cleanPlayers = [];
 var gameWidth = 720;
 var gameHeight = 720;
 var updateRate = 30;
@@ -34,10 +35,15 @@ wss.on("connection", function connection(ws) {
                 players[nClients] = {active:true, x:gameWidth/2, y:gameHeight/2, r:8, color:"red",
                     ws:ws, keys:{}, speed:0.02, grav:0.01, vx:0, vy:0, maxVx:10, maxVy:10, 
                     collisions:{}, jumpSpeed:-6, hasJump:false, jFrame:0, jHold:true};
+		cleanPlayers[nClients] = {active:true, x:players[nClients].x, y:players[nClients].y,
+		    r:players[nClients].r, color:players[nClients].color};
                 nClients++;
+		console.log("Connect " + (nClients-1));
                 break;
             case "disconnect":
+		console.log("Disconnect " + obj.clientNum);
                 players[obj.clientNum].active = false;
+		cleanPlayers[obj.clientNum].active = false;
                 break;
             case "tick":
                 ws.send(JSON.stringify({"type": "tock", "timeSent": obj.timeSent}));
@@ -65,6 +71,7 @@ function Update() {
         if (!players[i].active){ continue; }
 
         let p = players[i];
+	let cp = cleanPlayers[i];
 
         // Accelerate based on user input.
         if (p.keys["a"]) {
@@ -145,9 +152,25 @@ function Update() {
                 p.y = w.y + w.height/2 + p.r;
             }
         }
+	if (p.x > gameWidth || p.x < 0 || p.y > gameHeight || p.y < 0) {
+	    p.x = gameWidth/2;
+	    p.y = gameHeight/2;
+	}
 
-        p.ws.send(JSON.stringify({"type": "tick", "players": players}));
+	// Cheat Codes!
+	if (p.keys["0"]) {
+	    p.x = gameWidth/2;
+	    p.y = gameHeight/2;
+	}
+
+	cp.x = p.x;
+	cp.y = p.y;
+
+        p.ws.send(JSON.stringify({"type": "tick", "players": cleanPlayers}));
     }
 }
 
 setInterval(Update, 1000/updateRate);
+
+console.log("Running");
+
