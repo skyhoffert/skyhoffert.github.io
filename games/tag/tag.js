@@ -8,7 +8,8 @@ const HEIGHT = 720;
 const GAME_WIDTH = 720;
 const GAME_BG = "#222222";
 const MENU_BG = "#181818";
-const VERSION = "v0.1";
+const VERSION = "v0.2";
+const VALID_KEYS = ["a", "d", "w", " ", "1", "2", "7", "8", "9"];
 
 var IP = "100.16.230.232";
 var PORT = "5016";
@@ -30,15 +31,25 @@ var chat = [];
 context.fillStyle = MENU_BG;
 context.fillRect(GAME_WIDTH, 0, WIDTH-GAME_WIDTH, HEIGHT);
 
-function DrawChat() {
-    context.font = "10px Verdana";
-    for (let i = chat.length-1; i >= 0; i--) {
-        if ((chat.length-i)*12 > 300) { break; }
-        context.fillText(chat[i], GAME_WIDTH+8, 600-(chat.length-i)*12);
-    }
-}
+function DrawMenu() {
+    context.fillStyle = MENU_BG;
+    context.fillRect(GAME_WIDTH, 0, WIDTH-GAME_WIDTH, HEIGHT);
+    
+    context.font = "24px Verdana";
+    context.fillStyle = players[clientNum].color;
+    context.fillText("You are "+players[clientNum].color+", ", GAME_WIDTH+8, 100);
+    context.fillText(""+players[clientNum].name, GAME_WIDTH+8, 126);
 
-function DrawStaticMenu() {
+    if (numIt !== -1) {
+        context.font = "24px Verdana";
+        context.fillStyle = players[numIt].color;
+        context.fillText(""+players[numIt].color+" is it!", GAME_WIDTH+8, 160);
+    }
+    
+    context.font = "12px Verdana";
+    context.fillStyle = "white";
+    context.fillText(""+ping+" ms", GAME_WIDTH+4, HEIGHT-10);
+    
     context.fillStyle = "white";
     context.font = "bold 36px Verdana";
     context.fillText("Tag", GAME_WIDTH+8, 40);
@@ -49,8 +60,45 @@ function DrawStaticMenu() {
     context.font = "14px Verdana";
     context.fillStyle = "white";
     context.fillText("Lobby Actions:", GAME_WIDTH+8, 200);
-    context.fillText("1: New IT", GAME_WIDTH+16, 220);
+    context.fillText("1: New Round", GAME_WIDTH+16, 220);
     context.fillText("2: Reset Lobby", GAME_WIDTH+16, 240);
+    context.fillText("Chat:", GAME_WIDTH+8, 285);
+
+    context.strokeStyle = "white";
+    context.beginPath();
+    context.moveTo(GAME_WIDTH, 270);
+    context.lineTo(WIDTH, 270);
+    context.closePath();
+    context.stroke();
+    context.beginPath();
+    context.moveTo(GAME_WIDTH, 600);
+    context.lineTo(WIDTH, 600);
+    context.closePath();
+    context.stroke();
+    context.beginPath();
+    context.moveTo(GAME_WIDTH, 613);
+    context.lineTo(WIDTH, 613);
+    context.closePath();
+    context.stroke();
+
+    context.fillStyle = "white";
+    context.font = "11px Verdana";
+    for (let i = chat.length-1; i >= 0; i--) {
+        if ((chat.length-i)*12 > 300) { break; }
+        context.fillText(chat[i], GAME_WIDTH+8, 600-(chat.length-i)*12);
+    }
+    context.fillText("7: gg", GAME_WIDTH+8, 610);
+    context.fillText("8: ez", GAME_WIDTH+98, 610);
+    context.fillText("9: rip", GAME_WIDTH+188, 610);
+
+    context.font = "12px Verdana";
+    context.fillText("a: Move Left", GAME_WIDTH+8, 640);
+    context.fillText("d: Move Right", GAME_WIDTH+8, 654);
+    context.fillText("Space: Jump", GAME_WIDTH+8, 668);
+    context.fillText("w: Special Ability", GAME_WIDTH+8, 682);
+}
+
+function DrawStaticMenu() {
 }
 
 DrawStaticMenu();
@@ -69,6 +117,14 @@ function DrawPlayer(p) {
     context.arc(p.x, p.y, p.r, 0, 2*Math.PI);
     context.closePath();
     context.fill();
+    
+    if (p.hasSpecial) {
+        context.fillStyle = "black";
+        context.beginPath();
+        context.arc(p.x, p.y, p.r/4, 0, 2*Math.PI);
+        context.closePath();
+        context.fill();
+    }
 
     context.font = "9px Verdana";
     let nw = context.measureText(p.name).width;
@@ -141,14 +197,8 @@ function Draw() {
     DrawOthers();
 
     DrawPlayers();
-
-    context.fillStyle = MENU_BG;
-    context.fillRect(GAME_WIDTH+2, HEIGHT-30, 100, 30);
-    context.font = "12px Verdana";
-    context.fillStyle = "white";
-    context.fillText(""+ping+" ms", GAME_WIDTH+4, HEIGHT-10);
     
-    DrawChat();
+    DrawMenu();
 }
 
 function Update() {
@@ -167,7 +217,6 @@ var ip = "localhost";
 ip = IP; // Comment out when in dev.
 var keys = {a:false, d:false};
 var ws = new WebSocket("ws://"+ip+":"+PORT);
-console.log("Attempting to connect to " + IP);
 
 setInterval(Update, 1000/UR);
 
@@ -191,10 +240,6 @@ ws.onmessage = function (message) {
             clientNum = obj.clientNum;
             walls = obj.walls;
             console.log("Successfully connected as client " + clientNum + ".");
-            context.font = "24px Verdana";
-            context.fillStyle = obj.color;
-            context.fillText("You are "+obj.color+", ", GAME_WIDTH+8, 100);
-            context.fillText(""+obj.name, GAME_WIDTH+8, 126);
             break;
         case "tock":
             if (pingCounter === UR) {
@@ -209,13 +254,6 @@ ws.onmessage = function (message) {
             players = obj.players;
             if (obj.numIt !== numIt) {
                 numIt = obj.numIt;
-                context.fillStyle = MENU_BG;
-                context.fillRect(GAME_WIDTH+1, 140, WIDTH-GAME_WIDTH, 40);
-                if (numIt !== -1) {
-                    context.font = "24px Verdana";
-                    context.fillStyle = players[numIt].color;
-                    context.fillText(""+players[numIt].color+" is it!", GAME_WIDTH+8, 160);
-                }
             }
             others = obj.others;
             if (obj.newChats) {
@@ -239,17 +277,13 @@ window.onbeforeunload = function () {
 }
 
 document.addEventListener("keydown", function (evt) {
-    if (ws.readyState === WebSocket.OPEN &&
-        (evt.key === "a" || evt.key === "d" || evt.key === " " || evt.key === "0" ||
-        evt.key === "1" || evt.key === "2" || evt.key === "7")) {
+    if (ws.readyState === WebSocket.OPEN && VALID_KEYS.includes(evt.key)) {
         keys[evt.key] = true;
     }
 });
 
 document.addEventListener("keyup", function (evt) {
-    if (ws.readyState === WebSocket.OPEN && 
-        (evt.key === "a" || evt.key === "d" || evt.key === " " || evt.key === "0" ||
-        evt.key === "1" || evt.key === "2" || evt.key === "7")) {
+    if (ws.readyState === WebSocket.OPEN && VALID_KEYS.includes(evt.key)) {
         keys[evt.key] = false;
     }
 });

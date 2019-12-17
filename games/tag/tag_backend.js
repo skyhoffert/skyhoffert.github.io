@@ -7,12 +7,13 @@ const WebSocket = require("ws");
 const wss = new WebSocket.Server({ port: 5016 });
 
 const COLORS = ["red", "green", "blue", "yellow", "cyan", "violet", "orange"];
-const NAMES_1 = ["Super", "Giant", "Light", "Funny", "Dank", "Yummy", "Quick", "Ripped"];
-const NAMES_2 = ["Beaver", "Dude", "Squirrel", "Otter", "Rat", "Ball", "Oval", "Sphere"];
+const NAMES_1 = ["Super", "Giant", "Light", "Funny", "Dank", "Yummy", "Quick", "Vivacious", "Rapid"];
+const NAMES_2 = ["Beaver", "Dude", "Squirrel", "Otter", "Rat", "Ball", "Oval", "Sphere", "Owl", "Cat"];
 
 const IT_TIMER = 2000;
 const PORTAL_TIMER = 5000;
 const PORTAL_CHANCE = 0.5;
+const SPECIAL_CD = 1200;
 
 function Dist(x, y, xx, yy) {
     return Math.sqrt(Math.pow(x - xx, 2) + Math.pow(y - yy, 2));
@@ -50,7 +51,6 @@ others.push(mvwall);
 others.push(portal);
 
 var newChatsTBD = [];
-var newChats = [];
 
 wss.on("connection", function connection(ws) {
     ws.on("message", function incoming(message) {
@@ -66,9 +66,11 @@ wss.on("connection", function connection(ws) {
                 players[nClients] = {active:true, x:gameWidth/2, y:gameHeight/2, r:8, color:c,
                     ws:ws, keys:{}, speed:0.02, grav:0.01, vx:0, vy:0, maxVx:10, maxVy:10, 
                     collisions:{}, jumpSpeed:-6, hasJump:false, jFrame:0, jHold:true, it:false,
-                    name:n};
+                    name:n, newChats:["Server: Welcome!"], chatDown:false, actionDown:false, 
+                    specialCd:0};
 		        cleanPlayers[nClients] = {active:true, x:players[nClients].x, y:players[nClients].y,
-                    r:players[nClients].r, color:players[nClients].color, it:false, name:n};
+                    r:players[nClients].r, color:players[nClients].color, it:false, name:n,
+                    hasSpecial:true};
                 nClients++;
                 colorTracker++;
 		        console.log("Connect " + (nClients-1));
@@ -84,17 +86,18 @@ wss.on("connection", function connection(ws) {
                 }
                 break;
             case "tick":
-                ws.send(JSON.stringify({type:"tock", timeSent:obj.timeSent, players:cleanPlayers,
-                    numIt:numIt, others:others, newChats:newChats}));
                 if (players[obj.clientNum]){
+                    ws.send(JSON.stringify({type:"tock", timeSent:obj.timeSent, players:cleanPlayers,
+                        numIt:numIt, others:others, newChats:players[obj.clientNum].newChats}));
                     players[obj.clientNum].keys = obj.keys;
+                    players[obj.clientNum].newChats = [];
                 }
                 break;
             default:
                 console.log("Unknown message type.");
                 console.log(obj);
                 break;
-        }
+        };
     });
 
     ws.on("close", function close() {
@@ -118,12 +121,6 @@ function Update() {
     let dT = now - prevTime;
     prevTime = now;
 
-    newChats = [];
-    for (let i = 0; i < newChatsTBD.length; i++) {
-        newChats.push(newChatsTBD[i]);
-    }
-    newChatsTBD = [];
-
     for (let i=0; i < players.length; i++) {
         if (!players[i].active){ continue; }
 
@@ -131,30 +128,48 @@ function Update() {
         let cp = cleanPlayers[i];
 
         // Accelerate based on user input.
-        if (p.keys["1"]) {
-            if (numIt !== -1) {
-                players[numIt].it = false;
+        if (p.keys["1"] || p.keys["2"]) {
+            if (!p.actionDown) {
+                p.actionDown = true;
+                if (p.keys["1"]) {
+                    if (numIt !== -1) {
+                        players[numIt].it = false;
+                    }
+                    let tries = 0;
+                    numIt = Math.round(Math.random() * (nClients-1));
+                    while ((!players[numIt] || !players[numIt].active) && tries < 50) {
+                        tries++;
+                        numIt = Math.round(Math.random() * (nClients-1));
+                    }
+                    if (players[numIt] && players[numIt].active) {
+                        players[numIt].it = true;
+                        cleanPlayers[numIt].it = true;
+                        console.log("Player " + numIt + " now it.");
+                        console.log("after " + tries + " tries.");
+                    }
+                } else if (p.keys["2"]) {
+                    if (nClients > 0) {
+                        Reset();
+                        return;
+                    }
+                }
             }
-            let tries = 0;
-            numIt = Math.round(Math.random() * (nClients-1));
-            while ((!players[numIt] || !players[numIt].active) && tries < 50) {
-                tries++;
-                let numIt = Math.round(Math.random() * (nClients-1));
+        } else {
+            p.actionDown = false;
+            if (p.keys["7"] || p.keys["8"] || p.keys["9"]) {
+                if (!p.chatDown) {
+                    p.chatDown = true;
+                    if (p.keys["7"]) {
+                        newChatsTBD.push(""+p.name+": gg");
+                    } else if (p.keys["8"]) {
+                        newChatsTBD.push(""+p.name+": rip");
+                    } else if (p.keys["9"]) {
+                        newChatsTBD.push(""+p.name+": ez");
+                    }
+                }
+            } else {
+                p.chatDown = false;
             }
-            if (players[numIt] && players[numIt].active) {
-                players[numIt].it = true;
-                cleanPlayers[numIt].it = true;
-                console.log("Player " + numIt + " now it.");
-                console.log("after " + tries + " tries.");
-            }
-        } else if (p.keys["2"]) {
-            if (nClients > 0) {
-                Reset();
-                return;
-            }
-        } else if (p.keys["7"]) {
-            newChatsTBD.push(""+p.name+": gg");
-            console.log(""+p.name+" says gg");
         }
         if (p.keys["a"]) {
             if (!p.collisions["l"]) {
@@ -173,6 +188,17 @@ function Update() {
         } else {
             let s = p.speed * dT * Math.sign(p.vx);
             p.vx = Math.sign(p.vx - s) !== Math.sign(p.vx) ? 0 : p.vx - s;
+        }
+        if (p.keys["w"]) {
+            if (p.specialCd <= 0) {
+                p.specialCd = SPECIAL_CD;
+                p.vy = p.maxVy;
+                p.y += 4;
+            }
+        }
+
+        if (p.specialCd > 0) {
+            p.specialCd -= dT;
         }
 
         // Gravity.
@@ -294,16 +320,18 @@ function Update() {
             p.y = gameHeight/2;
         }
 
-        // Cheat Codes!
-        if (p.keys["0"]) {
-            p.x = gameWidth/2;
-            p.y = gameHeight/2;
-        }
-
         cp.x = p.x;
         cp.y = p.y;
         cp.it = p.it;
+        cp.hasSpecial = p.specialCd <= 0;
     }
+    
+    for (let i = 0; i < players.length; i++) {
+        for (let j = 0; j < newChatsTBD.length; j++) {
+            players[i].newChats.push(newChatsTBD[j]);
+        }
+    }
+    newChatsTBD = [];
 
     if (mvwall.right) {
         if (mvwall.x > gameWidth*2/3) {
