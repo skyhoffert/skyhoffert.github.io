@@ -22,10 +22,21 @@ canvas.style.height = "100vh";
 
 var players = [];
 var walls = [];
+var others = [];
 var numIt = -1;
+var portalAng = 0;
+var chat = [];
 
 context.fillStyle = MENU_BG;
 context.fillRect(GAME_WIDTH, 0, WIDTH-GAME_WIDTH, HEIGHT);
+
+function DrawChat() {
+    context.font = "10px Verdana";
+    for (let i = chat.length-1; i >= 0; i--) {
+        if ((chat.length-i)*12 > 300) { break; }
+        context.fillText(chat[i], GAME_WIDTH+8, 600-(chat.length-i)*12);
+    }
+}
 
 function DrawStaticMenu() {
     context.fillStyle = "white";
@@ -58,6 +69,51 @@ function DrawPlayer(p) {
     context.arc(p.x, p.y, p.r, 0, 2*Math.PI);
     context.closePath();
     context.fill();
+
+    context.font = "9px Verdana";
+    let nw = context.measureText(p.name).width;
+    context.fillStyle = "white";
+    context.fillText(p.name, p.x - nw/2, p.y-p.r-2);
+}
+
+function DrawOthers() {
+    for (let i = 0; i < others.length; i++) {
+        let o = others[i];
+        if (o.type === "mvwall") {
+            context.fillStyle = "white";
+            context.fillRect(o.x - o.width/2, o.y - o.height/2, o.width, o.height);
+        } else if (o.type === "portal" && o.active === true) {
+            context.fillStyle = "white";
+            context.beginPath();
+            context.arc(o.x, o.y, o.r, 0, 2*Math.PI);
+            context.closePath();
+            context.fill();
+            context.strokeStyle = "black";
+            context.beginPath();
+            context.moveTo(o.x, o.y);
+            context.lineTo(o.x + o.r/2 * Math.cos(portalAng),
+                o.y + o.r/2 * Math.sin(portalAng));
+            context.closePath();
+            context.stroke();
+
+            context.beginPath();
+            context.arc(o.x2, o.y2, o.r, 0, 2*Math.PI);
+            context.closePath();
+            context.fill();
+            context.strokeStyle = "black";
+            context.beginPath();
+            context.moveTo(o.x2, o.y2);
+            context.lineTo(o.x2 + o.r/2 * Math.cos(-portalAng),
+                o.y2 + o.r/2 * Math.sin(-portalAng));
+            context.closePath();
+            context.stroke();
+
+            portalAng += 0.08;
+            if (portalAng > 6.28) {
+                portalAng -= 6.28;
+            }
+        }
+    }
 }
 
 function DrawPlayers() {
@@ -82,6 +138,8 @@ function Draw() {
 
     DrawWalls();
 
+    DrawOthers();
+
     DrawPlayers();
 
     context.fillStyle = MENU_BG;
@@ -89,6 +147,8 @@ function Draw() {
     context.font = "12px Verdana";
     context.fillStyle = "white";
     context.fillText(""+ping+" ms", GAME_WIDTH+4, HEIGHT-10);
+    
+    DrawChat();
 }
 
 function Update() {
@@ -103,7 +163,8 @@ var clientNum = -1;
 var pingCounter = 0;
 var pingTotal = 0;
 var ping = 0;
-var ip = IP;
+var ip = "localhost";
+ip = IP; // Comment out when in dev.
 var keys = {a:false, d:false};
 var ws = new WebSocket("ws://"+ip+":"+PORT);
 console.log("Attempting to connect to " + IP);
@@ -132,7 +193,8 @@ ws.onmessage = function (message) {
             console.log("Successfully connected as client " + clientNum + ".");
             context.font = "24px Verdana";
             context.fillStyle = obj.color;
-            context.fillText("You are "+obj.color+".", GAME_WIDTH+8, 100);
+            context.fillText("You are "+obj.color+", ", GAME_WIDTH+8, 100);
+            context.fillText(""+obj.name, GAME_WIDTH+8, 126);
             break;
         case "tock":
             if (pingCounter === UR) {
@@ -148,11 +210,17 @@ ws.onmessage = function (message) {
             if (obj.numIt !== numIt) {
                 numIt = obj.numIt;
                 context.fillStyle = MENU_BG;
-                context.fillRect(GAME_WIDTH+1, 120, WIDTH-GAME_WIDTH, 40);
+                context.fillRect(GAME_WIDTH+1, 140, WIDTH-GAME_WIDTH, 40);
                 if (numIt !== -1) {
                     context.font = "24px Verdana";
                     context.fillStyle = players[numIt].color;
-                    context.fillText(""+players[numIt].color+" is it!", GAME_WIDTH+8, 140);
+                    context.fillText(""+players[numIt].color+" is it!", GAME_WIDTH+8, 160);
+                }
+            }
+            others = obj.others;
+            if (obj.newChats) {
+                for (let i = 0; i < obj.newChats.length; i++) {
+                    chat.push(obj.newChats[i]);
                 }
             }
             Draw();
@@ -173,7 +241,7 @@ window.onbeforeunload = function () {
 document.addEventListener("keydown", function (evt) {
     if (ws.readyState === WebSocket.OPEN &&
         (evt.key === "a" || evt.key === "d" || evt.key === " " || evt.key === "0" ||
-        evt.key === "1" || evt.key === "2")) {
+        evt.key === "1" || evt.key === "2" || evt.key === "7")) {
         keys[evt.key] = true;
     }
 });
@@ -181,7 +249,7 @@ document.addEventListener("keydown", function (evt) {
 document.addEventListener("keyup", function (evt) {
     if (ws.readyState === WebSocket.OPEN && 
         (evt.key === "a" || evt.key === "d" || evt.key === " " || evt.key === "0" ||
-        evt.key === "1" || evt.key === "2")) {
+        evt.key === "1" || evt.key === "2" || evt.key === "7")) {
         keys[evt.key] = false;
     }
 });
