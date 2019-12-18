@@ -189,7 +189,7 @@ function Update() {
             let s = p.speed * dT * Math.sign(p.vx);
             p.vx = Math.sign(p.vx - s) !== Math.sign(p.vx) ? 0 : p.vx - s;
         }
-        if (p.keys["w"]) {
+        if (p.keys["s"]) {
             if (p.specialCd <= 0) {
                 p.specialCd = SPECIAL_CD;
                 p.vy = p.maxVy;

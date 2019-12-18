@@ -9,7 +9,7 @@ const GAME_WIDTH = 720;
 const GAME_BG = "#222222";
 const MENU_BG = "#181818";
 const VERSION = "v0.2";
-const VALID_KEYS = ["a", "d", "w", " ", "1", "2", "7", "8", "9"];
+const VALID_KEYS = ["a", "d", "w", "s", " ", "1", "2", "7", "8", "9"];
 
 var IP = "100.16.230.232";
 var PORT = "5016";
@@ -88,8 +88,8 @@ function DrawMenu() {
         context.fillText(chat[i], GAME_WIDTH+8, 600-(chat.length-i)*12);
     }
     context.fillText("7: gg", GAME_WIDTH+8, 610);
-    context.fillText("8: ez", GAME_WIDTH+98, 610);
-    context.fillText("9: rip", GAME_WIDTH+188, 610);
+    context.fillText("8: rip", GAME_WIDTH+98, 610);
+    context.fillText("9: ez", GAME_WIDTH+188, 610);
 
     context.font = "12px Verdana";
     context.fillText("a: Move Left", GAME_WIDTH+8, 640);
