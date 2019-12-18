@@ -225,7 +225,7 @@ var pingCounter = 0;
 var pingTotal = 0;
 var ping = 0;
 var ip = "localhost";
-//ip = IP; // Comment out when in dev.
+ip = IP; // Comment out when in dev.
 var keys = {a:false, d:false};
 var ws = new WebSocket("ws://"+ip+":"+PORT);
 
