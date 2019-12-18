@@ -6,14 +6,17 @@ const WebSocket = require("ws");
 
 const wss = new WebSocket.Server({ port: 5016 });
 
-const COLORS = ["red", "green", "blue", "yellow", "cyan", "violet", "orange"];
-const NAMES_1 = ["Super", "Giant", "Light", "Funny", "Dank", "Yummy", "Quick", "Vivacious", "Rapid"];
-const NAMES_2 = ["Beaver", "Dude", "Squirrel", "Otter", "Rat", "Ball", "Oval", "Sphere", "Owl", "Cat"];
+//               red        green      blue       yellow     cyan       violet     orange
+const COLORS = ["#d41919", "#66de78", "#658deb", "#dbcd32", "#52e3e1", "#9655e6", "#f2b424"];
+const NAMES_1 = ["Super", "Giant", "Light", "Funny", "Dank", "Yummy", "Quick", "Vivacious", 
+    "Rapid", "Lucky", "Sexy", "Lit", "Sweet", "Ugly"];
+const NAMES_2 = ["Beaver", "Dude", "Squirrel", "Otter", "Rat", "Ball", "Oval", "Sphere", "Owl",
+    "Cat", "Lobster", "Crab", "Whale", "Ape"];
 
-const IT_TIMER = 2000;
 const PORTAL_TIMER = 5000;
 const PORTAL_CHANCE = 0.5;
-const SPECIAL_CD = 1200;
+const FASTFALL_CD = 1200;
+const DOUBLEJUMP_CD = 3000;
 
 function Dist(x, y, xx, yy) {
     return Math.sqrt(Math.pow(x - xx, 2) + Math.pow(y - yy, 2));
@@ -25,9 +28,7 @@ var cleanPlayers = [];
 var gameWidth = 720;
 var gameHeight = 720;
 var updateRate = 30;
-var colorTracker = 0;
-var numIt = -1;
-var itCd = 0;
+var numIt = [];
 var portalCheckTimer = PORTAL_TIMER;
 
 var walls = [];
@@ -58,7 +59,7 @@ wss.on("connection", function connection(ws) {
 
         switch (obj.type) {
             case "connect":
-                let c = COLORS[colorTracker%COLORS.length];
+                let c = COLORS[Math.floor(Math.random()*(COLORS.length))];
                 let n = NAMES_1[Math.floor(Math.random()*NAMES_1.length)] + " " +
                     NAMES_2[Math.floor(Math.random() * NAMES_2.length)];
                 ws.send(JSON.stringify({type:"connected", clientNum:nClients, walls:walls,
@@ -67,22 +68,21 @@ wss.on("connection", function connection(ws) {
                     ws:ws, keys:{}, speed:0.02, grav:0.01, vx:0, vy:0, maxVx:10, maxVy:10, 
                     collisions:{}, jumpSpeed:-6, hasJump:false, jFrame:0, jHold:true, it:false,
                     name:n, newChats:["Server: Welcome!"], chatDown:false, actionDown:false, 
-                    specialCd:0};
+                    fastFallCd:0, fastFalling:false, doubleJumpCd:0};
 		        cleanPlayers[nClients] = {active:true, x:players[nClients].x, y:players[nClients].y,
                     r:players[nClients].r, color:players[nClients].color, it:false, name:n,
-                    hasSpecial:true};
+                    hasFastFall:true, hasDoubleJump:true};
                 nClients++;
-                colorTracker++;
 		        console.log("Connect " + (nClients-1));
                 break;
             case "disconnect":
                 console.log("Disconnect " + obj.clientNum);
-                if (numIt === obj.clientNum) {
-                    numIt = -1;
+                if (numIt.includes(obj.clientNum)) {
+                    numIt.splice(numIt.indexOf(obj.clientNum), 1);
                 }
                 if (players[obj.clientNum]) {
-                    players[obj.clientNum].active = false;
-                    cleanPlayers[obj.clientNum].active = false;
+                    players[obj.clientNum] = {active:false};
+                    cleanPlayers[obj.clientNum] = {active:false};
                 }
                 break;
             case "tick":
@@ -108,9 +108,7 @@ function Reset() {
     players = [];
     cleanPlayers = [];
     nClients = 0;
-    numIt = -1;
-    itCd = 0;
-    colorTracker = 0;
+    numIt = [];
     return;
 }
 
@@ -120,6 +118,49 @@ function Update() {
     let now = Date.now();
     let dT = now - prevTime;
     prevTime = now;
+    
+    // Move the moving wall in the center of the arena.
+    if (mvwall.right) {
+        if (mvwall.x > gameWidth*2/3) {
+            mvwall.right = false;
+        }
+    } else {
+        if (mvwall.x < gameWidth/3) {
+            mvwall.right = true;
+        }
+    }
+    mvwall.x += mvwall.right ? mvwall.speed * dT : -mvwall.speed * dT;
+    
+    // Check if the portal needs to be checked.
+    // Sometimes a portal will be created, sometimes it will be destroyed.
+    // When this timer expires, check if the state should be flipped.
+    if (portalCheckTimer <= 0) {
+        portalCheckTimer = PORTAL_TIMER;
+        let r = Math.random();
+        if (!portal.active) {
+            if (r < PORTAL_CHANCE) {
+                let p1 = Math.floor(Math.random() * 2);
+                if (p1 === 0) {
+                    portal.x = gameWidth/6;
+                    portal.y = gameHeight/6;
+                    portal.x2 = gameWidth*5/6;
+                    portal.y2 = gameHeight*5/6;
+                } else {
+                    portal.x = gameWidth*5/6;
+                    portal.y = gameHeight/6;
+                    portal.x2 = gameWidth/6;
+                    portal.y2 = gameHeight*5/6;
+                }
+                portal.active = true;
+            }
+        } else {
+            if (r > PORTAL_CHANCE) {
+                portal.active = false;
+            }
+        }
+    } else {
+        portalCheckTimer -= dT;
+    }
 
     for (let i=0; i < players.length; i++) {
         if (!players[i].active){ continue; }
@@ -132,20 +173,23 @@ function Update() {
             if (!p.actionDown) {
                 p.actionDown = true;
                 if (p.keys["1"]) {
-                    if (numIt !== -1) {
-                        players[numIt].it = false;
+                    for (let j = 0; j < numIt.length; j++) {
+                        if (players[numIt[i]]) {
+                            players[numIt[i]].it = false;
+                        }
                     }
                     let tries = 0;
-                    numIt = Math.round(Math.random() * (nClients-1));
-                    while ((!players[numIt] || !players[numIt].active) && tries < 50) {
+                    numIt = [];
+                    let t = Math.round(Math.random() * (nClients-1));
+                    while ((!players[t] || !players[t].active) && tries < 50) {
                         tries++;
-                        numIt = Math.round(Math.random() * (nClients-1));
+                        t = Math.round(Math.random() * (nClients-1));
                     }
-                    if (players[numIt] && players[numIt].active) {
-                        players[numIt].it = true;
-                        cleanPlayers[numIt].it = true;
-                        console.log("Player " + numIt + " now it.");
-                        console.log("after " + tries + " tries.");
+                    if (players[t] && players[t].active) {
+                        players[t].it = true;
+                        cleanPlayers[t].it = true;
+                        numIt.push(t);
+                        console.log("Player " + t + " now it.");
                     }
                 } else if (p.keys["2"]) {
                     if (nClients > 0) {
@@ -190,15 +234,24 @@ function Update() {
             p.vx = Math.sign(p.vx - s) !== Math.sign(p.vx) ? 0 : p.vx - s;
         }
         if (p.keys["s"]) {
-            if (p.specialCd <= 0) {
-                p.specialCd = SPECIAL_CD;
-                p.vy = p.maxVy;
+            if (p.fastFallCd <= 0) {
+                p.fastFallCd = FASTFALL_CD;
+                p.vy = p.maxVy*2;
                 p.y += 4;
+                p.fastFalling = true;
+            }
+        } else if (p.keys["w"]) {
+            if (p.doubleJumpCd <= 0) {
+                p.doubleJumpCd = DOUBLEJUMP_CD;
+                p.vy = p.jumpSpeed*5/4;
             }
         }
 
-        if (p.specialCd > 0) {
-            p.specialCd -= dT;
+        if (p.fastFallCd > 0) {
+            p.fastFallCd -= dT;
+        }
+        if (p.doubleJumpCd > 0) {
+            p.doubleJumpCd -= dT;
         }
 
         // Gravity.
@@ -222,7 +275,9 @@ function Update() {
         if (!p.jHold) {
             p.vy += p.grav * dT;
         }
-        p.vy = p.vy > p.maxVy ? p.maxVy : p.vy;
+        if (!p.fastFalling) {
+            p.vy = p.vy > p.maxVy ? p.maxVy : p.vy;
+        }
 
         // Add velocity to position.
         p.x += p.vx;
@@ -243,6 +298,7 @@ function Update() {
                 p.vy = 0;
                 p.y = w.y - w.height/2 - p.r;
                 p.hasJump = true;
+                p.fastFalling = false;
             } else if (p.x > w.x - w.width/2 && p.x < w.x + w.width/2 &&
                 p.y - p.r > w.y - w.height/2 && p.y - p.r < w.y + w.height/2) {
                 p.collisions["t"] = w;
@@ -269,6 +325,9 @@ function Update() {
                     p.vy = 0;
                     p.y = w.y - w.height/2 - p.r;
                     p.hasJump = true;
+                    p.fastFalling = false;
+                    // Move player along with wall.
+                    p.x += mvwall.right ? mvwall.speed*2 * dT : -mvwall.speed*2 * dT;
                 } else if (p.x > w.x - w.width/2 && p.x < w.x + w.width/2 &&
                     p.y - p.r > w.y - w.height/2 && p.y - p.r < w.y + w.height/2) {
                     p.collisions["t"] = w;
@@ -288,36 +347,33 @@ function Update() {
             } else if (others[j].type === "portal" && others[j].active) {
                 if (Dist(p.x, p.y, others[j].x, others[j].y) < others[j].r) {
                     p.x = others[j].x2;
-		    if (p.vy > 0) {
-                        p.y = others[j].y2 + others[j].r + 1;
-		    } else {
-			p.y = others[j].y2 - others[j].r - 1;
-		    }
+                    if (p.vy > 0) {
+                                p.y = others[j].y2 + others[j].r + 1;
+                    } else {
+                    p.y = others[j].y2 - others[j].r - 1;
+                    }
                 } else if (Dist(p.x, p.y, others[j].x2, others[j].y2) < others[j].r) {
                     p.x = others[j].x;
-		    if (p.vy > 0) {
-                        p.y = others[j].y + others[j].r + 1;
-		    } else {
-			p.y = others[j].y - others[j].r - 1;
-		    }
+                    if (p.vy > 0) {
+                                p.y = others[j].y + others[j].r + 1;
+                    } else {
+                    p.y = others[j].y - others[j].r - 1;
+                    }
                 }
             }
         }
 
-        if (numIt !== -1) {
-            if (itCd === 0) {
-                if (numIt !== i) {
-                    let d = Dist(p.x, p.y, players[numIt].x, players[numIt].y);
+        if (!numIt.includes(i)) {
+            for (let j = 0; j < numIt.length; j++) {
+                let t = numIt[j];
+                if (t !== i) {
+                    let d = Dist(p.x, p.y, players[t].x, players[t].y);
                     if (d < p.r*2) {
-                        console.log("P " + numIt + " tagged " + i);
-                        players[numIt].it = false;
-                        numIt = i;
-                        players[numIt].it = true;
-                        itCd = IT_TIMER;
+                        console.log("P " + t + " tagged " + i);
+                        numIt.push(i);
+                        players[i].it = true;
                     }
                 }
-            } else {
-                itCd = itCd - dT < 0 ? 0 : itCd - dT;
             }
         }
 
@@ -329,54 +385,18 @@ function Update() {
         cp.x = p.x;
         cp.y = p.y;
         cp.it = p.it;
-        cp.hasSpecial = p.specialCd <= 0;
+        cp.hasFastFall = p.fastFallCd <= 0;
+        cp.hasDoubleJump = p.doubleJumpCd <= 0;
     }
     
     for (let i = 0; i < players.length; i++) {
-        for (let j = 0; j < newChatsTBD.length; j++) {
-            players[i].newChats.push(newChatsTBD[j]);
+        if (players[i].active) {
+            for (let j = 0; j < newChatsTBD.length; j++) {
+                players[i].newChats.push(newChatsTBD[j]);
+            }
         }
     }
     newChatsTBD = [];
-
-    if (mvwall.right) {
-        if (mvwall.x > gameWidth*2/3) {
-            mvwall.right = false;
-        }
-    } else {
-        if (mvwall.x < gameWidth/3) {
-            mvwall.right = true;
-        }
-    }
-    mvwall.x += mvwall.right ? mvwall.speed * dT : -mvwall.speed * dT;
-
-    if (portalCheckTimer <= 0) {
-        portalCheckTimer = PORTAL_TIMER;
-        let r = Math.random();
-        if (!portal.active) {
-            if (r < PORTAL_CHANCE) {
-                let p1 = Math.floor(Math.random() * 2);
-                if (p1 === 0) {
-                    portal.x = gameWidth/6;
-                    portal.y = gameHeight/6;
-                    portal.x2 = gameWidth*5/6;
-                    portal.y2 = gameHeight*5/6;
-                } else {
-                    portal.x = gameWidth*5/6;
-                    portal.y = gameHeight/6;
-                    portal.x2 = gameWidth/6;
-                    portal.y2 = gameHeight*5/6;
-                }
-                portal.active = true;
-            }
-        } else {
-            if (r > PORTAL_CHANCE) {
-                portal.active = false;
-            }
-        }
-    } else {
-        portalCheckTimer -= dT;
-    }
 }
 
 setInterval(Update, 1000/updateRate);

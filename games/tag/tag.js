@@ -8,7 +8,7 @@ const HEIGHT = 720;
 const GAME_WIDTH = 720;
 const GAME_BG = "#222222";
 const MENU_BG = "#181818";
-const VERSION = "v0.2";
+const VERSION = "v0.3";
 const VALID_KEYS = ["a", "d", "w", "s", " ", "1", "2", "7", "8", "9"];
 
 var IP = "100.16.230.232";
@@ -24,7 +24,7 @@ canvas.style.height = "100vh";
 var players = [];
 var walls = [];
 var others = [];
-var numIt = -1;
+var numIt = [];
 var portalAng = 0;
 var chat = [];
 
@@ -35,16 +35,9 @@ function DrawMenu() {
     context.fillStyle = MENU_BG;
     context.fillRect(GAME_WIDTH, 0, WIDTH-GAME_WIDTH, HEIGHT);
     
-    context.font = "24px Verdana";
+    context.font = "18px Verdana";
     context.fillStyle = players[clientNum].color;
-    context.fillText("You are "+players[clientNum].color+", ", GAME_WIDTH+8, 100);
-    context.fillText(""+players[clientNum].name, GAME_WIDTH+8, 126);
-
-    if (numIt !== -1) {
-        context.font = "24px Verdana";
-        context.fillStyle = players[numIt].color;
-        context.fillText(""+players[numIt].color+" is it!", GAME_WIDTH+8, 160);
-    }
+    context.fillText("You are "+players[clientNum].name+".", GAME_WIDTH+8, 80);
     
     context.font = "12px Verdana";
     context.fillStyle = "white";
@@ -59,9 +52,9 @@ function DrawMenu() {
 
     context.font = "14px Verdana";
     context.fillStyle = "white";
-    context.fillText("Lobby Actions:", GAME_WIDTH+8, 200);
-    context.fillText("1: New Round", GAME_WIDTH+16, 220);
-    context.fillText("2: Reset Lobby", GAME_WIDTH+16, 240);
+    context.fillText("Lobby Actions:", GAME_WIDTH+8, 220);
+    context.fillText("1: New Round", GAME_WIDTH+16, 240);
+    context.fillText("2: Reset Lobby", GAME_WIDTH+16, 260);
     context.fillText("Chat:", GAME_WIDTH+8, 285);
 
     context.strokeStyle = "white";
@@ -92,10 +85,10 @@ function DrawMenu() {
     context.fillText("9: ez", GAME_WIDTH+188, 610);
 
     context.font = "12px Verdana";
-    context.fillText("a: Move Left", GAME_WIDTH+8, 640);
-    context.fillText("d: Move Right", GAME_WIDTH+8, 654);
-    context.fillText("Space: Jump", GAME_WIDTH+8, 668);
-    context.fillText("w: Special Ability", GAME_WIDTH+8, 682);
+    context.fillText("a: Move Left        d: Move Right", GAME_WIDTH+8, 634);
+    context.fillText("Space: Jump", GAME_WIDTH+8, 646);
+    context.fillText("w: Second Jump", GAME_WIDTH+8, 658);
+    context.fillText("s: Fast Fall", GAME_WIDTH+8, 670);
 }
 
 function DrawStaticMenu() {
@@ -118,12 +111,21 @@ function DrawPlayer(p) {
     context.closePath();
     context.fill();
     
-    if (p.hasSpecial) {
-        context.fillStyle = "black";
+    if (p.hasFastFall) {
+        context.strokeStyle = "black";
         context.beginPath();
-        context.arc(p.x, p.y, p.r/4, 0, 2*Math.PI);
+        context.moveTo(p.x - p.r, p.y+2);
+        context.lineTo(p.x + p.r, p.y+2);
         context.closePath();
-        context.fill();
+        context.stroke();
+    }
+    if (p.hasDoubleJump) {
+        context.strokeStyle = "black";
+        context.beginPath();
+        context.moveTo(p.x - p.r, p.y-2);
+        context.lineTo(p.x + p.r, p.y-2);
+        context.closePath();
+        context.stroke();
     }
 
     context.font = "9px Verdana";
@@ -139,16 +141,21 @@ function DrawOthers() {
             context.fillStyle = "white";
             context.fillRect(o.x - o.width/2, o.y - o.height/2, o.width, o.height);
         } else if (o.type === "portal" && o.active === true) {
-            context.fillStyle = "white";
+            context.fillStyle = "#ccffaa";
             context.beginPath();
             context.arc(o.x, o.y, o.r, 0, 2*Math.PI);
             context.closePath();
             context.fill();
-            context.strokeStyle = "black";
+            context.lineWidth = 4;
+            context.strokeStyle = "#3db1ff";
             context.beginPath();
-            context.moveTo(o.x, o.y);
-            context.lineTo(o.x + o.r/2 * Math.cos(portalAng),
-                o.y + o.r/2 * Math.sin(portalAng));
+            let A = 2/3;
+            context.moveTo(o.x + o.r*A * Math.cos(portalAng),
+                o.y + o.r*A * Math.sin(portalAng));
+            context.lineTo(o.x + o.r*A * Math.cos(portalAng + Math.PI*2/3),
+                o.y + o.r*A * Math.sin(portalAng + Math.PI*2/3));
+            context.lineTo(o.x + o.r*A * Math.cos(portalAng - Math.PI*2/3),
+                o.y + o.r*A * Math.sin(portalAng - Math.PI*2/3));
             context.closePath();
             context.stroke();
 
@@ -156,13 +163,17 @@ function DrawOthers() {
             context.arc(o.x2, o.y2, o.r, 0, 2*Math.PI);
             context.closePath();
             context.fill();
-            context.strokeStyle = "black";
+            context.strokeStyle = "#3db1ff";
             context.beginPath();
-            context.moveTo(o.x2, o.y2);
-            context.lineTo(o.x2 + o.r/2 * Math.cos(-portalAng),
-                o.y2 + o.r/2 * Math.sin(-portalAng));
+            context.moveTo(o.x2 + o.r*A * Math.cos(-portalAng),
+                o.y2 + o.r*A * Math.sin(-portalAng));
+            context.lineTo(o.x2 + o.r*A * Math.cos(-portalAng + Math.PI*2/3),
+                o.y2 + o.r*A * Math.sin(-portalAng + Math.PI*2/3));
+            context.lineTo(o.x2 + o.r*A * Math.cos(-portalAng - Math.PI*2/3),
+                o.y2 + o.r*A * Math.sin(-portalAng - Math.PI*2/3));
             context.closePath();
             context.stroke();
+            context.lineWidth = 1;
 
             portalAng += 0.08;
             if (portalAng > 6.28) {
@@ -214,7 +225,7 @@ var pingCounter = 0;
 var pingTotal = 0;
 var ping = 0;
 var ip = "localhost";
-ip = IP; // Comment out when in dev.
+//ip = IP; // Comment out when in dev.
 var keys = {a:false, d:false};
 var ws = new WebSocket("ws://"+ip+":"+PORT);
 
@@ -252,8 +263,11 @@ ws.onmessage = function (message) {
                 pingTotal += curPing;
             }
             players = obj.players;
-            if (obj.numIt !== numIt) {
-                numIt = obj.numIt;
+            if (obj.numIt.length !== numIt.length) {
+                numIt = [];
+                for (let i = 0; i < obj.numIt.length; i++) {
+                    numIt.push(obj.numIt[i]);
+                }
             }
             others = obj.others;
             if (obj.newChats) {
