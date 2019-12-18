@@ -288,12 +288,18 @@ function Update() {
             } else if (others[j].type === "portal" && others[j].active) {
                 if (Dist(p.x, p.y, others[j].x, others[j].y) < others[j].r) {
                     p.x = others[j].x2;
-                    p.y = others[j].y2 + others[j].r + 1;
-                    if (p.vy < 0) { p.vy = -p.vy; }
+		    if (p.vy > 0) {
+                        p.y = others[j].y2 + others[j].r + 1;
+		    } else {
+			p.y = others[j].y2 - others[j].r - 1;
+		    }
                 } else if (Dist(p.x, p.y, others[j].x2, others[j].y2) < others[j].r) {
                     p.x = others[j].x;
-                    p.y = others[j].y + others[j].r + 1;
-                    if (p.vy < 0) { p.vy = -p.vy; }
+		    if (p.vy > 0) {
+                        p.y = others[j].y + others[j].r + 1;
+		    } else {
+			p.y = others[j].y - others[j].r - 1;
+		    }
                 }
             }
         }
