@@ -223,9 +223,11 @@ class Lander {
         context.stroke();
 
         if (keys[" "]) {
+            /* TODO *
             context.strokeStyle = "white";
             DrawRectCenter(context,this.x,this.y,this.size*2,this.size*2);
             context.stroke();
+            /* */
         }
 
 
