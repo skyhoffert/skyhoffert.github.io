@@ -51,12 +51,12 @@ class Lander {
         this.x = -10;
         this.y = 10;
         this.size = 15;
-        this.vx = 0.1;
+        this.vx = 0.2;
         this.vy = 0;
-        this.angle = 0;
-        this.accel = 0.0001;
+        this.angle = pi/2;
+        this.accel = 0.00007;
         this.grav = 0.00002;
-        this.maxfuel = 4;
+        this.maxfuel = 4.2;
         this.fuel = this.maxfuel;
         this.active = true;
         this.canaccel = true;
@@ -68,6 +68,8 @@ class Lander {
         this.lldist = 100;
         this.rldist = 100;
         this.landingdescr = "";
+        this.turnrate = 0.001;
+        this.drawn = true;
         
         this.pts = [
             {a:pi/2,r:this.size},
@@ -99,6 +101,12 @@ class Lander {
             // upper right corner
             {a:pi*1/6,r:this.size*3/4}
         ];
+
+        this.thrustpts = [
+            {a:-pi*3/4,r:this.size*9/8},
+            {a:-pi/2,r:this.size*11/8},
+            {a:-pi*1/4,r:this.size*9/8}
+        ];
     }
 
     Tick(dT) {
@@ -111,9 +119,9 @@ class Lander {
 
         if (this.canturn) {
             if (keys.a) {
-                this.angle += 0.1;
+                this.angle += this.turnrate * dT;
             } else if (keys.d) {
-                this.angle -= 0.1;
+                this.angle -= this.turnrate * dT;
             }
         }
 
@@ -127,13 +135,19 @@ class Lander {
             this.vy += this.grav * dT;
         }
 
-        let coll = this.Collision();
+        let coll = false;
+        if (!this.lldown && !this.rldown) {
+            coll = this.Collision();
+        }
         
         if (this.lldown && this.rldown) {
-            this.landingdescr = "perfect landing.";
-        } else if (this.lldown && this.rldist < this.size/4) {
+            this.landingdescr = "perfect landing";
+        } else if (this.lldown && this.rldist < this.size/12 ||
+                   this.rldown && this.lldist < this.size/12) {
+            this.landingdescr = "perfect landing";
+        } else if (this.lldown && this.rldist < this.size/2) {
             this.landingdescr = "good landing";
-        } else if (this.rldown && this.lldist < this.size/4) {
+        } else if (this.rldown && this.lldist < this.size/2) {
             this.landingdescr = "good landing";
         } else if (this.lldown || this.rldown) {
             this.landingdescr = "bad landing";
@@ -142,12 +156,52 @@ class Lander {
         if (coll) {
             this.landingdescr = "crashed";
             this.active = false;
+            this.drawn = false;
+
+            let explpts = [];
+            let vel = 0.4;
+            let ms = 6;
+            let np = 50;
+            for (let i = 0; i < np; i++) {
+                explpts.push({x:this.x,y:this.y,vx:Math.random()*vel-vel/2,
+                    vy:Math.random()*vel-vel/2,col:"lightgray",size:Math.random()*ms});
+            }
+            lurkers.push(new Lurker(function (dT) {
+                if (!this.vals.good) {
+                    this.vals.good = true;
+                    this.vals.duration = 2000;
+                    this.vals.pts = [];
+                    for (let i = 0; i < explpts.length; i++) {
+                        this.vals.pts.push(explpts[i]);
+                    }
+                }
+
+                for (let i = 0; i < this.vals.pts.length; i++) {
+                    this.vals.pts[i].x += this.vals.pts[i].vx * dT;
+                    this.vals.pts[i].y += this.vals.pts[i].vy * dT;
+                }
+                
+                if (this.elapsed > this.vals.duration) {
+                    return false;
+                }
+                return true;
+            }, function (c) {
+                for (let i = 0; i < this.vals.pts.length; i++) {
+                    c.fillStyle = this.vals.pts[i].col;
+                    c.fillRect(this.vals.pts[i].x,this.vals.pts[i].y,this.vals.pts[i].size,this.vals.pts[i].size);
+                }
+            }));
+        }
+
+        if (this.landingdescr !== "") {
+            gameFinished = true;
         }
     }
 
     Collision() {
         // magnitude of velocity
         let MoV = Magnitude({x:this.vx,y:this.vy});
+        let crash = false;
 
         // center point
         let cp = {x:this.x,y:this.y};
@@ -188,7 +242,7 @@ class Lander {
                     this.lldown = true;
                     
                     if (MoV > this.crashvel) {
-                        return true;
+                        crash = true;
                     }
                 }
             }
@@ -208,63 +262,79 @@ class Lander {
                     this.rldown = true;
                     
                     if (MoV > this.crashvel) {
-                        return true;
+                        crash = true;
                     }
                 }
             }
         }
 
-        return false;
+        return crash;
     }
 
     Draw() {
-        context.strokeStyle = "white";
-        DrawAnglePolygon(context,this.pts,this.x,this.y,this.angle);
-        context.stroke();
+        if (this.drawn) {
 
-        if (keys[" "]) {
-            /* TODO *
             context.strokeStyle = "white";
-            DrawRectCenter(context,this.x,this.y,this.size*2,this.size*2);
+            DrawAnglePolygon(context,this.pts,this.x,this.y,this.angle);
             context.stroke();
+
+            if (keys[" "] && this.canaccel && this.fuel > 0) {
+                context.fillStyle = "#aa4444";
+                DrawAnglePolygon(context, this.thrustpts, this.x, this.y, this.angle);
+                context.fill();
+            }
+
+
+            let bw = 160;
+            let bh = 40;
+            context.fillStyle = "gray";
+            DrawRect(context,width-(bw+5),5,bw*(this.fuel/this.maxfuel),bh);
+            context.fill();
+
+            context.strokeStyle = "white";
+            DrawRect(context,width-(bw+5),5,bw,bh);
+            context.stroke();
+
+            /* DEBUG *
+            context.fillStyle = "red";
+            DrawPtAngle(context, this.x, this.y, this.angle + pi*5/4, this.size*5/4);
+            DrawPtAngle(context, this.x, this.y, this.angle - pi/4, this.size*5/4);
+            DrawPt(context, {x:this.x,y:this.y});
             /* */
         }
-
-
-        let bw = 160;
-        let bh = 40;
-        context.fillStyle = "gray";
-        DrawRect(context,width-(bw+5),5,bw*(this.fuel/this.maxfuel),bh);
-        context.fill();
-
-        context.strokeStyle = "white";
-        DrawRect(context,width-(bw+5),5,bw,bh);
-        context.stroke();
-
-        /* DEBUG *
-        context.fillStyle = "red";
-        DrawPtAngle(context, this.x, this.y, this.angle + pi*5/4, this.size*5/4);
-        DrawPtAngle(context, this.x, this.y, this.angle - pi/4, this.size*5/4);
-        DrawPt(context, {x:this.x,y:this.y});
-        /* */
 
         if (this.landingdescr !== "") {
             context.fillStyle = "white";
             context.font = "40px Verdana";
             let wid = context.measureText(this.landingdescr).width;
             context.fillText(this.landingdescr,width/2 - wid/2, height/2-20);
+
+            context.font = "20px Verdana";
+            let txt = "Press Enter to restart"
+            wid = context.measureText(txt).width;
+            context.fillText(txt,width/2 - wid/2, height*3/4-10);
         }
     }
 }
 
 var lander = new Lander();
 
-function Tick(dT) {
-    context.fillStyle = "black";
-    DrawRect(context, 0, 0, width, height);
-    context.fill();
+var lurkers = [];
 
-    context.strokeStyle = "gray";
+var gameFinished = false;
+
+function Tick(dT) {
+    if (!gameFinished) {
+        context.fillStyle = "black";
+        DrawRect(context, 0, 0, width, height);
+        context.fill();
+    } else {
+        context.fillStyle = "rgba(0,0,0,0.05)";
+        DrawRect(context, 0, 0, width, height);
+        context.fill();
+    }
+
+    context.strokeStyle = "lightgray";
     DrawPolygon(context,pts,0,0);
     context.fillStyle = "#222222";
     context.fill();
@@ -273,6 +343,18 @@ function Tick(dT) {
     lander.Tick(dT);
 
     lander.Draw();
+
+    for (let i = 0; i < lurkers.length; i++) {
+        lurkers[i].Tick(dT);
+        lurkers[i].Draw(context);
+    }
+
+    for (let i = 0; i < lurkers.length; i++) {
+        if (!lurkers[i].active) {
+            lurkers.splice(i, 1);
+            break;
+        }
+    }
 }
 
 let prevTime = Date.now();
@@ -289,6 +371,10 @@ setInterval(Update, 1000/FPS);
 
 document.addEventListener("keydown", function (evt) {
     keys[evt.key] = true;
+
+    if (gameFinished && evt.key == "Enter") {
+        window.location.reload(false);
+    }
 }, false);
 
 document.addEventListener("keyup", function (evt) {

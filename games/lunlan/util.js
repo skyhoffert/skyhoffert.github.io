@@ -79,3 +79,25 @@ function AreaOfTri(p1,p2,p3) {
     let s = (d1 + d2 + d3)/2;
     return Math.sqrt(s * (s - d1) * (s - d2) * (s - d3));
 }
+
+class Lurker {
+    constructor(cb, d=function(ctx){}) {
+        this.cb = cb;
+        this.d = d;
+        this.elapsed = 0;
+        this.active = true;
+        this.vals = {good:false}; // Can hold additional values per lurker.
+    }
+
+    Tick(dT) {
+        if (!this.active) { return; }
+
+        this.elapsed += dT;
+
+        this.active = this.cb(dT);
+    }
+
+    Draw(ctx) {
+        this.d(ctx);
+    }
+}
