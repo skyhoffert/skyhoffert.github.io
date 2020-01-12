@@ -16,8 +16,19 @@ class Terrain {
         this.color = "#51e023";
     }
 
+    // To be overriden.
     Contains(){}
     Draw(c,cam){}
+
+    // For all terrain types.
+    _InCam(cam) {
+        let caml = cam.x - cam.width/2;
+        let camr = cam.x + cam.width/2;
+        let camt = cam.y - cam.height/2;
+        let camb = cam.y + cam.height/2;
+        return !(camr < this.bounds.left || caml > this.bounds.right ||
+            camt > this.bounds.bottom || camb < this.bounds.top);
+    }
 }
 
 // Rectanlge is FLAT, or aligned with cartesian axis of world.
@@ -32,9 +43,12 @@ class Rectangle extends Terrain {
     }
 
     Draw(c,cam) {
-        c.strokeStyle = this.color;
-        c.strokeRect(-cam.x + cam.width/2 + this.x-this.width/2, 
-            -cam.y + cam.height/2 + this.y-this.height/2, this.width, this.height);
+        if (this._InCam(cam)) {
+            let px = -cam.x + cam.width/2 + this.x-this.width/2;
+            let py = -cam.y + cam.height/2 + this.y-this.height/2;
+            c.strokeStyle = this.color;
+            c.strokeRect(px, py, this.width, this.height);
+        }
     }
 }
 
@@ -104,14 +118,28 @@ class Player {
         this.vy = 0;
         this.keys = {a:false,d:false,s:false,w:false};
         this.keyUpdates = [];
-        this.horizontalAccel = 0.02;
-        this.horizontalFriction = 0.004;
-        this.horizontalMaxVel = 8;
-        this.jumpVelocity = -0.3;
+        this.horizontalAccel = 0.0008;
+        this.horizontalFriction = 0.0004;
+        this.horizontalMaxVel = 0.017;
+        this.horizontalMinVel = 0.001;
+        this.jumpVelocity = -0.011;
         this.fallFactor = 1.1;
         this.wallSlideSpeed = 0.08;
         this.canJump = false;
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+        this.jumpFrames = 0;
+        this.maxJumpFrames = 6;
+        this.grav = 0.0008;
+        this.coins = 0;
+    }
+
+    ResetKeys() {
+        this.keys = {a:false,d:false,s:false,w:false};
+    }
+
+    CollectCoins(v) {
+        this.coins += v;
+        console.log("player now has "+this.coins+" coins");
     }
 
     Tick(dT) {
@@ -120,56 +148,70 @@ class Player {
         }
         this.keyUpdates = [];
 
-        this.vy += this.vy > 0 ? (GRAV * this.fallFactor) * dT: GRAV * dT;
-        if ((this.collisions.left !== -1 || this.collisions.right !== -1) && this.vy > 0) {
-            // If "sliding" on a wall.
-            this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
+        if (this.collisions.bottom === -1) {
+            this.vy += this.vy > 0 ? (this.grav * this.fallFactor) * dT: this.grav * dT;
+            if ((this.collisions.left !== -1 || this.collisions.right !== -1) && this.vy > 0) {
+                // If "sliding" on a wall.
+                this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
+            }
         }
         this.y += this.vy * dT;
 
         if (this.keys.a) {
             this.vx -= this.horizontalAccel * dT;
-            this.vx = this.vx < -this.horizontalMaxVel ? -this.horizontalMaxVel : this.vx;
+            this.vx = this.vx < -this.horizontalMaxVel*dT ? -this.horizontalMaxVel*dT : this.vx;
         } else if (this.keys.d) {
             this.vx += this.horizontalAccel * dT;
-            this.vx = this.vx > this.horizontalMaxVel ? this.horizontalMaxVel : this.vx;
+            this.vx = this.vx > this.horizontalMaxVel*dT ? this.horizontalMaxVel*dT : this.vx;
         } else {
-            this.vx -= Math.sign(this.vx) * this.horizontalFriction * dT;
+            if (Math.abs(this.vx) > this.horizontalMinVel) {
+                this.vx -= Math.sign(this.vx) * this.horizontalFriction * dT;
+            } else {
+                this.vx = 0;
+            }
         }
         
         if (this.keys[" "] && this.canJump) {
-            this.vy = this.jumpVelocity;
-            this.canJump = false;
+            this.jumpFrames++;
+            if (this.jumpFrames >= this.maxJumpFrames) {
+                this.canJump = false;
+            }
+            this.vy = this.jumpVelocity * dT * (this.jumpFrames > this.maxJumpFrames/2 ? this.jumpFrames/3 : 1);
+        } else if (this.jumpFrames !== 0) {
+            this.jumpFrames = 0;
+            if (!this.keys[" "]) {
+                this.canJump = false;
+            }
         }
 
-        this.x += this.vx;
+        this.x += this.vx * dT;
     }
 
     Collision(t) {
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
 
         for (let i = 0; i < t.length; i++) {
-            for (let h = 0; h < this.size; h++) {
+            for (let h = 0; h < this.size+2; h++) {
                 if (t[i].Contains(this.x, this.y + h)) {
                     // Bottom
                     this.vy = this.vy > 0 ? 0 : this.vy;
-                    this.y -= this.size - h - 1;
+                    this.y -= this.size - h + 1;
                     this.canJump = true;
                     this.collisions.bottom = h;
                 } else if (t[i].Contains(this.x - h, this.y)) {
                     // Left
                     this.vx = 0;
-                    this.x += this.size - h - 1;
+                    this.x += this.size - h + 1;
                     this.collisions.left = h;
                 } else if (t[i].Contains(this.x + h, this.y)) {
                     // Right
                     this.vx = 0;
-                    this.x -= this.size - h - 1;
+                    this.x -= this.size - h + 1;
                     this.collisions.right = h;
                 } else if (t[i].Contains(this.x, this.y - h)) {
                     // Top
                     this.vy = 0;
-                    this.y += this.size - h - 1;
+                    this.y += this.size - h + 1;
                     this.collisions.top = h;
                 }
             }
@@ -203,5 +245,39 @@ class Camera {
         if (this.y + this.height/2 > this.bottomBound) {
             this.y -= this.y + this.height/2 - this.bottomBound;
         }
+    }
+}
+
+class Coin {
+    constructor(x,y) {
+        this.x = x;
+        this.y = y;
+        this.value = 1;
+        this.width = 20;
+        this.height = 20;
+        this.color = "cyan";
+        this.elapsed = 0;
+    }
+
+    Collision(p) {
+        if (this.x > p.x - p.size*1.2 && this.x < p.x + p.size*1.2 &&
+            this.y > p.y - p.size*1.2 && this.y < p.y + p.size*1.2) {
+            return true;
+        }
+        return false;
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/250;
+        if (this.elapsed > 2*pi) {
+            this.elapsed -= 2*pi;
+        }
+    }
+
+    Draw(c,cam) {
+        c.strokeStyle = this.color;
+        let wid = this.width * Math.cos(this.elapsed);
+        c.strokeRect(-cam.x + cam.width/2 + this.x - wid/2, -cam.y + cam.height/2 + this.y - this.height/2,
+            wid, this.height);
     }
 }
