@@ -26,27 +26,44 @@ if (!taller) {
 }
 
 // World stuff.
-var testnr = new Rectangle(width/4,height/4,100,30);
-var testrr = new RotatedRectangle(width/2,height/2,100,30,pi/8);
-var pt = {x:width/2,y:height/8,Draw:function (c) {
-    c.fillStyle = "white";
-    c.fillRect(this.x-1,this.y-1,3,3);
-}};
+var terrain = [];
+/*
+terrain.push(new Rectangle(width/4,height/4,100,30),
+    new RotatedRectangle(width/2,height/2,100,30,pi/8),
+    new Rectangle(width/2,height, width, 40)
+);
+
+var player = new Player(width/2,height/4,12,"purple");
+*/
+terrain.push(new Rectangle(0, 300, 800, 40));
+var player = new Player(0, 0, 12, "purple");
+
+var camera = new Camera(0,0,width,height);
+
+document.addEventListener("keydown", function (evt) {
+    player.keyUpdates.push({key:evt.key,down:true});
+}, false);
+
+document.addEventListener("keyup", function (evt) {
+    player.keyUpdates.push({key:evt.key,down:false});
+}, false);
 
 // Engine stuff.
 function Tick(dT) {
-    if (!testnr.Contains(pt.x,pt.y) && !testrr.Contains(pt.x,pt.y)){
-        pt.y += 0.05 * dT;
-    }
+    player.Tick(dT);
+
+    player.Collision(terrain);
 }
 
 function Draw() {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, width, height);
 
-    testnr.Draw(ctx);
-    testrr.Draw(ctx);
-    pt.Draw(ctx);
+    for (let i = 0; i < terrain.length; i++) {
+        terrain[i].Draw(ctx,camera);
+    }
+
+    player.Draw(ctx,camera);
 }
 
 var prevTime = Date.now();
