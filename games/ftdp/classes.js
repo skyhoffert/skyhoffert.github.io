@@ -33,7 +33,8 @@ class Rectangle extends Terrain {
 
     Draw(c,cam) {
         c.strokeStyle = this.color;
-        c.strokeRect(this.x-this.width/2, this.y-this.height/2, this.width, this.height);
+        c.strokeRect(-cam.x + cam.width/2 + this.x-this.width/2, 
+            -cam.y + cam.height/2 + this.y-this.height/2, this.width, this.height);
     }
 }
 
@@ -75,10 +76,14 @@ class RotatedRectangle extends Terrain {
     Draw(c,cam) {
         c.strokeStyle = this.color;
         c.beginPath();
-        c.moveTo(this.drawBox.topLeft.x, this.drawBox.topLeft.y);
-        c.lineTo(this.drawBox.topRight.x, this.drawBox.topRight.y);
-        c.lineTo(this.drawBox.bottomRight.x, this.drawBox.bottomRight.y);
-        c.lineTo(this.drawBox.bottomLeft.x, this.drawBox.bottomLeft.y);
+        c.moveTo(-cam.x + cam.width/2 + this.drawBox.topLeft.x, 
+            -cam.y + cam.height/2 + this.drawBox.topLeft.y);
+        c.lineTo(-cam.x + cam.width/2 + this.drawBox.topRight.x, 
+            -cam.y + cam.height/2 + this.drawBox.topRight.y);
+        c.lineTo(-cam.x + cam.width/2 + this.drawBox.bottomRight.x, 
+            -cam.y + cam.height/2 + this.drawBox.bottomRight.y);
+        c.lineTo(-cam.x + cam.width/2 + this.drawBox.bottomLeft.x, 
+            -cam.y + cam.height/2 + this.drawBox.bottomLeft.y);
         c.closePath();
         c.stroke();
 
@@ -102,9 +107,11 @@ class Player {
         this.horizontalAccel = 0.02;
         this.horizontalFriction = 0.004;
         this.horizontalMaxVel = 8;
-        this.jumpVelocity = -0.2;
+        this.jumpVelocity = -0.3;
         this.fallFactor = 1.1;
+        this.wallSlideSpeed = 0.08;
         this.canJump = false;
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
     }
 
     Tick(dT) {
@@ -114,6 +121,10 @@ class Player {
         this.keyUpdates = [];
 
         this.vy += this.vy > 0 ? (GRAV * this.fallFactor) * dT: GRAV * dT;
+        if ((this.collisions.left !== -1 || this.collisions.right !== -1) && this.vy > 0) {
+            // If "sliding" on a wall.
+            this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
+        }
         this.y += this.vy * dT;
 
         if (this.keys.a) {
@@ -135,23 +146,40 @@ class Player {
     }
 
     Collision(t) {
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+
         for (let i = 0; i < t.length; i++) {
             for (let h = 0; h < this.size; h++) {
                 if (t[i].Contains(this.x, this.y + h)) {
+                    // Bottom
                     this.vy = this.vy > 0 ? 0 : this.vy;
                     this.y -= this.size - h - 1;
                     this.canJump = true;
-                    return true;
+                    this.collisions.bottom = h;
+                } else if (t[i].Contains(this.x - h, this.y)) {
+                    // Left
+                    this.vx = 0;
+                    this.x += this.size - h - 1;
+                    this.collisions.left = h;
+                } else if (t[i].Contains(this.x + h, this.y)) {
+                    // Right
+                    this.vx = 0;
+                    this.x -= this.size - h - 1;
+                    this.collisions.right = h;
+                } else if (t[i].Contains(this.x, this.y - h)) {
+                    // Top
+                    this.vy = 0;
+                    this.y += this.size - h - 1;
+                    this.collisions.top = h;
                 }
             }
         }
-        return false;
     }
 
-    Draw(c) {
+    Draw(c,cam) {
         c.strokeStyle = this.color;
         c.beginPath();
-        c.arc(this.x,this.y,this.size,0,pi*2);
+        c.arc(-cam.x + cam.width/2 + this.x, -cam.y + cam.height/2 + this.y,this.size,0,pi*2);
         c.stroke();
     }
 }
@@ -162,5 +190,18 @@ class Camera {
         this.y = y;
         this.width = w;
         this.height = h;
+        this.bottomBound = 0;
+        this.target = null;
+    }
+
+    Tick(dT) {
+        if (!this.target) { return; }
+
+        this.x = this.target.x;
+        this.y -= (this.y - (this.target.y-40))*0.2;
+
+        if (this.y + this.height/2 > this.bottomBound) {
+            this.y -= this.y + this.height/2 - this.bottomBound;
+        }
     }
 }

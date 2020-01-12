@@ -27,18 +27,16 @@ if (!taller) {
 
 // World stuff.
 var terrain = [];
-/*
-terrain.push(new Rectangle(width/4,height/4,100,30),
-    new RotatedRectangle(width/2,height/2,100,30,pi/8),
-    new Rectangle(width/2,height, width, 40)
-);
+terrain.push(new Rectangle(0, -50, 800, 40));
+terrain.push(new RotatedRectangle(320, -90, 200, 30, pi/8));
+terrain.push(new Rectangle(-420, -230, 40, 400));
+terrain.push(new Rectangle(420, -230, 40, 400));
+terrain.push(new Rectangle(300,-360,200,40));
 
-var player = new Player(width/2,height/4,12,"purple");
-*/
-terrain.push(new Rectangle(0, 300, 800, 40));
-var player = new Player(0, 0, 12, "purple");
+var player = new Player(0, -220, 12, "purple");
 
-var camera = new Camera(0,0,width,height);
+var camera = new Camera(0,-400,width,height);
+camera.target = player;
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
@@ -53,6 +51,8 @@ function Tick(dT) {
     player.Tick(dT);
 
     player.Collision(terrain);
+
+    camera.Tick(dT);
 }
 
 function Draw() {
