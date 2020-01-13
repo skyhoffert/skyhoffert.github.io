@@ -19,16 +19,6 @@ class Terrain {
     // To be overriden.
     Contains(){}
     Draw(c,cam){}
-
-    // For all terrain types.
-    _InCam(cam) {
-        let caml = cam.x - cam.width/2;
-        let camr = cam.x + cam.width/2;
-        let camt = cam.y - cam.height/2;
-        let camb = cam.y + cam.height/2;
-        return !(camr < this.bounds.left || caml > this.bounds.right ||
-            camt > this.bounds.bottom || camb < this.bounds.top);
-    }
 }
 
 // Rectanlge is FLAT, or aligned with cartesian axis of world.
@@ -43,7 +33,7 @@ class Rectangle extends Terrain {
     }
 
     Draw(c,cam) {
-        if (this._InCam(cam)) {
+        if (InCam(cam, this)) {
             let px = -cam.x + cam.width/2 + this.x-this.width/2;
             let py = -cam.y + cam.height/2 + this.y-this.height/2;
             c.strokeStyle = this.color;
@@ -88,6 +78,8 @@ class RotatedRectangle extends Terrain {
     }
 
     Draw(c,cam) {
+        if (!InCam(cam, this)) { return; }
+
         c.strokeStyle = this.color;
         c.beginPath();
         c.moveTo(-cam.x + cam.width/2 + this.drawBox.topLeft.x, 
@@ -122,6 +114,7 @@ class Player {
         this.horizontalFriction = 0.0004;
         this.horizontalMaxVel = 0.017;
         this.horizontalMinVel = 0.001;
+        this.wallSlideJumpVel = 0.014;
         this.jumpVelocity = -0.011;
         this.fallFactor = 1.1;
         this.wallSlideSpeed = 0.08;
@@ -150,12 +143,34 @@ class Player {
 
         if (this.collisions.bottom === -1) {
             this.vy += this.vy > 0 ? (this.grav * this.fallFactor) * dT: this.grav * dT;
+
             if ((this.collisions.left !== -1 || this.collisions.right !== -1) && this.vy > 0) {
                 // If "sliding" on a wall.
                 this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
+                if (this.collisions.bottom === -1) {
+                    this.wallSliding = true;
+                    this.canJump = true;
+                } else {
+                    this.wallSliding = false;
+                }
+            } else {
+                if (this.wallSliding) {
+                    this.canJump = false;
+                    this.wallSliding = false;
+                }
             }
+        } else {
+            // Bottom collision.
+            this.vy = this.vy > 0 ? 0 : this.vy;
+            this.y -= this.size - this.collisions.bottom + 1;
+            this.canJump = true;
         }
-        this.y += this.vy * dT;
+
+        if (this.collisions.top !== -1) {
+            this.vy = this.vy < 0 ? 0 : this.vy;
+            this.y += this.size - this.collisions.top + 1;
+        
+        }
 
         if (this.keys.a) {
             this.vx -= this.horizontalAccel * dT;
@@ -172,11 +187,23 @@ class Player {
         }
         
         if (this.keys[" "] && this.canJump) {
-            this.jumpFrames++;
-            if (this.jumpFrames >= this.maxJumpFrames) {
+            if (this.wallSliding) {
+                this.vy = this.jumpVelocity*1.2 * dT;
                 this.canJump = false;
+                if (this.collisions.left !== -1) {
+                    this.vx = this.wallSlideJumpVel * dT;
+                    this.x += 4;
+                } else {
+                    this.vx = -this.wallSlideJumpVel * dT;
+                    this.x -= 4;
+                }
+            } else {
+                this.jumpFrames++;
+                if (this.jumpFrames >= this.maxJumpFrames) {
+                    this.canJump = false;
+                }
+                this.vy = this.jumpVelocity * dT * (this.jumpFrames > this.maxJumpFrames/2 ? this.jumpFrames/3 : 1);
             }
-            this.vy = this.jumpVelocity * dT * (this.jumpFrames > this.maxJumpFrames/2 ? this.jumpFrames/3 : 1);
         } else if (this.jumpFrames !== 0) {
             this.jumpFrames = 0;
             if (!this.keys[" "]) {
@@ -184,6 +211,15 @@ class Player {
             }
         }
 
+        if (this.collisions.left !== -1) {
+            this.vx = this.vx < 0 ? 0 : this.vx;
+            this.x += this.size - this.collisions.left + 1;
+        } else if (this.collisions.right !== -1) {
+            this.vx = this.vx > 0 ? 0 : this.vx;
+            this.x -= this.size - this.collisions.right + 1;
+        }
+
+        this.y += this.vy * dT;
         this.x += this.vx * dT;
     }
 
@@ -193,32 +229,103 @@ class Player {
         for (let i = 0; i < t.length; i++) {
             for (let h = 0; h < this.size+2; h++) {
                 if (t[i].Contains(this.x, this.y + h)) {
-                    // Bottom
-                    this.vy = this.vy > 0 ? 0 : this.vy;
-                    this.y -= this.size - h + 1;
-                    this.canJump = true;
-                    this.collisions.bottom = h;
+                    if (h < this.collisions.bottom || this.collisions.bottom === -1) {
+                        this.collisions.bottom = h;
+                    }
                 } else if (t[i].Contains(this.x - h, this.y)) {
-                    // Left
-                    this.vx = 0;
-                    this.x += this.size - h + 1;
-                    this.collisions.left = h;
+                    if (h < this.collisions.left || this.collisions.left === -1) {
+                        this.collisions.left = h;
+                    }
                 } else if (t[i].Contains(this.x + h, this.y)) {
-                    // Right
-                    this.vx = 0;
-                    this.x -= this.size - h + 1;
-                    this.collisions.right = h;
+                    if (h < this.collisions.right || this.collisions.right === -1) {
+                        this.collisions.right = h;
+                    }
                 } else if (t[i].Contains(this.x, this.y - h)) {
-                    // Top
-                    this.vy = 0;
-                    this.y += this.size - h + 1;
-                    this.collisions.top = h;
+                    if (h < this.collisions.top || this.collisions.top === -1) {
+                        this.collisions.top = h;
+                    }
                 }
             }
         }
     }
 
     Draw(c,cam) {
+        c.strokeStyle = this.color;
+        c.beginPath();
+        c.arc(-cam.x + cam.width/2 + this.x, -cam.y + cam.height/2 + this.y,this.size,0,pi*2);
+        c.stroke();
+    }
+}
+
+class SimpleEnemy {
+    constructor(x,y) {
+        this.x = x;
+        this.y = y;
+        this.vx = -0.08;
+        this.vy = 0;
+        this.grav = 0.0005;
+        this.elapsed = 0;
+        this.size = 14;
+        this.color = "red";
+        this.bounds = {left:x-this.size,right:x+this.size,top:y-this.size,bottom:y+this.size};
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+    }
+
+    Collision(t,p) {
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+
+        for (let i = 0; i < t.length; i++) {
+            for (let h = 0; h < this.size+2; h++) {
+                if (t[i].Contains(this.x, this.y + h)) {
+                    if (h < this.collisions.bottom || this.collisions.bottom === -1) {
+                        this.collisions.bottom = h;
+                    }
+                } else if (t[i].Contains(this.x - h, this.y)) {
+                    if (h < this.collisions.left || this.collisions.left === -1) {
+                        this.collisions.left = h;
+                    }
+                } else if (t[i].Contains(this.x + h, this.y)) {
+                    if (h < this.collisions.right || this.collisions.right === -1) {
+                        this.collisions.right = h;
+                    }
+                } else if (t[i].Contains(this.x, this.y - h)) {
+                    if (h < this.collisions.top || this.collisions.top === -1) {
+                        this.collisions.top = h;
+                    }
+                }
+            }
+        }
+
+        if (Distance(this.x,this.y,p.x,p.y) < this.size+p.size) {
+            console.log("hit player");
+        }
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/400;
+        this.elapsed = this.elapsed > 100 ? this.elapsed-100 : this.elapsed;
+        this.x += this.vx * dT * Math.abs(Math.cos(this.elapsed));
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        this.vy += this.grav * dT;
+
+        if (this.collisions.bottom !== -1) {
+            this.vy = 0;
+            this.y -= this.size - this.collisions.bottom + 1;
+        }
+
+        this.y += this.vy * dT;
+
+        if (this.collisions.left !== -1) {
+            this.vx = this.vx < 0 ? -this.vx : this.vx;
+        } else if (this.collisions.right !== -1) {
+            this.vx = this.vx > 0 ? -this.vx : this.vx;
+        }
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)){ return; }
+
         c.strokeStyle = this.color;
         c.beginPath();
         c.arc(-cam.x + cam.width/2 + this.x, -cam.y + cam.height/2 + this.y,this.size,0,pi*2);
@@ -257,11 +364,11 @@ class Coin {
         this.height = 20;
         this.color = "cyan";
         this.elapsed = 0;
+        this.bounds = {left:x-this.width/2,right:x+this.width/2,top:y-this.height/2,bottom:y+this.height/2};
     }
 
     Collision(p) {
-        if (this.x > p.x - p.size*1.2 && this.x < p.x + p.size*1.2 &&
-            this.y > p.y - p.size*1.2 && this.y < p.y + p.size*1.2) {
+        if (Distance(this.x,this.y,p.x,p.y) < p.size+this.width) {
             return true;
         }
         return false;
@@ -275,6 +382,8 @@ class Coin {
     }
 
     Draw(c,cam) {
+        if (!InCam(cam,this)) { return; }
+
         c.strokeStyle = this.color;
         let wid = this.width * Math.cos(this.elapsed);
         c.strokeRect(-cam.x + cam.width/2 + this.x - wid/2, -cam.y + cam.height/2 + this.y - this.height/2,

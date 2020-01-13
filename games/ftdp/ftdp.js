@@ -38,6 +38,8 @@ var terrain = level.terrain;
 var coins = level.coins;
 var coinsHit = [];
 
+var enemies = level.enemies;
+
 var player = level.player;
 
 var camera = new Camera(level.camera.x,level.camera.y,width,height);
@@ -85,6 +87,11 @@ function Tick(dT) {
         coinsHit.splice(0,1);
     }
 
+    for (let i = 0; i < enemies.length; i++) {
+        enemies[i].Collision(terrain, player);
+        enemies[i].Tick(dT);
+    }
+
     camera.Tick(dT);
 }
 
@@ -98,6 +105,10 @@ function Draw() {
     // Game stuff.
     for (let i = 0; i < terrain.length; i++) {
         terrain[i].Draw(ctx,camera);
+    }
+
+    for (let i = 0; i < enemies.length; i++) {
+        enemies[i].Draw(ctx,camera);
     }
 
     for (let i = 0; i < coins.length; i++) {
@@ -119,10 +130,16 @@ function Draw() {
 }
 
 function Debug() {
-    //console.log(""+(camera.x + camera.width/2));
+    if (time > 10000) {
+        console.log("DEBUG (fps="+Math.round(frames*1000/time)+")");
+        time = 0;
+        frames = 0;
+    }
 }
 
 var prevTime = Date.now();
+var frames = 0;
+var time = 0;
 
 function Update() {
     let now = Date.now();
@@ -143,6 +160,9 @@ function Update() {
     Tick(dT);
 
     Draw();
+
+    frames++;
+    time += dT;
 
     Debug();
 }

@@ -14,3 +14,12 @@ function AreaOfTri(p1,p2,p3) {
     let s = (d1 + d2 + d3)/2;
     return Math.sqrt(s * (s - d1) * (s - d2) * (s - d3));
 }
+
+function InCam(cam,o) {
+    let caml = cam.x - cam.width/2;
+    let camr = cam.x + cam.width/2;
+    let camt = cam.y - cam.height/2;
+    let camb = cam.y + cam.height/2;
+    return !(camr < o.bounds.left || caml > o.bounds.right ||
+        camt > o.bounds.bottom || camb < o.bounds.top);
+}
