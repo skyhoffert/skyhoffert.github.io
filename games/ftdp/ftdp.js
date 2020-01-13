@@ -3,9 +3,9 @@
 // Fun, Two-Dimensional Platformer
 //
 
-var width = 800;
-var height = 600;
-var FPS = 40;
+var width = WIDTH;
+var height = HEIGHT;
+var fps = FPS;
 var hasFocus = false;
 
 var canvas = document.getElementById("canvas");
@@ -35,6 +35,8 @@ console.log("(w="+canvas.style.width+",h="+canvas.style.height+")");
 var level = LEVEL_0;
 var terrain = level.terrain;
 
+var background = level.background;
+
 var coins = level.coins;
 var coinsHit = [];
 
@@ -42,14 +44,21 @@ var enemies = level.enemies;
 
 var player = level.player;
 
-var camera = new Camera(level.camera.x,level.camera.y,width,height);
-camera.target = player;
+var camera = new Camera(level.camera.x,level.camera.y,width,height,level.camera.z);
+camera.target = null;
 
 // Interacting with the canvas.
 var cursor = {x:width/2,y:height/2};
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
+
+    // DEBUG
+    if (evt.key === "l") {
+        camera.Zoom(1, true);
+        // Make lines thicker as camera zooms in.
+        ctx.lineWidth = (1/camera.zoom)*2;
+    }
 }, false);
 
 document.addEventListener("keyup", function (evt) {
@@ -62,11 +71,14 @@ canvas.addEventListener("mousemove", function (evt) {
 }, false);
 
 canvas.addEventListener("wheel", function (evt) {
-    let amt = 1 + 1/evt.deltaY;
+    let amt = 1 + (1/evt.deltaY)/10;
     camera.Zoom(amt);
+    
+    // Make lines thicker as camera zooms in.
+    ctx.lineWidth = (1/camera.zoom)*2;
 }, false);
 
-function  GetMousePos(canvas, evt) {
+function GetMousePos(canvas, evt) {
     return {
         x: (evt.clientX - rect.left) * scaleX,   // scale mouse coordinates after they have
         y: (evt.clientY - rect.top) * scaleY     // been adjusted to be relative to element
@@ -97,6 +109,14 @@ function Tick(dT) {
         enemies[i].Tick(dT);
     }
 
+    if (elapsed < 1) {
+        camera.zoom = level.camera.z + (1 - level.camera.z)*elapsed;
+        camera.y += 0.20 * dT;
+    } else if (!debugSetup) {
+        debugSetup = true;
+        camera.target = player;
+    }
+
     camera.Tick(dT);
 }
 
@@ -106,6 +126,10 @@ function Draw() {
     // Background.
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, width, height);
+
+    for (let i = 0; i < background.length; i++) {
+        background[i].Draw(ctx,camera);
+    }
 
     // Game stuff.
     for (let i = 0; i < terrain.length; i++) {
@@ -140,20 +164,33 @@ function Debug() {
         time = 0;
         frames = 0;
     }
+
+    /* DEBUG *
+    ctx.strokeStyle = "white";
+    ctx.beginPath();
+    ctx.moveTo(WIDTH/2, 0);
+    ctx.lineTo(WIDTH/2, HEIGHT);
+    ctx.stroke();
+    /* */
 }
 
+var elapsed = 0;
 var prevTime = Date.now();
 var frames = 0;
 var time = 0;
+
+var debugSetup = false;
 
 function Update() {
     let now = Date.now();
     let dT = now - prevTime;
     prevTime = now;
 
-    if (dT > 1000/FPS) {
-        dT = 1000/FPS;
+    if (dT > 1000/fps) {
+        dT = 1000/fps;
     }
+
+    elapsed += dT/1000;
 
     let focused = document.hasFocus();
     if (focused && !hasFocus) {
@@ -172,4 +209,4 @@ function Update() {
     Debug();
 }
 
-setInterval(Update, 1000/FPS);
+setInterval(Update, 1000/fps);
