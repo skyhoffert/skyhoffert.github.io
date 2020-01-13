@@ -61,6 +61,11 @@ canvas.addEventListener("mousemove", function (evt) {
     cursor.x = mpos.x; cursor.y = mpos.y;
 }, false);
 
+canvas.addEventListener("wheel", function (evt) {
+    let amt = 1 + 1/evt.deltaY;
+    camera.Zoom(amt);
+}, false);
+
 function  GetMousePos(canvas, evt) {
     return {
         x: (evt.clientX - rect.left) * scaleX,   // scale mouse coordinates after they have

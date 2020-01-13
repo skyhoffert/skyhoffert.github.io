@@ -34,10 +34,10 @@ class Rectangle extends Terrain {
 
     Draw(c,cam) {
         if (InCam(cam, this)) {
-            let px = -cam.x + cam.width/2 + this.x-this.width/2;
-            let py = -cam.y + cam.height/2 + this.y-this.height/2;
+            let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
             c.strokeStyle = this.color;
-            c.strokeRect(px, py, this.width, this.height);
+            c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
         }
     }
 }
@@ -82,14 +82,14 @@ class RotatedRectangle extends Terrain {
 
         c.strokeStyle = this.color;
         c.beginPath();
-        c.moveTo(-cam.x + cam.width/2 + this.drawBox.topLeft.x, 
-            -cam.y + cam.height/2 + this.drawBox.topLeft.y);
-        c.lineTo(-cam.x + cam.width/2 + this.drawBox.topRight.x, 
-            -cam.y + cam.height/2 + this.drawBox.topRight.y);
-        c.lineTo(-cam.x + cam.width/2 + this.drawBox.bottomRight.x, 
-            -cam.y + cam.height/2 + this.drawBox.bottomRight.y);
-        c.lineTo(-cam.x + cam.width/2 + this.drawBox.bottomLeft.x, 
-            -cam.y + cam.height/2 + this.drawBox.bottomLeft.y);
+        c.moveTo((-cam.x + cam.width/2 + this.drawBox.topLeft.x)/cam.zoom,
+            (-cam.y + cam.height/2 + this.drawBox.topLeft.y)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.drawBox.topRight.x)/cam.zoom,
+            (-cam.y + cam.height/2 + this.drawBox.topRight.y)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.drawBox.bottomRight.x)/cam.zoom,
+            (-cam.y + cam.height/2 + this.drawBox.bottomRight.y)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.drawBox.bottomLeft.x)/cam.zoom,
+            (-cam.y + cam.height/2 + this.drawBox.bottomLeft.y)/cam.zoom);
         c.closePath();
         c.stroke();
 
@@ -252,7 +252,7 @@ class Player {
     Draw(c,cam) {
         c.strokeStyle = this.color;
         c.beginPath();
-        c.arc(-cam.x + cam.width/2 + this.x, -cam.y + cam.height/2 + this.y,this.size,0,pi*2);
+        c.arc((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,this.size/cam.zoom,0,pi*2);
         c.stroke();
     }
 }
@@ -328,7 +328,7 @@ class SimpleEnemy {
 
         c.strokeStyle = this.color;
         c.beginPath();
-        c.arc(-cam.x + cam.width/2 + this.x, -cam.y + cam.height/2 + this.y,this.size,0,pi*2);
+        c.arc((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,this.size/cam.zoom,0,pi*2);
         c.stroke();
     }
 }
@@ -341,6 +341,15 @@ class Camera {
         this.height = h;
         this.bottomBound = 0;
         this.target = null;
+        this.zoom = 1.0;
+        this.defaultWidth = 800;
+        this.defaultHeight = 600;
+    }
+
+    Zoom(f) {
+        this.zoom *= f;
+        this.width = this.defaultWidth * this.zoom;
+        this.height = this.defaultHeight * this.zoom;
     }
 
     Tick(dT) {
@@ -386,7 +395,8 @@ class Coin {
 
         c.strokeStyle = this.color;
         let wid = this.width * Math.cos(this.elapsed);
-        c.strokeRect(-cam.x + cam.width/2 + this.x - wid/2, -cam.y + cam.height/2 + this.y - this.height/2,
-            wid, this.height);
+        c.strokeRect((-cam.x + cam.width/2 + this.x - wid/2)/cam.zoom, 
+            (-cam.y + cam.height/2 + this.y - this.height/2)/cam.zoom,
+            wid/cam.zoom, this.height/cam.zoom);
     }
 }
