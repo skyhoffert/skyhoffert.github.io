@@ -49,3 +49,16 @@ function HandleCollisions(o,t) {
         }
     }
 }
+
+function MeasureDistance(px,py,ang,md,t) {
+    let dx = Math.cos(ang);
+    let dy = -Math.sin(ang);
+    for (let i = 0; i < t.length; i++) {
+        for (let h = 0; h < md; h++) {
+            if (t[i].Contains(px + h*dx, py + h*dy)) {
+                return h;
+            }
+        }
+    }
+    return -1;
+}

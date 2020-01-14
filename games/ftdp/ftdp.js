@@ -45,6 +45,8 @@ var enemies = level.enemies;
 var player = level.player;
 
 var camera = new Camera(level.camera.x,level.camera.y,width,height,level.camera.z);
+camera.bounds.left = level.camera.lb;
+camera.bounds.right = level.camera.rb;
 camera.target = null;
 
 // Interacting with the canvas.
@@ -68,6 +70,13 @@ document.addEventListener("keyup", function (evt) {
 canvas.addEventListener("mousemove", function (evt) {
     let mpos = GetMousePos(canvas,evt);
     cursor.x = mpos.x; cursor.y = mpos.y;
+}, false);
+
+canvas.addEventListener("mousedown", function (evt) {
+    /* DEBUG *
+    let d = MeasureDistance(player.x, player.y, -pi/2, 1000, terrain);
+    console.log(d);
+    /* */
 }, false);
 
 canvas.addEventListener("wheel", function (evt) {
@@ -145,17 +154,6 @@ function Draw() {
     }
 
     player.Draw(ctx,camera);
-
-    // Cursor, since we removed it in the html.
-    ctx.strokeStyle = "red";
-    ctx.beginPath();
-    ctx.moveTo(cursor.x - 4, cursor.y);
-    ctx.lineTo(cursor.x + 4, cursor.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cursor.x, cursor.y - 4);
-    ctx.lineTo(cursor.x, cursor.y + 4);
-    ctx.stroke();
 }
 
 function Debug() {
