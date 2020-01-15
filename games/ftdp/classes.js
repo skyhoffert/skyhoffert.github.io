@@ -6,14 +6,19 @@
 // Terrain is immovable. One of either Rectangle or RotatedRectangle
 class Terrain {
     // x,y is CENTER
-    constructor(x,y,w,h) {
+    constructor(x,y,w,h,hf) {
         this.x = x;
         this.y = y;
         this.width = w;
         this.height = h;
         // for quick access in collision
         this.bounds = {left:x-w/2,right:x+w/2,top:y-h/2,bottom:y+h/2};
-        this.color = "#51e023";
+        this.harmful = hf;
+        if (this.harmful) {
+            this.color = "#ff5c33";
+        } else {
+            this.color = "#51e023";
+        }
     }
 
     // To be overriden.
@@ -23,8 +28,8 @@ class Terrain {
 
 // Rectanlge is FLAT, or aligned with cartesian axis of world.
 class Rectangle extends Terrain {
-    constructor(x,y,w,h) {
-        super(x,y,w,h);
+    constructor(x,y,w,h,hf=false) {
+        super(x,y,w,h,hf);
     }
 
     Contains(x,y) {
@@ -46,10 +51,10 @@ class Rectangle extends Terrain {
 
 // Rotated rectangle for collision. Angle must be between -pi/2 and pi/2.
 class RotatedRectangle extends Terrain {
-    constructor(x,y,w,h,a,to=false) {
+    constructor(x,y,w,h,a,to=false,hf=false) {
         let phi = Math.atan2(h,w);
         let r = Distance(x,y,x+w/2,y+h/2);
-        super(x,y,w,h);
+        super(x,y,w,h,hf);
         this.phi = phi;
         this.r = r;
         this.ang = a;
@@ -152,6 +157,7 @@ class Player {
         this.canJump = false;
         this.canJumpBeforeWallSlide = false;
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+        this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
         this.grav = 0.0008;
         this.coins = 0;
         this.offworld = {left:-500,right:10000,top:-1000,bottom:0};
@@ -325,6 +331,16 @@ class Player {
         this.bounds = {left:this.x-this.size,right:this.x+this.size,
             top:this.y-this.size,bottom:this.y+this.size};
 
+        if (this.collisionsObjs.bottom && this.collisionsObjs.bottom.harmful) {
+            this.Hit();
+        } else if (this.collisionsObjs.left && this.collisionsObjs.left.harmful) {
+            this.Hit();
+        } else if (this.collisionsObjs.right && this.collisionsObjs.right.harmful) {
+            this.Hit();
+        } else if (this.collisionsObjs.top && this.collisionsObjs.top.harmful) {
+            this.Hit();
+        }
+
         if (this.y > this.offworld.bottom) {
             console.log("player is off screen");
             this.Respawn();
@@ -405,7 +421,7 @@ class SimpleEnemy {
     constructor(x,y,xmod=1,fmod=1) {
         this.x = x;
         this.y = y;
-        this.vxMax = -0.08 * xmod;
+        this.vxMax = 0.08 * xmod;
         this.vx = this.vxMax;
         this.vy = 0;
         this.grav = 0.0005;
@@ -415,6 +431,7 @@ class SimpleEnemy {
         this.color = "red";
         this.bounds = {left:x-this.size,right:x+this.size,top:y-this.size,bottom:y+this.size};
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+        this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
         this.sensors = {left:-1, right:-1};
     }
 
@@ -445,6 +462,9 @@ class SimpleEnemy {
 
         this.y += this.vy * dT;
 
+        // TODO: something can possibly glitch out with vx?
+        this.vx = this.vxMax * dT * Math.abs(Math.cos(this.elapsed)) * Math.sign(this.vx);
+
         if (this.collisions.left !== -1) {
             this.vx = this.vx < 0 ? -this.vx : this.vx;
         } else if (this.collisions.right !== -1) {
@@ -455,16 +475,20 @@ class SimpleEnemy {
             this.vx = this.vx > 0 ? -this.vx : this.vx;
         }
 
-        this.x += this.vx * dT * Math.abs(Math.cos(this.elapsed));
+        this.x += this.vx;
     }
 
     Draw(c,cam) {
         if (!InCam(cam,this)){ return; }
 
+        let xrad = (this.size+(Math.abs(this.vx)+Math.abs(this.vy)/2))/cam.zoom;
+        let yrad = this.size - Math.abs(this.size - xrad);
+        let ang = Math.atan2(this.vy,this.vx);
+
         c.fillStyle = BG_COLOR;
         c.strokeStyle = this.color;
         c.beginPath();
-        c.arc((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,this.size/cam.zoom,0,pi*2);
+        c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,xrad,yrad,ang,0,pi*2);
         c.fill();
         c.stroke();
     }
@@ -510,8 +534,8 @@ class Camera {
         if (!this.target) { return; }
 
         if (!InCam(this,this.target)) {
-            this.x = this.target.x + this.width/2;
-            this.y = this.target.y + this.height/2;
+            this.x += (this.target.x - this.x)/10;
+            this.y += (this.target.y - this.y)/10;
             return;
         }
 
@@ -628,5 +652,35 @@ class BGRect {
             c.strokeStyle = this.color;
             c.stroke();
         //}
+    }
+}
+
+class LevelEnd {
+    constructor(x,y,w,h) {
+        this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.bounds = {left:x-this.width/2,right:x+this.width/2,top:y-this.height/2,bottom:y+this.height/2};
+        this.reached = false;
+    }
+
+    Contains(x,y) {
+        let got = x > this.bounds.left && x < this.bounds.right &&
+            y > this.bounds.top && y < this.bounds.bottom;
+        if (!this.reached && got) { this.reached = true; }
+        return got;
+    }
+
+    // DEBUG
+    Draw(c,cam) {
+        if (InCam(cam, this)) {
+            let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
+            c.fillStyle = BG_COLOR;
+            c.fillRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+            c.strokeStyle = this.color;
+            c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+        }
     }
 }

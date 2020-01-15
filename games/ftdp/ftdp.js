@@ -44,6 +44,8 @@ var enemies = level.enemies;
 
 var player = level.player;
 
+var levelEnd = new LevelEnd(level.levelEnd.x, level.levelEnd.y, level.levelEnd.w, level.levelEnd.h);
+
 var camera = new Camera(level.camera.x,level.camera.y,width,height,level.camera.z);
 camera.bounds.left = level.camera.lb;
 camera.bounds.right = level.camera.rb;
@@ -127,6 +129,9 @@ function Tick(dT) {
     }
 
     camera.Tick(dT);
+
+    // DEBUG
+    levelEnd.Contains(player.x, player.y)
 }
 
 function Draw() {
@@ -170,6 +175,17 @@ function Debug() {
     ctx.lineTo(WIDTH/2, HEIGHT);
     ctx.stroke();
     /* */
+
+    if (levelEnd.reached) {
+        let fsize = 60;
+        ctx.font = ""+fsize+"px Verdana";
+        let txt = "Level Complete!";
+        let wid = ctx.measureText(txt).width;
+        ctx.fillStyle = "#444444";
+        ctx.fillRect(width/2-wid/2-10, 0, wid+20, fsize+20);
+        ctx.fillStyle = "white"; 
+        ctx.fillText(txt,width/2-wid/2,fsize);  
+    }
 }
 
 var elapsed = 0;

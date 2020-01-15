@@ -27,6 +27,8 @@ const LEVEL_0 = {
         
         new Rectangle(1480, 30, 1000, 200),
 
+        new Rectangle(2450, -200, 200, 40, true),
+
         new RotatedRectangle(2180, -740, 20, 100, -pi/64),
         new Rectangle(2180, -200, 400, 1000), // left building
 
@@ -48,32 +50,44 @@ const LEVEL_0 = {
         new RotatedRectangle(4550, -475, 40, 650, -pi/32), // building wall left
         new RotatedRectangle(4850, -390, 250, 670, -pi/32), // building wall right
 
-        new Rectangle(5350, -90, 200, 40), // platform with enemy at end
+        new Rectangle(5350, -90, 200, 40, true), // platform with enemy at end
 
         new Rectangle(5050, 30, 1600, 200), // final ground
         new Rectangle(5810, -80, 80, 20), // "end" platform
         new Rectangle(6050, -430, 400, 1000), // right bound
     ],
     background: [
-        new BGRect(2000, -100, 50, 800, 6, "#002200"),
-        new BGShape(300, -200, 2, "#002200", [
-            {x:-10,y:0},
-            {x:10,y:-10},
-            {x:10,y:10},
-            {x:0,y:300}
-        ]),
-        new BGRect(0, -100, 100, 300, 2, "#002200"),
-        new BGShape(1000, -230, 2, "#002200", [
-            {x:-10,y:0},
-            {x:10,y:10},
-            {x:10,y:-10},
-            {x:0,y:300}
-        ]),
-        new BGRect(1500, -50, 100, 200, 2, "#002200"),
+        new BGRect(2000, -100, 50, 800, 6, "#004400"),
 
+        new BGRect(4000, -155, 100, 250, 6, "#004400"),
+
+        new BGRect(8000, -155, 100, 250, 6, "#004400"),
+        new BGRect(8000, -75, 40, 250, 4, "#004400"),
+        new BGRect(7000, -100, 40, 300, 4, "#004400"),
+        new BGRect(7500, -30, 40, 270, 4, "#004400"),
+
+        new BGShape(300, -200, 2, "#004400", [
+            {x:-10,y:0},
+            {x:10,y:-10},
+            {x:10,y:10},
+            {x:0,y:300}
+        ]),
+        new BGRect(0, -100, 100, 300, 2, "#004400"),
+        new BGShape(1000, -230, 2, "#004400", [
+            {x:-10,y:0},
+            {x:10,y:10},
+            {x:10,y:-10},
+            {x:0,y:300}
+        ]),
+        new BGRect(1500, -50, 100, 200, 2, "#004400"),
         new BGRect(3230, -75, 40, 150, 0, "#008800"),
 
-        new BGRect(8000, -800, 40, 40, 10, "#004400"), // moon
+        new BGRect(3000, -155, 100, 250, 2, "#004400"),
+        new BGRect(3500, -100, 120, 150, 2, "#004400"),
+        new BGRect(2400, -155, 180, 280, 2, "#004400"),
+        new BGRect(2800, -105, 140, 190, 2, "#004400"),
+
+        new BGRect(8000, -800, 40, 40, 10, "#006600"), // moon
     ],
     enemies: [
         new SimpleEnemy(800,-100),
@@ -96,5 +110,6 @@ const LEVEL_0 = {
         new Coin(4700, -1050),
         new Coin(4975, -90),
     ],
-    camera: {x:-100,y:-500,z:1,lb:-500,rb:5950}
+    camera: {x:-100,y:-500,z:1,lb:-500,rb:5950},
+    levelEnd: {x:5810,y:-140,w:80,h:100}
 };
