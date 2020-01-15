@@ -15,9 +15,11 @@ class Terrain {
         this.bounds = {left:x-w/2,right:x+w/2,top:y-h/2,bottom:y+h/2};
         this.harmful = hf;
         if (this.harmful) {
-            this.color = "#ff5c33";
+            this.color = "red";
+            this.colorFill = "#040000";
         } else {
             this.color = "#51e023";
+            this.colorFill = "#000400";
         }
     }
 
@@ -41,7 +43,7 @@ class Rectangle extends Terrain {
         if (InCam(cam, this)) {
             let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
             let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
-            c.fillStyle = BG_COLOR;
+            c.fillStyle = this.colorFill;
             c.fillRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
             c.strokeStyle = this.color;
             c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
@@ -97,7 +99,7 @@ class RotatedRectangle extends Terrain {
         let pt4 = {x:(-cam.x + cam.width/2 + this.drawBox.bottomLeft.x)/cam.zoom,
             y:(-cam.y + cam.height/2 + this.drawBox.bottomLeft.y)/cam.zoom};
 
-        c.fillStyle = BG_COLOR;
+        c.fillStyle = this.colorFill;
         c.beginPath();
         c.moveTo(pt1.x, pt1.y);
         c.lineTo(pt2.x, pt2.y);
@@ -130,24 +132,26 @@ class RotatedRectangle extends Terrain {
 }
 
 class Player {
-    constructor(x,y,s,c) {
+    constructor(x,y,s,c,c2,msgq) {
         this.x = x;
         this.y = y;
         this.size = s;
         this.color = c;
+        this.colorFill = c2;
         this.bounds = {left:x-s,right:x+s,top:y-s,bottom:y+s};
         this.vx = 0;
         this.vy = 0;
         this.keys = {a:false,d:false,s:false,w:false};
         this.keyUpdates = [];
-        this.horizontalAccel = 0.0008*3;
+        this.horizontalAccel = 0.0008*2;
         this.horizontalFriction = 0.0004*4;
-        this.horizontalMaxVel = 0.017;
+        this.horizontalMaxVel = 0.015;
         this.horizontalMinVel = 0.05;
         this.jumpVelocity = -0.011;
         this.jumpFrames = 0;
         this.maxJumpFrames = 6;
         this.fallFactor = 2.0;
+        this.fallMaxVel = 0.035;
         this.wallSlideSpeed = 0.11;
         this.wallSlideJumpVel = 0.02;
         this.wallJumpDisplacement = 8;
@@ -160,17 +164,24 @@ class Player {
         this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
         this.grav = 0.0008;
         this.coins = 0;
-        this.offworld = {left:-500,right:10000,top:-1000,bottom:0};
+        this.offworld = {left:-10000,right:10000,top:-10000,bottom:10000};
         this.spawn = {x:x,y:y};
-        this.maxHits = 2; // DEBUG
+        this.maxHits = 3; // DEBUG
         this.currentHits = this.maxHits;
         this.iframeTime = 0;
         this.iframeTimeMax = 2;
         this.iframeColor = "gray";
         this.startLocked = true;
         this.isDrawn = true;
+        this.active = true;
+        this.hitActiveTimer = 0;
+        this.hitActiveTimerMax = 0.5;
 
         this.elapsed = 0;
+
+        this.messageQueue = msgq;
+
+        this.playerID = 0;
 
         // DEBUG
         this.debugMoveMode = 0;
@@ -191,6 +202,7 @@ class Player {
         this.vy = 0;
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
         this.isDrawn = true;
+        this.active = true;
     }
 
     CollectCoins(v) {
@@ -200,11 +212,17 @@ class Player {
     Hit() {
         if (this.iframeTime <= 0) {
             this.currentHits--;
-            this.iframeTime = this.iframeTimeMax;
-        }
+            this.iframeTime = this.iframeTimeMax + this.hitActiveTimerMax;
+            this.active = false;
+            this.hitActiveTimer = this.hitActiveTimerMax;
 
-        if (this.currentHits === 0) {
-            this.Respawn();
+            let dead = false;
+            if (this.currentHits === 0) {
+                this.Respawn();
+                dead = true;
+            }
+
+            this.messageQueue.push({type:"playerHit",id:this.playerID,x:this.x,y:this.y,dead:dead});
         }
     }
 
@@ -216,6 +234,16 @@ class Player {
             }
         }
         this.keyUpdates = [];
+
+        if (!this.active) {
+            if (this.hitActiveTimer > 0) {
+                this.hitActiveTimer -= dT/1000;
+                if (this.hitActiveTimer < 0) {
+                    this.active = true;
+                }
+            }
+            return;
+        }
 
         this.elapsed += dT/1000;
 
@@ -241,6 +269,10 @@ class Player {
                     this.canJump = this.canJumpBeforeWallSlide;
                     this.wallSliding = false;
                 }
+            }
+
+            if (this.vy > this.fallMaxVel * dT) {
+                this.vy = this.fallMaxVel * dT;
             }
         } else {
             // Bottom collision.
@@ -331,13 +363,10 @@ class Player {
         this.bounds = {left:this.x-this.size,right:this.x+this.size,
             top:this.y-this.size,bottom:this.y+this.size};
 
-        if (this.collisionsObjs.bottom && this.collisionsObjs.bottom.harmful) {
-            this.Hit();
-        } else if (this.collisionsObjs.left && this.collisionsObjs.left.harmful) {
-            this.Hit();
-        } else if (this.collisionsObjs.right && this.collisionsObjs.right.harmful) {
-            this.Hit();
-        } else if (this.collisionsObjs.top && this.collisionsObjs.top.harmful) {
+        if ((this.collisionsObjs.bottom && this.collisionsObjs.bottom.harmful) ||
+            (this.collisionsObjs.left && this.collisionsObjs.left.harmful) ||
+            (this.collisionsObjs.right && this.collisionsObjs.right.harmful) ||
+            (this.collisionsObjs.top && this.collisionsObjs.top.harmful)) {
             this.Hit();
         }
 
@@ -365,12 +394,12 @@ class Player {
                 -(this.size - this.collisions.right) : this.size - this.collisions.left;
             let px = (-cam.x + cam.width/2 + this.x + collOffsetX)/cam.zoom;
             let py = (-cam.y + cam.height/2 + this.y - collOffsetY)/cam.zoom;
-            let xrad = (this.size+(Math.abs(this.vx)+Math.abs(this.vy))*3)/cam.zoom;
-            let yrad = this.size - Math.abs(this.size - xrad);
+            let xrad = (this.size/cam.zoom+(Math.abs(this.vx)+Math.abs(this.vy))*3);
+            let yrad = (this.size/cam.zoom - Math.abs(this.size/cam.zoom - xrad));
             let ang = Math.atan2(this.vy,this.vx);
 
-            c.fillStyle = BG_COLOR;
-            if (this.iframeTime > 0) {
+            c.fillStyle = this.colorFill;
+            if (this.iframeTime > 0 && ((this.elapsed*100)%50) < 25) {
                 c.strokeStyle = this.iframeColor;
             } else {
                 c.strokeStyle = this.color;
@@ -379,6 +408,25 @@ class Player {
             c.ellipse(px,py,xrad,yrad,ang,0,pi*2);
             c.fill();
             c.stroke();
+
+            if (this.iframeTime > 0) {
+                // TODO: Could probably be better.
+                c.globalAlpha = 0.4;
+                c.fillStyle = "black";
+                c.beginPath();
+                c.arc(px, py, 1000*this.iframeTime, 0, 2*pi);
+                c.fill();
+                c.globalAlpha = 0.02;
+                c.fillStyle = "#666666";
+                c.beginPath();
+                c.arc(px, py, 100*this.iframeTime, 0, 2*pi);
+                c.fill();
+                c.fillStyle = "#444444";
+                c.beginPath();
+                c.arc(px, py, 200*this.iframeTime, 0, 2*pi);
+                c.fill();
+                c.globalAlpha = 1.0;
+            }
         }
 
         // Don't affect line width by scale.
@@ -407,6 +455,8 @@ class Player {
         let coinSymbolSpace = 5;
         let coinsX = coinSymbolSpace;
         let coinsY = HEIGHT - coinSymbolSpace - coinSymbolSize;
+        c.fillStyle = "black";
+        c.fillRect(coinsX + coinSymbolSize/2 - coinWid/2, coinsY, coinWid, coinSymbolSize);
         c.strokeStyle = "cyan";
         c.strokeRect(coinsX + coinSymbolSize/2 - coinWid/2, coinsY, coinWid, coinSymbolSize);
         c.font = ""+coinSymbolSize+"px Verdana";
@@ -421,14 +471,15 @@ class SimpleEnemy {
     constructor(x,y,xmod=1,fmod=1) {
         this.x = x;
         this.y = y;
-        this.vxMax = 0.08 * xmod;
-        this.vx = this.vxMax;
+        this.vxMax = 0.08;
+        this.vx = this.vxMax * xmod;
         this.vy = 0;
         this.grav = 0.0005;
         this.elapsed = 0;
         this.size = 14;
         this.moveFreq = 400 * fmod;
         this.color = "red";
+        this.colorFill = "#100404";
         this.bounds = {left:x-this.size,right:x+this.size,top:y-this.size,bottom:y+this.size};
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
         this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
@@ -481,14 +532,14 @@ class SimpleEnemy {
     Draw(c,cam) {
         if (!InCam(cam,this)){ return; }
 
-        let xrad = (this.size+(Math.abs(this.vx)+Math.abs(this.vy)/2))/cam.zoom;
-        let yrad = this.size - Math.abs(this.size - xrad);
+        let xrad = (this.size/cam.zoom+(Math.abs(this.vx)+Math.abs(this.vy)/2));
+        let yrad = this.size/cam.zoom - Math.abs(this.size/cam.zoom - xrad);
         let ang = Math.atan2(this.vy,this.vx);
 
-        c.fillStyle = BG_COLOR;
+        c.fillStyle = this.colorFill;
         c.strokeStyle = this.color;
         c.beginPath();
-        c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,xrad,yrad,ang,0,pi*2);
+        c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y + (this.size-yrad))/cam.zoom,xrad,yrad,ang,0,pi*2);
         c.fill();
         c.stroke();
     }
@@ -511,6 +562,16 @@ class Camera {
         this.maxMove = 11;
         this.maxZoom = 2;
         this.minZoom = 0.5;
+
+        this.shaking = false;
+        this.shakeMag = 0;
+        this.shakeTime = 0;
+    }
+
+    Shake(m, t) {
+        this.shakeMag = m;
+        this.shakeTime = t;
+        this.shaking = true;
     }
 
     Zoom(f, s=false) {
@@ -542,11 +603,11 @@ class Camera {
         // "Lead" the target if it has horizontal velocity.
         if (this.target.vx) {
             let mv = (this.x - (this.target.x + this.target.vx*this.velocityGain))*this.horizontalFactor;
-            mv = Math.abs(mv) > this.maxMove ? this.maxMove * Math.sign(mv) : mv;
+            mv = Math.abs(mv)/this.zoom > this.maxMove ? this.maxMove * Math.sign(mv) : mv;
             this.x -= mv;
         } else {
-            let mv = (this.x - (this.target.x + this.target.vx*this.velocityGain))*this.horizontalFactor;
-            mv = Math.abs(mv) > this.maxMove ? this.maxMove * Math.sign(mv) : mv;
+            let mv = (this.x - (this.target.x))*this.horizontalFactor;
+            mv = Math.abs(mv)/this.zoom > this.maxMove ? this.maxMove * Math.sign(mv) : mv;
             this.x -= mv;
         }
 
@@ -560,6 +621,21 @@ class Camera {
 
         if (this.y + this.height/2 > this.bounds.bottom) {
             this.y -= this.y + this.height/2 - this.bounds.bottom;
+        }
+
+        if (this.shaking) {
+            let env = this.shakeTime * this.shakeMag;
+            let offX = env * (2*Math.random()-1);
+            let offY = env * (2*Math.random()-1);
+            this.x += offX;
+            this.y += offY;
+
+            if (this.shakeTime > 0) {
+                this.shakeTime -= dT/1000;
+                if (this.shakeTime <= 0) {
+                    this.shaking = false;
+                }
+            }
         }
     }
 }
@@ -604,24 +680,27 @@ class Coin {
 }
 
 class BGShape {
-    constructor(x,y,d,c,pts) {
+    constructor(x,y,d,c,c2,pts) {
         this.x = x;
         this.y = y;
         this.distance = d;
         this.pts = pts;
         this.color = c;
+        this.colorFill = c2;
     }
 
     Draw(c,cam) {
+        // TODO: this should be drawn only if on the screen.
         let px = (-cam.x + cam.width/2 + this.x)/cam.zoom/(1+this.distance);
         let py = (-cam.y + cam.height/2 + this.y)/cam.zoom/(1.1);
+
         c.beginPath();
         c.moveTo(px + this.pts[0].x/cam.zoom, py + this.pts[0].y/cam.zoom);
         for (let i = 1; i < this.pts.length; i++) {
             c.lineTo(px + this.pts[i].x/cam.zoom, py + this.pts[i].y/cam.zoom);
         }
         c.closePath();
-        c.fillStyle = BG_COLOR;
+        c.fillStyle = this.colorFill;
         c.fill();
         c.strokeStyle = this.color;
         c.stroke();
@@ -629,17 +708,20 @@ class BGShape {
 }
 
 class BGRect {
-    constructor(x,y,w,h,d,c) {
+    constructor(x,y,w,h,d,c,c2) {
         this.x = x;
         this.y = y;
         this.width = w;
         this.height = h;
         this.color = c;
+        this.colorFill = c2;
         this.distance = d;
         this.bounds = {left:x-w/2,right:x+w/2,top:y-h/2,bottom:y+h/2};
     }
 
     Draw(c, cam) {
+        // TODO: this should be drawn only if on the screen.
+        // TODO: make this better
         // DEBUG
         //if (InCam(cam,this)) {
             let px = (-cam.x + cam.width/2 + this.x)/cam.zoom/(1+this.distance);
@@ -647,7 +729,7 @@ class BGRect {
             c.beginPath();
             c.rect(px-this.width/2/cam.zoom,py-this.height/2/cam.zoom,
                 this.width/cam.zoom,this.height/cam.zoom);
-            c.fillStyle = BG_COLOR;
+            c.fillStyle = this.colorFill;
             c.fill();
             c.strokeStyle = this.color;
             c.stroke();
@@ -681,6 +763,79 @@ class LevelEnd {
             c.fillRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
             c.strokeStyle = this.color;
             c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+        }
+    }
+}
+
+class HitParticle {
+    constructor(x,y,s,c,vx,vy,tA,drag=false,collision=false) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.size = s;
+        this.color = c;
+        this.timeAlive = tA;
+        this.hasDrag = drag;
+        this.hasCollision = collision;
+        this.grav = 0.0008;
+        this.active = true;
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+    }
+
+    Collision(t) {
+        if (this.hasCollision) {
+            HandleCollisions(this,t);
+        }
+    }
+
+    Tick(dT) {
+        if (!this.active) { return; }
+
+        this.timeAlive -= dT/1000;
+
+        if (this.timeAlive <= 0) {
+            this.active = false;
+        }
+
+        if (this.collisions.bottom === -1) {
+            this.vy += this.grav * dT;
+        } else {
+            this.y -= this.collisions.bottom;
+            this.vy = this.vy > 0 ? -this.vy*0.6 : this.vy;
+        }
+
+        if (this.collisions.left !== -1) {
+            if (this.vx < 0) {
+                this.vx = -this.vx*0.6;
+            }
+        } else if (this.collisions.right !== -1) {
+            if (this.vx > 0) {
+                this.vx = -this.vx*0.6;
+            }
+        }
+
+        if (this.hasDrag) {
+            this.vx *= 0.99;
+            this.vy *= 0.99;
+        }
+
+        this.x += this.vx * dT;
+        this.y += this.vy * dT;
+
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+    }
+
+    Draw(c,cam) {
+        if (!this.active) { return; }
+        if (InCam(cam, this)) {
+            let px = (-cam.x + cam.width/2 + this.x)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y)/cam.zoom;
+            c.fillStyle = this.color;
+            c.beginPath();
+            c.arc(px, py, this.size/cam.zoom, 0, 2*pi);
+            c.fill();
         }
     }
 }

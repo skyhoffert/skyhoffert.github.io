@@ -5,111 +5,134 @@
 
 const LEVEL_0 = {
     terrain: [
-        new RotatedRectangle(-308,-72,40,20,-pi/6, true), // "start" ramp
-        new RotatedRectangle(330, -68, 185, 80, pi/8, true),
-        new RotatedRectangle(1050, -68, 185, 80, -pi/8, true),
-        new Rectangle(0, 30, 800, 200),
-        new Rectangle(-600, -330, 400, 800),
-        new Rectangle(420, -105, 40, 70),
-        new Rectangle(700,-310, 200, 40),
-        new Rectangle(-360,-80,80,20), // "start" platform
-        new Rectangle(690, 30, 580, 200),
-        new Rectangle(960,-105,40,70),
-        /*
-        new RotatedRectangle(1200, -350, 40, 300, -pi/32),
-        new RotatedRectangle(1050, -450, 40, 300, -pi/32),
-        new Rectangle(1180, 30, 400, 200),
-        */
-        new RotatedRectangle(1850, -200, 120, 40, pi/10),
-        new RotatedRectangle(1250, -500, 120, 40, -pi/8),
-        new RotatedRectangle(1550, -700, 120, 40, pi/6),
-        new RotatedRectangle(1880, -550, 220, 40, pi/10),
+        ["rr",-308,-72,40,20,-pi/6,true],// "start" ramp
+        ["rr",330,-68,185,80,pi/8,true],
+        ["rr",1050,-68,185,80,-pi/8,true],
+        ["r",0,30,800,200,false],
+        ["r",-600,-330,400,800,false],
+        ["r",420,-105,40,70,false],
+        ["r",700,-310,200,40,false],
+        ["r",-360,-80,80,20,false],// "start" platform
+        ["r",690,30,580,200,false],
+        ["r",960,-105,40,70,false],
+
+        ["rr",1850,-200,120,40,pi/10,false],
+        ["rr",1250,-500,120,40,-pi/8,false],
+        ["rr",1550,-700,120,40,pi/6,false],
+        ["rr",1880,-550,220,40,pi/10,false],
         
-        new Rectangle(1480, 30, 1000, 200),
+        ["r",1480,30,1000,200,false],
 
-        new Rectangle(2450, -200, 200, 40, true),
+        ["r",2450,-200,200,40,true],
 
-        new RotatedRectangle(2180, -740, 20, 100, -pi/64),
-        new Rectangle(2180, -200, 400, 1000), // left building
+        ["rr",2178,-740,20,110,-pi/64,false],
+        ["r",2180,-200,400,1000,false],// left building
 
-        new Rectangle(1550,-310, 200, 40),
-        new Rectangle(1800,-910, 40, 300),
+        ["r",1550,-310,200,40,false],
+        ["r",1800,-910,40,300,false],
 
-        new RotatedRectangle(2750, -720, 20, 40, pi/64),
-        new Rectangle(2680, -710, 40, 20),
-        new Rectangle(2750, -200, 400, 1000), // right building
+        ["rr",2750,-720,20,40,pi/64,false],
+        ["r",2680,-710,40,20,false],
+        ["r",2750,-200,400,1000,false],// right building
 
-        new Rectangle(3150,-810, 40, 400),
-        new Rectangle(3400,-510, 300, 40), // enemy platform
+        ["r",3150,-810,40,400,false],
+        ["r",3400,-510,300,40,false],// enemy platform
 
-        new Rectangle(3100,-210, 300, 40),
-        new Rectangle(3450, 30, 1000, 200), // ground after buildings
-        new Rectangle(4100, 0, 300, 250), // platform with enemies
+        ["r",3100,-210,300,40,false],
+        ["r",3450,30,1000,200,false],// ground after buildings
+        ["r",4100,0,300,250,false],// platform with enemies
 
-        new RotatedRectangle(5760,-72,40,20, pi/6, true), // "end" ramp
-        new RotatedRectangle(4550, -475, 40, 650, -pi/32), // building wall left
-        new RotatedRectangle(4850, -390, 250, 670, -pi/32), // building wall right
+        ["rr",5760,-72,40,20,pi/6,true],// "end" ramp
+        ["rr",4550,-475,40,650,-pi/32,false],// building wall left
+        ["rr",4850,-390,250,670,-pi/32,false],// building wall right
 
-        new Rectangle(5350, -90, 200, 40, true), // platform with enemy at end
+        ["r",5350,-90,200,40,true],// platform with enemy at end
 
-        new Rectangle(5050, 30, 1600, 200), // final ground
-        new Rectangle(5810, -80, 80, 20), // "end" platform
-        new Rectangle(6050, -430, 400, 1000), // right bound
+        ["r",5050,30,1600,200,false],// final ground
+        ["r",5810,-80,80,20,false],// "end" platform
+        ["r",6050,-430,400,1000,false],// right bound
     ],
     background: [
-        new BGRect(2000, -100, 50, 800, 6, "#004400"),
+        ["bgr",2000,-100,50,800,6,"#004400","#000200"],
 
-        new BGRect(4000, -155, 100, 250, 6, "#004400"),
+        ["bgr",4000,-155,100,350,6,"#004400","#000200"],
 
-        new BGRect(8000, -155, 100, 250, 6, "#004400"),
-        new BGRect(8000, -75, 40, 250, 4, "#004400"),
-        new BGRect(7000, -100, 40, 300, 4, "#004400"),
-        new BGRect(7500, -30, 40, 270, 4, "#004400"),
+        ["bgr",8000,-155,100,450,6,"#004400","#000200"],
+        ["bgr",8000,-75,40,350,4,"#004400"],"#000200",
+        ["bgr",7000,-100,40,400,4,"#004400","#000200"],
+        ["bgr",7500,-30,40,370,4,"#004400","#000200"],
 
-        new BGShape(300, -200, 2, "#004400", [
+        ["bgs",300,-200,2,"#004400","#000200",[
             {x:-10,y:0},
             {x:10,y:-10},
             {x:10,y:10},
             {x:0,y:300}
-        ]),
-        new BGRect(0, -100, 100, 300, 2, "#004400"),
-        new BGShape(1000, -230, 2, "#004400", [
+        ]],
+        ["bgr",0,-100,100,400,2,"#004400","#000200"],
+        ["bgs",1000,-230,2,"#004400","#000200",[
             {x:-10,y:0},
             {x:10,y:10},
             {x:10,y:-10},
             {x:0,y:300}
-        ]),
-        new BGRect(1500, -50, 100, 200, 2, "#004400"),
-        new BGRect(3230, -75, 40, 150, 0, "#008800"),
+        ]],
+        ["bgr",1500,-50,100,300,2,"#004400","#000200"],
 
-        new BGRect(3000, -155, 100, 250, 2, "#004400"),
-        new BGRect(3500, -100, 120, 150, 2, "#004400"),
-        new BGRect(2400, -155, 180, 280, 2, "#004400"),
-        new BGRect(2800, -105, 140, 190, 2, "#004400"),
+        ["bgr",3000,-155,100,350,2,"#004400","#000200"],
+        ["bgr",3500,-100,120,250,2,"#004400","#000200"],
+        ["bgr",2400,-155,180,380,2,"#004400","#000200"],
+        ["bgr",2800,-105,140,290,2,"#004400","#000200"],
 
-        new BGRect(8000, -800, 40, 40, 10, "#006600"), // moon
+        ["bgr",8000,-800,40,40,10,"#668866","#061206"],// moon
+
+        ["bgr",3230,-75,40,150,0,"#008800","#000200"],
     ],
     enemies: [
-        new SimpleEnemy(800,-100),
-        new SimpleEnemy(1550,-500),
-        new SimpleEnemy(4100,-100),
-        new SimpleEnemy(4100,-100,-1),
-        new SimpleEnemy(5350,-100,2,0.7),
+        ["se",800,-100,1,1],
+        ["se",1550,-500,1,1],
+        ["se",4100,-100,1,1],
+        ["se",4100,-100,-1,1],
+        ["se",5350,-100,2,0.7],
     ],
-    player: new Player(-360, -720, 12, "#9999ff"),
-    //player: new Player(2750, -2000, 12, "#9999ff"), // DEBUG
+    player: [-360,-720,12,"#9999ff","#060610"],
     coins: [
-        new Coin(0, -160),
-        new Coin(700,-350),
-        new Coin(1550, -400),
-        new Coin(1960, -90),
-        new Coin(1640, -1085),
-        new Coin(2465, -585),
-        new Coin(3400, -555),
-        new Coin(3100, -100),
-        new Coin(4700, -1050),
-        new Coin(4975, -90),
+        ["c",0,-160],
+        ["c",700,-350],
+        ["c",1550,-400],
+        ["c",1960,-90],
+        ["c",1640,-1085],
+        ["c",2465,-585],
+        ["c",3400,-555],
+        ["c",3100,-100],
+        ["c",4700,-1050],
+        ["c",4975,-90],
     ],
-    camera: {x:-100,y:-500,z:1,lb:-500,rb:5950},
+    camera: {x:-100,y:-500,z:1.2,lb:-500,rb:5950,bb:0,tp:10000},
     levelEnd: {x:5810,y:-140,w:80,h:100}
+};
+
+const PLAYGROUND = {
+    terrain: [
+        //["rr",-308,-72,40,20,-pi/6,true],
+        ["r",-500,0,80,1000,false],
+        ["r",500,0,80,1000,false],
+        ["r",0,500,1000,80,false],
+        ["r",0,-500,1000,80,false],
+        ["r",-400,450,200,100,false],
+        ["r",-400,200,200,100,false],
+        ["r",400,150,200,100,false],
+        ["r",440,-80,120,50,false],
+        ["r",200,-300,200,40,false],
+        ["r",-380,-300,200,40,false],
+        ["r",-220,-400,40,200,false],
+    ],
+    background: [
+        ["bgr",2000,0,200,200,4,"#003300","#000500"],
+    ],
+    enemies: [
+    ],
+    player: [0,0,12,"#9999ff","#060610"],
+    coins: [
+    ],
+    camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tp:-1000},
+    levelEnd: {x:0,y:10000,w:100,h:100}
 };
