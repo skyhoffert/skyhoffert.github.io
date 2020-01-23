@@ -39,6 +39,7 @@ const LEVEL_0 = {
         ["r",3400,-510,300,40,false],// enemy platform
 
         ["r",3100,-210,300,40,false],
+        ["r",3570,-590,40,200,true],// harmful wall by floating platform
         ["r",3450,30,1000,200,false],// ground after buildings
         ["r",4100,0,300,250,false],// platform with enemies
 

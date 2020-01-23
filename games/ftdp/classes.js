@@ -250,19 +250,22 @@ class Player {
         if (this.collisions.bottom === -1) {
             this.vy += this.vy > 0 ? (this.grav * this.fallFactor) * dT : this.grav * dT;
 
-            if ((this.collisions.left !== -1 || this.collisions.right !== -1) && this.vy > 0) {
-                // If "sliding" on a wall.
-                this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
-                if (this.collisions.bottom === -1) {
-                    // If a transition to wall slide, store previous jump ability.
-                    if (!this.wallSliding) {
-                        this.canJumpBeforeWallSlide = this.canJump;
+            if (this.collisions.left !== -1 || this.collisions.right !== -1) {
+                // TODO: without this check, things are a bit buggy.
+                //if (this.vy > 0) {
+                    // If "sliding" on a wall.
+                    this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
+                    if (this.collisions.bottom === -1) {
+                        // If a transition to wall slide, store previous jump ability.
+                        if (!this.wallSliding) {
+                            this.canJumpBeforeWallSlide = this.canJump;
+                        }
+                        this.wallSliding = true;
+                        this.canJump = true;
+                    } else {
+                        this.wallSliding = false;
                     }
-                    this.wallSliding = true;
-                    this.canJump = true;
-                } else {
-                    this.wallSliding = false;
-                }
+                //}
             } else {
                 if (this.wallSliding) {
                     // Regain jump ability if had before starting wall slide.
