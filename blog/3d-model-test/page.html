@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>3D Model Test</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <link rel="stylesheet" href="page.css">
+
+    <script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+    <script defer src="three.min.js"></script>
+    <script defer src="GLTFLoader.js"></script>
+    <script defer src="page.js"></script>
+</head>
+<body>
+    <p><a href="../../blog.html">Back</a></p>
+    
+    <div class="spacer-40"></div>
+    
+    <h1>3D Model Test</h1>
+    <hr>
+
+    <div class="spacer-20"></div>
+    <i>Sky Hoffert</i><br>
+    <i>January 23, 2020</i>
+    <div class="spacer-20"></div>
+
+    <p>
+    The purpose of this page is to get a 3D model that has been animated working with THREE.js
+    library. Below, you will find a super simple demo of a quick 3D model created using
+    Blender being rendered with the THREE.js library. The rest of this post will detail my
+    process!
+    </p>
+    
+    <div class="spacer-20"></div>
+    
+    <canvas id="canvas"></canvas>
+    <p><i>Completed model/animation!</i></p>
+
+    <div class="spacer-20"></div>
+
+    <p>
+    This model is called "low-poly" or low polygon count. This means it is easier to create, load,
+    and display with the drawback of not looking as nice as it could. In this case, the boy looks
+    quite bad. But the point was to learn how this process unfolds!
+    <br><br>
+    My first task was to create a 3D model. Now, I do have some experience using Blender on and off
+    over the past year or so. My background with it definitely made the process easier, although I
+    did follow a tutorial on YouTube that guided me through. The model was made using the texture
+    as a guide. Credit for the texture goes to Robin C. It can be found
+    <a href="http://arbeencee.blogspot.com/2012/05/character-turnaround.html">here</a>.
+    <br><br>
+    <img src="pic1-model.JPG" width="600px">
+    <br>
+    <i>Completed model in Blender software.</i>
+    <br><br>
+    Once the model was complete, the texture that I was using to create the model could be applied.
+    To do this, I followed the UV unwrapping routine to apply the image texture to the faces of
+    each polygon. It was pretty straightforward since there are not many details in this model. In
+    the image below, smooth shading makes the model more appealing.
+    <br><br>
+    <img src="pic2-texture.JPG" width="600px">
+    <br>
+    <i>Model with texture applied in Blender.</i>
+    <br><br>
+    Now that the texture has been applied, we can start "adding bones" to the polygons. Doing this
+    is called "rigging" a model. It took some time, but again I followed a YouTube tutorial for
+    rigging a character model. Once the "rig" is in place, I could start moving the bones around to
+    experiment with different poses.
+    <br><br>
+    <img src="pic3-rig.JPG" width="600px">
+    <br>
+    <i>Rigged model in Blender.</i>
+    <br><br>
+    Now comes the time to animate! I wanted to do a simple waving animation with some movement. So
+    I made him sort of shift his weight onto the opposite foot and then go back to the original
+    position. This results in a clean looping pattern.
+    <br><br>
+    Animating is all about adding "keyframes" over a timeline. You choose positions at certain
+    times that the model should hit and the software will smoothly move the bones between the time
+    for each keyframe. This is a pretty common technique and honestly pretty simple! At the bottom
+    of this image you can see I have just 5 total keyframes. If you watch the animation it can be
+    clearly seen when each keyframe transition occurs.
+    <br><br>
+    <img src="pic4-animation.JPG" width="600px">
+    <br>
+    <i>Animating the model in Blender.</i>
+    <br><br>
+    Now comes the part I am best at - programming the model to work in the browser! I used a
+    popular library called "THREE.js" to load and animate the model. I will admit that if you
+    haven't used this library before it can be a bit intimidating. But really all you need to do
+    is find the right examples online and search for any problems that may come about... and be
+    prepared to spend a lot of time tinkering with the code until things work. But after an hour or
+    so, I was able to write some decent, quick code that loads the model (as a GLTF/GLB) file and
+    initiates the animation.
+    <br><br>
+    <img src="pic5-coding.JPG" width="600px">
+    <br>
+    <i>Programming in VS Code.</i>
+    <br><br>
+    And now the final part, writing this blog post! I'm carefully navigating the timeline as to not
+    cause a chicken-and-the-egg issue. The picture was taken while a bit of the post was written,
+    but there is much more written as I actually enter the contents into the html file.
+    <br><br>
+    <img src="pic6-blog.JPG" width="600px">
+    <br>
+    <i>Time bending picture of the beginning of this post.</i>
+    <br><br>
+    That wraps everything up! Overall this was an awesome learning experience. I would highly
+    recommend that if you are interested in game development or modeling or anything else related
+    to this process that you go through it to figure out for yourself how everything works. The
+    end result is being able to watch your animation in the browser <strong>anywhere</strong> on
+    <strong>any</strong> device. Pretty cool!
+    <br><br>
+    Be Curious!
+    </p>
+    
+    <div class="spacer-120"></div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- WideAd -->
+    <ins class="adsbygoogle"
+        style="display:inline-block;width:728px;height:90px"
+        data-ad-client="ca-pub-4496939647071346"
+        data-ad-slot="7242507454"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    <div class="spacer-40"></div>
+    
+    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+    <input type="hidden" name="cmd" value="_donations" />
+    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
+    <input type="hidden" name="currency_code" value="USD" />
+    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
+
+    <div class="spacer-120"></div>
+    
+    <p>&copy; 2020 Sky Hoffert</p>
+
+</body>
+</html>
