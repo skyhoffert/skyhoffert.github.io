@@ -17,10 +17,10 @@ canvas.height = height;
 ctx.lineWidth = 2;
 
 // These lines scale the canvas so that it always fits in the current window.
-var taller = window.innerWidth < window.innerHeight * 4/3;
+var taller = window.innerWidth < (window.innerHeight-100) * 4/3;
 if (!taller) {
-    canvas.style.width = ""+window.innerHeight*0.99*4/3+"px";
-    canvas.style.height = ""+window.innerHeight*0.99+"px";
+    canvas.style.width = ""+(window.innerHeight-100)*0.99*4/3+"px";
+    canvas.style.height = ""+(window.innerHeight-100)*0.99+"px";
 } else {
     canvas.style.width = ""+window.innerWidth*0.99+"px";
     canvas.style.height = ""+window.innerWidth*0.99*3/4+"px";
