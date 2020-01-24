@@ -247,37 +247,40 @@ class Player {
 
         this.elapsed += dT/1000;
 
-        if (this.collisions.bottom === -1) {
-            this.vy += this.vy > 0 ? (this.grav * this.fallFactor) * dT : this.grav * dT;
+        // Wall Sliding logical block.
+        if ((this.collisions.left !== -1 || this.collisions.right !== -1) && this.jumpFrames <= 0) {
+            // TODO: without this check, things are a bit buggy.
+            //if (this.vy > 0) {
+                // If "sliding" on a wall.
+                this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
 
-            if (this.collisions.left !== -1 || this.collisions.right !== -1) {
-                // TODO: without this check, things are a bit buggy.
-                //if (this.vy > 0) {
-                    // If "sliding" on a wall.
-                    this.vy = this.vy > this.wallSlideSpeed ? this.wallSlideSpeed : this.vy;
-                    if (this.collisions.bottom === -1) {
-                        // If a transition to wall slide, store previous jump ability.
-                        if (!this.wallSliding) {
+                if (this.collisions.bottom === -1 && this.collisions.top === -1) {
+                    // If a transition to wall slide, store previous jump ability.
+                    if (!this.wallSliding) {
                             this.canJumpBeforeWallSlide = this.canJump;
-                        }
-                        this.wallSliding = true;
-                        this.canJump = true;
-                    } else {
-                        this.wallSliding = false;
                     }
-                //}
-            } else {
-                if (this.wallSliding) {
-                    // Regain jump ability if had before starting wall slide.
-                    this.canJump = this.canJumpBeforeWallSlide;
+                    this.wallSliding = true;
+                    this.canJump = true;
+                } else {
                     this.wallSliding = false;
                 }
+            //}
+        } else {
+            if (this.wallSliding) {
+                // Regain jump ability if had before starting wall slide.
+                this.canJump = this.canJumpBeforeWallSlide;
+                this.wallSliding = false;
             }
+        }
+
+        // Falling logical block.
+        if (this.collisions.bottom === -1) {
+            this.vy += this.vy > 0 ? (this.grav * this.fallFactor) * dT : this.grav * dT;
 
             if (this.vy > this.fallMaxVel * dT) {
                 this.vy = this.fallMaxVel * dT;
             }
-        } else {
+        } else if (this.collisions.top === -1) {
             // Bottom collision.
             this.vy = this.vy > 0 ? 0 : this.vy;
             this.y -= this.size - this.collisions.bottom + 1;
@@ -289,9 +292,9 @@ class Player {
         if (this.collisions.top !== -1) {
             this.vy = this.vy < 0 ? 0 : this.vy;
             this.y += this.size - this.collisions.top + 1;
-        
         }
 
+        // Left/Right movement logical block.
         if (this.startLocked) {
         } else if (this.wallJumpDummyTime >= 0) {
             this.wallJumpDummyTime -= dT/1000;
@@ -323,8 +326,9 @@ class Player {
             }
         }
         
+        // Jumping logical block.
         if (this.keys[" "] && this.canJump) {
-            if (this.wallSliding) {
+            if (this.wallSliding && this.collisions.top === -1 && this.collisions.bottom === -1) {
                 this.vy = this.jumpVelocity*this.wallJumpYFactor * dT;
                 this.canJump = false;
                 if (this.collisions.left !== -1) {
@@ -705,7 +709,17 @@ class BGShape {
         c.closePath();
         c.fillStyle = this.colorFill;
         c.fill();
+
         c.strokeStyle = this.color;
+        let oldWidth = c.lineWidth;
+        c.globalAlpha = 0.35;
+        c.lineWidth = 10;
+        c.stroke();
+        c.globalAlpha = 0.6;
+        c.lineWidth = 6;
+        c.stroke();
+        c.globalAlpha = 1.0;
+        c.lineWidth = oldWidth;
         c.stroke();
     }
 }
@@ -734,7 +748,17 @@ class BGRect {
                 this.width/cam.zoom,this.height/cam.zoom);
             c.fillStyle = this.colorFill;
             c.fill();
+
             c.strokeStyle = this.color;
+            let oldWidth = c.lineWidth;
+            c.globalAlpha = 0.35;
+            c.lineWidth = 10;
+            c.stroke();
+            c.globalAlpha = 0.6;
+            c.lineWidth = 6;
+            c.stroke();
+            c.globalAlpha = 1.0;
+            c.lineWidth = oldWidth;
             c.stroke();
         //}
     }
