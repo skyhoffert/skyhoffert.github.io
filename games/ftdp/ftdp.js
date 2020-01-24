@@ -48,17 +48,11 @@ var camera = null;
 var lurkers = [];
 
 Init();
-LoadLevel(LEVEL_0);
+//LoadLevel(LEVEL_0);
+LoadLevel(TESTGROUND); // DEBUG
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
-
-    // DEBUG
-    if (evt.key === "l") {
-        camera.Zoom(1, true);
-        // Make lines thicker as camera zooms in.
-        ctx.lineWidth = (1/camera.zoom)*2;
-    }
 }, false);
 
 document.addEventListener("keyup", function (evt) {
@@ -117,6 +111,10 @@ function LoadLevel(l) {
             terrain.push(new RotatedRectangle(t[1], t[2], t[3], t[4], t[5]));
         } else if (t[0] === "bb") { // Block Blade
             terrain.push(new BlockBlade(t[1],t[2],t[3],t[4],t[5],t[6],t[7]));
+        } else if (t[0] === "kd") {
+            terrain.push(new KeyDoor(t[1],t[2],t[3],t[4],t[5]));
+        } else if (t[0] === "otb") {
+            terrain.push(new OneTouchBlock(t[1],t[2],t[3],t[4],t[5],t[6]));
         }
     }
     
@@ -138,8 +136,12 @@ function LoadLevel(l) {
     
     for (let i = 0; i < level.enemies.length; i++) {
         let e = level.enemies[i];
-        if (e[0] === "se") { // Coin
-            enemies.push(new Mulper(e[1], e[2], e[3], e[4]));
+        if (e[0] === "m") { // Coin
+            enemies.push(new Mulper(e[1],e[2],e[3],e[4]));
+        } else if (e[0] === "j") {
+            enemies.push(new Julper(e[1],e[2],e[3],e[4]));
+        } else if (e[0] === "s") {
+            enemies.push(new Sulper(e[1],e[2],e[3]));
         }
     }
     

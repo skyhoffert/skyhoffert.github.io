@@ -24,28 +24,28 @@ function InCam(cam,o) {
         camt > o.bounds.bottom || camb < o.bounds.top);
 }
 
-function HandleCollisions(o,t) {
+function HandleCollisions(o,t,p=false) {
     o.collisions = {left:-1,right:-1,top:-1,bottom:-1};
     o.collisionsObjs = {left:null,right:null,top:null,bottom:null};
 
     for (let i = 0; i < t.length; i++) {
         for (let h = 0; h < o.size+2; h++) {
-            if (t[i].Contains(o.x, o.y + h)) {
+            if (t[i].Contains(o.x, o.y + h,p)) {
                 if (h < o.collisions.bottom || o.collisions.bottom === -1) {
                     o.collisions.bottom = h;
                     o.collisionsObjs.bottom = t[i];
                 }
-            } else if (t[i].Contains(o.x - h, o.y)) {
+            } else if (t[i].Contains(o.x - h, o.y,p)) {
                 if (h < o.collisions.left || o.collisions.left === -1) {
                     o.collisions.left = h;
                     o.collisionsObjs.left = t[i];
                 }
-            } else if (t[i].Contains(o.x + h, o.y)) {
+            } else if (t[i].Contains(o.x + h, o.y,p)) {
                 if (h < o.collisions.right || o.collisions.right === -1) {
                     o.collisions.right = h;
                     o.collisionsObjs.right = t[i];
                 }
-            } else if (t[i].Contains(o.x, o.y - h)) {
+            } else if (t[i].Contains(o.x, o.y - h,p)) {
                 if (h < o.collisions.top || o.collisions.top === -1) {
                     o.collisions.top = h;
                     o.collisionsObjs.top = t[i];

@@ -24,7 +24,7 @@ class Terrain {
     }
 
     // To be overriden.
-    Contains(){}
+    Contains(x,y){}
     Tick(dT){}
     Draw(c,cam){}
 }
@@ -178,7 +178,19 @@ class BlockBlade extends Terrain {
     }
 
     Draw(c,cam) {
-        if (!InCam(cam, this)) { return; }
+        if (this.pt1 !== null && this.pt2 !== null) {
+            let preCheckBounds = JSON.parse(JSON.stringify(this.bounds));
+            let leftmost = this.pt1.x < this.pt2.x ? this.pt1 : this.pt2;
+            let topmost = this.pt1.y < this.pt2.y ? this.pt1 : this.pt2;
+            let rightmost = this.pt1.x > this.pt2.x ? this.pt1 : this.pt2;
+            let bottommost = this.pt1.y > this.pt2.y ? this.pt1 : this.pt2;
+            this.bounds = {left:leftmost.x - this.width,right:rightmost.x + this.width,
+                top:topmost - this.height,bottom:bottommost + this.height};
+            if (!InCam(cam, this)) { return; }
+            this.bounds = JSON.parse(JSON.stringify(preCheckBounds));
+        } else {
+            if (!InCam(cam, this)) { return; }
+        }
 
         c.beginPath();
         c.moveTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle-pi*2/3)*this.width)/cam.zoom,
@@ -201,6 +213,157 @@ class BlockBlade extends Terrain {
             c.strokeStyle = this.color;
             c.stroke();
             c.globalAlpha = 1.0;
+        }
+    }
+}
+
+class Key {
+    constructor(x,y) {
+        this.x = x;
+        this.y = y;
+        this.width = 20;
+        this.height = 20;
+        this.bounds = {left:x-this.width/2,right:x+this.width/2,top:y-this.height/2,bottom:y+this.height/2};
+        this.elapsed = 0;
+        this.color = "#ff00ff";
+        this.colorFill = BG_COLOR;
+    }
+
+    Contains(x,y,p=false) {
+        if (!p) { return false; }
+
+        return x > this.bounds.left && x < this.bounds.right &&
+            y > this.bounds.top && y < this.bounds.bottom;
+    }
+    
+    Tick(dT) {
+        this.elapsed += dT/350;
+        if (this.elapsed > 2*pi) {
+            this.elapsed -= 2*pi;
+        }
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)) { return; }
+
+        let wid = this.width * Math.cos(this.elapsed);
+        let px = (-cam.x + cam.width/2 + this.x - wid/2)/cam.zoom;
+        let py = (-cam.y + cam.height/2 + this.y - this.height/2)/cam.zoom;
+        c.fillStyle = this.colorFill;
+        c.fillRect(px, py, wid/cam.zoom, this.height/cam.zoom);
+        c.strokeStyle = this.color;
+        c.strokeRect(px, py, wid/cam.zoom, this.height/cam.zoom);
+    }
+}
+
+class KeyDoor extends Terrain {
+    constructor(x,y,w,h,kp) {
+        super(x,y,w,h,false);
+        this.unlocked = false;
+        this.key = new Key(kp.x,kp.y);
+        this.color = "#ff00ff";
+        this.colorFill = "#1a001a";
+    }
+
+    Contains(x,y,p=false) {
+        if (this.unlocked) { return false; }
+
+        if (this.key.Contains(x,y,p)) {
+            this.unlocked = true;
+            return false;
+        }
+
+        return x > this.bounds.left && x < this.bounds.right &&
+            y > this.bounds.top && y < this.bounds.bottom;
+    }
+
+    Tick(dT) {
+        this.key.Tick(dT);
+    }
+
+    Draw(c,cam) {
+        if (!this.unlocked) {
+            this.key.Draw(c,cam);
+        }
+
+        if (!InCam(cam, this)) { return; }
+
+        if (!this.unlocked) {
+            let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
+            c.fillStyle = this.colorFill;
+            c.fillRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+            c.strokeStyle = this.color;
+            c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+        } else {
+            let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
+            c.strokeStyle = this.color;
+            c.setLineDash([8, 10]);
+            c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+            c.setLineDash([]);
+        }
+    }
+}
+
+class OneTouchBlock extends Terrain {
+    constructor(x,y,w,h,ts,tg) {
+        super(x,y,w,h,false);
+        this.color = "#3366ff";
+        this.colorFill = "#00061a";
+        this.hittable = true;
+        this.timeStay = ts; // Controls how long before dissapearing.
+        this.timeGone = tg; // How long until the block respawns.
+        this.timeLeftStaying = 0;
+        this.timeLeftGone = 0;
+    }
+
+    Contains(x,y,p=false) {
+        if (!this.hittable) { return false; }
+
+        let hit = x > this.bounds.left && x < this.bounds.right &&
+            y > this.bounds.top && y < this.bounds.bottom;
+        
+        if (p && hit) {
+            this.timeLeftStaying = this.timeStay;
+            this.hittable = false;
+            this.timeLeftGone = this.timeGone;
+        }
+
+        return hit;
+    }
+
+    Tick(dT) {
+        if (this.hittable) { return; }
+        if (this.timeLeftStaying > 0) {
+            this.timeLeftStaying -= dT/1000;
+        } else if (this.timeLeftGone > 0) {
+            this.timeLeftGone -= dT/1000;
+        } else {
+            this.hittable = true;
+        }
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam, this)) { return; }
+
+        if (this.hittable) {
+            let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
+            c.fillStyle = this.colorFill;
+            c.fillRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+            c.strokeStyle = this.color;
+            c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+        } else {
+            let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
+            let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
+            c.strokeStyle = this.color;
+
+            let totalLineWidth = 15;
+            let pc = (1 - this.timeLeftGone / this.timeGone)*0.95 + 0.05;
+            c.setLineDash([totalLineWidth*pc, totalLineWidth*(1-pc)]);
+            c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
+            c.setLineDash([]);
         }
     }
 }
@@ -257,9 +420,6 @@ class Player {
         this.messageQueue = msgq;
 
         this.playerID = 0;
-
-        // DEBUG
-        this.debugMoveMode = 0;
     }
 
     ResetKeys() {
@@ -304,9 +464,6 @@ class Player {
     Tick(dT) {
         for (let i = 0; i < this.keyUpdates.length; i++) {
             this.keys[this.keyUpdates[i].key] = this.keyUpdates[i].down;
-            if (this.keyUpdates[i].key === "p" && this.keyUpdates[i].down === true) {
-                this.debugMoveMode = Math.abs(this.debugMoveMode - 1);
-            }
         }
         this.keyUpdates = [];
 
@@ -400,25 +557,15 @@ class Player {
             if (this.keys.a) {
                 this.vx -= this.horizontalAccel * dT;
 
-                if (this.debugMoveMode === 1) {
-                    this.vx = -this.horizontalMaxVel * 3/4 * dT;
-                }
-
                 this.vx = this.vx < -this.horizontalMaxVel*dT ? -this.horizontalMaxVel*dT : this.vx;
             } else if (this.keys.d) {
                 this.vx += this.horizontalAccel * dT;
 
-                if (this.debugMoveMode === 1) {
-                    this.vx = this.horizontalMaxVel * 3/4 * dT;
-                }
                 this.vx = this.vx > this.horizontalMaxVel*dT ? this.horizontalMaxVel*dT : this.vx;
             } else {
                 if (Math.abs(this.vx) > this.horizontalMinVel) {
                     this.vx -= Math.sign(this.vx) * this.horizontalFriction * dT;
                 } else {
-                    this.vx = 0;
-                }
-                if (this.debugMoveMode === 1) {
                     this.vx = 0;
                 }
             }
@@ -487,7 +634,7 @@ class Player {
     }
 
     Collision(t) {
-        HandleCollisions(this,t);
+        HandleCollisions(this,t,true);
     }
 
     Draw(c,cam) {
@@ -619,7 +766,6 @@ class Mulper {
 
         this.y += this.vy * dT;
 
-        // TODO: something can possibly glitch out with vx?
         this.vx = this.vxMax * dT * Math.abs(Math.cos(this.elapsed)) * Math.sign(this.vx);
 
         if (this.collisions.left !== -1) {
@@ -646,6 +792,237 @@ class Mulper {
         c.strokeStyle = this.color;
         c.beginPath();
         c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y + (this.size-yrad))/cam.zoom,xrad,yrad,ang,0,pi*2);
+        c.fill();
+        c.stroke();
+    }
+}
+
+class Julper {
+    constructor(x,y,tw,js) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.grav = 0.0005;
+        this.elapsed = 0;
+        this.size = 14;
+        this.color = "red";
+        this.colorFill = "#100404";
+        this.bounds = {left:x-this.size,right:x+this.size,top:y-this.size,bottom:y+this.size};
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+        this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
+        this.timeWait = tw;
+        this.jumpStrength = js;
+        this.waitingToJump = true;
+        this.timeLeftWait = tw;
+        this.jumping = false;
+        this.onCeiling = false;
+    }
+
+    Collision(t,p) {
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+
+        HandleCollisions(this, t);
+
+        if (Distance(this.x,this.y,p.x,p.y) < this.size+p.size) {
+            p.Hit();
+        }
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/this.moveFreq;
+        this.elapsed = this.elapsed > 100 ? this.elapsed-100 : this.elapsed;
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        this.vy += this.grav * dT;
+
+        if (this.collisions.top !== -1) {
+            this.vy = 0;
+            this.y += this.size - this.collisions.top - 1;
+
+            if (this.jumping) {
+                this.jumping = false;
+                this.waitingToJump = true;
+                this.timeLeftWait = this.timeWait;
+                this.onCeiling = true;
+            }
+        } else if (this.collisions.bottom !== -1) {
+            this.vy = 0;
+            this.y -= this.size - this.collisions.bottom + 1;
+
+            if (this.jumping) {
+                this.jumping = false;
+                this.waitingToJump = true;
+                this.timeLeftWait = this.timeWait;
+            }
+        }
+        
+        if (this.waitingToJump) {
+            if (this.timeLeftWait > 0) {
+                this.timeLeftWait -= dT/1000;
+            }
+
+            if (this.timeLeftWait <= 0) {
+                this.waitingToJump = false;
+                this.jumping = true;
+
+                if (this.onCeiling) {
+                    this.y += 3;
+                    this.onCeiling = false;
+                } else {
+                    this.vy -= this.jumpStrength * dT;
+                }
+            }
+        }
+
+        this.y += this.vy * dT;
+
+        this.x += this.vx;
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)){ return; }
+
+        let mod = 1-this.timeLeftWait/this.timeWait;
+        if (this.timeLeftWait < 0) { mod = 0; }
+        let xrad = (this.size/cam.zoom+(Math.abs(mod*3)+Math.abs(this.vy*6)));
+        let yrad = this.size/cam.zoom - Math.abs(this.size/cam.zoom - xrad);
+        let ang = Math.atan2(this.vy,this.vx);
+        if (this.onCeiling) {
+            ang += pi/2;
+        }
+
+        c.fillStyle = this.colorFill;
+        c.strokeStyle = this.color;
+        c.beginPath();
+        c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y + (this.size-yrad))/cam.zoom,xrad,yrad,ang,0,pi*2);
+        c.fill();
+        c.stroke();
+    }
+}
+
+class Sulper {
+    constructor(x,y,s) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = Math.abs(s);
+        this.dir = Math.sign(s);
+        this.elapsed = 0;
+        this.size = 14;
+        this.color = "red";
+        this.colorFill = "#100404";
+        this.bounds = {left:x-this.size,right:x+this.size,top:y-this.size,bottom:y+this.size};
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+        this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
+        this.clingObject = null;
+        this.face = -1; // face is important, it tells which face the sulper is currently on
+            // relative to the clingObject. Face 0 is the right face, Face 1 is top, etc. going
+            // counterclockwise around the object.
+        this.inCam = false;
+    }
+
+    Collision(t,p) {
+        if (this.face === -1) {
+            this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+
+            HandleCollisions(this, t);
+
+            if (this.collisions.left !== -1) {
+                this.clingObject = this.collisionsObjs.left;
+                this.face = 0;
+                this.vy = this.dir === 1 ? this.speed : -this.speed;
+            } else if (this.collisions.right !== -1) {
+                this.clingObject = this.collisionsObjs.right;
+                this.face = 2;
+                this.vy = this.dir === 1 ? -this.speed : this.speed;
+            } else if (this.collisions.top !== -1) {
+                this.clingObject = this.collisionsObjs.top;
+                this.face = 3;
+                this.vx = this.dir === 1 ? this.speed : -this.speed;
+            } else if (this.collisions.bottom !== -1) {
+                this.clingObject = this.collisionsObjs.bottom;
+                this.face = 1;
+                this.vx = this.dir === 1 ? -this.speed : this.speed;
+            }
+        }
+
+        if (Distance(this.x,this.y,p.x,p.y) < this.size+p.size) {
+            p.Hit();
+        }
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/this.moveFreq;
+        this.elapsed = this.elapsed > 100 ? this.elapsed-100 : this.elapsed;
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        if (this.face === 0) {
+            if (this.y < this.clingObject.y - this.clingObject.height/2 - this.size) {
+                this.face = 1;
+                this.y = this.clingObject.y - this.clingObject.height/2 - this.size;
+                this.vy = 0;
+                this.vx = -this.speed;
+            } else if (this.y > this.clingObject.y + this.clingObject.height/2 + this.size) {
+                this.face = 3;
+                this.y = this.clingObject.y + this.clingObject.height/2 + this.size;
+                this.vy = 0;
+                this.vx = -this.speed;
+            }
+        } else if (this.face === 1) {
+            if (this.x < this.clingObject.x - this.clingObject.width/2 - this.size) {
+                this.face = 2;
+                this.x = this.clingObject.x - this.clingObject.width/2 - this.size;
+                this.vy = this.speed;
+                this.vx = 0;
+            } else if (this.x > this.clingObject.x + this.clingObject.width/2 + this.size) {
+                this.face = 0;
+                this.x = this.clingObject.x + this.clingObject.width/2 + this.size;
+                this.vy = this.speed;
+                this.vx = 0;
+            }
+        } else if (this.face === 2) {
+            if (this.y > this.clingObject.y + this.clingObject.height/2 + this.size) {
+                this.face = 3;
+                this.y = this.clingObject.y + this.clingObject.height/2 + this.size;
+                this.vy = 0;
+                this.vx = this.speed;
+            } else if (this.y < this.clingObject.y - this.clingObject.height/2 - this.size) {
+                this.face = 1;
+                this.y = this.clingObject.y - this.clingObject.height/2 - this.size;
+                this.vy = 0;
+                this.vx = this.speed;
+            }
+        } else if (this.face === 3) {
+            if (this.x > this.clingObject.x + this.clingObject.width/2 + this.size) {
+                this.face = 0;
+                this.x = this.clingObject.x + this.clingObject.width/2 + this.size;
+                this.vy = -this.speed;
+                this.vx = 0;
+            } else if (this.x < this.clingObject.x - this.clingObject.width/2 - this.size) {
+                this.face = 2;
+                this.x = this.clingObject.x - this.clingObject.width/2 - this.size;
+                this.vy = -this.speed;
+                this.vx = 0;
+            }
+        }
+
+        this.y += this.vy * dT;
+        this.x += this.vx * dT;
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)){ return; }
+
+        let xrad = (this.size/cam.zoom+Math.abs(this.speed*20));
+        let yrad = this.size/cam.zoom - Math.abs(this.size/cam.zoom - xrad);
+        let ang = Math.atan2(this.vy,this.vx);
+
+        c.fillStyle = this.colorFill;
+        c.strokeStyle = this.color;
+        c.beginPath();
+        c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,xrad,yrad,ang,0,pi*2);
         c.fill();
         c.stroke();
     }
