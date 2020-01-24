@@ -25,6 +25,7 @@ class Terrain {
 
     // To be overriden.
     Contains(){}
+    Tick(dT){}
     Draw(c,cam){}
 }
 
@@ -131,6 +132,79 @@ class RotatedRectangle extends Terrain {
     }
 }
 
+class BlockBlade extends Terrain {
+    constructor(x,y,s,sr,p1=null,p2=null,spd=0) {
+        super(x,y,s,s,true);
+        this.spinRate = sr;
+        this.angle = 0;
+        this.bounds = {left:x-s/sqrt2,right:x+s/sqrt2,top:y-s/sqrt2,bottom:y+s/sqrt2};
+        this.elapsed = 0;
+        this.pt1 = p1;
+        this.pt2 = p2;
+        this.transitionSpeed = spd;
+        this.timeInTransition = this.transitionSpeed;
+        this.goingToPt2 = true;
+    }
+
+    Contains(x,y) {
+        return x > this.bounds.left && x < this.bounds.right &&
+            y > this.bounds.top && y < this.bounds.bottom;
+    }
+
+    Tick(dT) {
+        this.angle += this.spinRate * dT;
+        this.elapsed += dT;
+
+        if (this.pt1 && this.pt2) {
+            let pc = this.timeInTransition / this.transitionSpeed;
+            if (this.goingToPt2) {
+                this.x = (this.pt2.x - this.pt1.x) * pc + this.pt1.x;
+                this.y = (this.pt2.y - this.pt1.y) * pc + this.pt1.y;
+            } else {
+                this.x = (this.pt1.x - this.pt2.x) * pc + this.pt2.x;
+                this.y = (this.pt1.y - this.pt2.y) * pc + this.pt2.y;
+            }
+
+            if (this.timeInTransition > 0) {
+                this.timeInTransition -= dT/1000;
+            } else {
+                this.timeInTransition = this.transitionSpeed;
+                this.goingToPt2 = !this.goingToPt2;
+            }
+
+            this.bounds = {left:this.x-this.width/sqrt2,right:this.x+this.width/sqrt2,
+                top:this.y-this.height/sqrt2,bottom:this.y+this.height/sqrt2};
+        }
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam, this)) { return; }
+
+        c.beginPath();
+        c.moveTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle-pi*2/3)*this.width)/cam.zoom,
+            (-cam.y + cam.height/2 + this.y - Math.sin(this.angle-pi*2/3)*this.height)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle)*this.width)/cam.zoom,
+            (-cam.y + cam.height/2 + this.y - Math.sin(this.angle)*this.height)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle+pi*2/3)*this.width)/cam.zoom,
+            (-cam.y + cam.height/2 + this.y - Math.sin(this.angle+pi*2/3)*this.height)/cam.zoom);
+        c.closePath();
+        c.fillStyle = this.colorFill;
+        c.fill();
+        c.strokeStyle = this.color;
+        c.stroke();
+        
+        if (this.pt1 && this.pt2) {
+            c.beginPath();
+            c.moveTo((-cam.x + cam.width/2 + this.pt1.x)/cam.zoom,(-cam.y + cam.height/2 + this.pt1.y)/cam.zoom);
+            c.lineTo((-cam.x + cam.width/2 + this.pt2.x)/cam.zoom,(-cam.y + cam.height/2 + this.pt2.y)/cam.zoom);
+            c.globalAlpha = 0.4;
+            c.strokeStyle = this.color;
+            c.stroke();
+            c.globalAlpha = 1.0;
+        }
+    }
+}
+
 class Player {
     constructor(x,y,s,c,c2,msgq) {
         this.x = x;
@@ -176,6 +250,7 @@ class Player {
         this.active = true;
         this.hitActiveTimer = 0;
         this.hitActiveTimerMax = 0.5;
+        this.lurkLocked = false;
 
         this.elapsed = 0;
 
@@ -286,7 +361,30 @@ class Player {
             this.y -= this.size - this.collisions.bottom + 1;
             this.canJump = true;
             this.wallSliding = false;
-            this.startLocked = false;
+            if (this.startLocked) {
+                this.startLocked = false;
+
+                /* DEBUG : just showing off the power of a lurker.
+                this.messageQueue.push({type:"playerAddLurker",cb:function(dT,v) {
+                    if (!v.good) {
+                        v.elapsed = 0;
+                        v.good = true;
+                        player.lurkLocked = true;
+                    } else {
+                        v.elapsed += dT;
+                    }
+
+                    camera.target = {x:2000,y:-400};
+                    
+                    if (v.elapsed > 3000) {
+                        camera.target = player;
+                        player.lurkLocked = false;
+                        return false;
+                    }
+                    return true;
+                },d:function(c,cam){}});
+                */
+            }
         }
 
         if (this.collisions.top !== -1) {
@@ -295,7 +393,7 @@ class Player {
         }
 
         // Left/Right movement logical block.
-        if (this.startLocked) {
+        if (this.startLocked || this.lurkLocked) {
         } else if (this.wallJumpDummyTime >= 0) {
             this.wallJumpDummyTime -= dT/1000;
         } else {
@@ -327,7 +425,8 @@ class Player {
         }
         
         // Jumping logical block.
-        if (this.keys[" "] && this.canJump) {
+        if (this.startLocked || this.lurkLocked) {
+        } else if (this.keys[" "] && this.canJump) {
             if (this.wallSliding && this.collisions.top === -1 && this.collisions.bottom === -1) {
                 this.vy = this.jumpVelocity*this.wallJumpYFactor * dT;
                 this.canJump = false;
@@ -474,7 +573,7 @@ class Player {
     }
 }
 
-class SimpleEnemy {
+class Mulper {
     constructor(x,y,xmod=1,fmod=1) {
         this.x = x;
         this.y = y;
@@ -601,9 +700,15 @@ class Camera {
     Tick(dT) {
         if (!this.target) { return; }
 
-        if (!InCam(this,this.target)) {
-            this.x += (this.target.x - this.x)/10;
-            this.y += (this.target.y - this.y)/10;
+        if (this.target.bounds){
+            if (!InCam(this,this.target)) {
+                this.x += (this.target.x - this.x)/10;
+                this.y += (this.target.y - this.y)/10;
+                return;
+            }
+        } else {
+            this.x += (this.target.x - this.x)/3;
+            this.y += (this.target.y - this.y)/3;
             return;
         }
 
@@ -864,5 +969,26 @@ class HitParticle {
             c.arc(px, py, this.size/cam.zoom, 0, 2*pi);
             c.fill();
         }
+    }
+}
+
+// Lurker is similar to lerper, but it will run continuously until the callback returns a value
+// of "false". At that point it will no longer call the callback.
+class Lurker {
+    constructor(cb, d=function(ctx){}) {
+        this.cb = cb;
+        this.d = d;
+        this.active = true;
+        this.vals = {good:false}; // Can hold additional values per lurker.
+    }
+
+    Tick(dT) {
+        if (!this.active) { return; }
+
+        this.active = this.cb(dT,this.vals);
+    }
+
+    Draw(ctx,cam) {
+        this.d(ctx,cam);
     }
 }

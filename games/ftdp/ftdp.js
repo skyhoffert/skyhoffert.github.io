@@ -33,7 +33,7 @@ var rect = canvas.getBoundingClientRect(), // abs. size of element
 console.log("(w="+canvas.style.width+",h="+canvas.style.height+")");
 
 // World stuff.
-var level = LEVEL_0;
+var level = null;
 var cursor = {x:0,y:0};
 var terrain = [];
 var background = [];
@@ -41,14 +41,14 @@ var enemies = [];
 var coins = [];
 var coinsHit = [];
 var particles = [];
-var deadParticle = -1;
 var messages = [];// Message queue for players.
 var player = null;
 var levelEnd = null;
 var camera = null;
+var lurkers = [];
 
 Init();
-LoadLevel(level);
+LoadLevel(LEVEL_0);
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
@@ -100,20 +100,23 @@ function Init() {
     coins = [];
     coinsHit = [];
     particles = [];
-    deadParticle = -1;
     messages = [];// Message queue for players.
     player = null;
     levelEnd = null;
     camera = null;
+    lurkers = [];
 }
 
-function LoadLevel(l,lvl) {
+function LoadLevel(l) {
+    level = l;
     for (let i = 0; i < level.terrain.length; i++) {
         let t = level.terrain[i];
         if (t[0] === "r") { // Rectangle
             terrain.push(new Rectangle(t[1], t[2], t[3], t[4], t[5]));
         } else if (t[0] === "rr") { // RotatedRectangle
             terrain.push(new RotatedRectangle(t[1], t[2], t[3], t[4], t[5]));
+        } else if (t[0] === "bb") { // Block Blade
+            terrain.push(new BlockBlade(t[1],t[2],t[3],t[4],t[5],t[6],t[7]));
         }
     }
     
@@ -136,7 +139,7 @@ function LoadLevel(l,lvl) {
     for (let i = 0; i < level.enemies.length; i++) {
         let e = level.enemies[i];
         if (e[0] === "se") { // Coin
-            enemies.push(new SimpleEnemy(e[1], e[2], e[3], e[4]));
+            enemies.push(new Mulper(e[1], e[2], e[3], e[4]));
         }
     }
     
@@ -165,6 +168,7 @@ function Tick(dT) {
 
     camera.Tick(dT);
 
+    let deadParticle = -1;
     for (let i = 0; i < particles.length; i++) {
         particles[i].Collision(terrain);
         particles[i].Tick(dT);
@@ -174,7 +178,6 @@ function Tick(dT) {
     }
     if (deadParticle !== -1) {
         particles.splice(deadParticle,1);
-        deadParticle = -1;
     }
 
     // Read messages from players and process.
@@ -191,13 +194,22 @@ function Tick(dT) {
                     let s = Math.random()*2+1;
                     particles.push(new HitParticle(msg.x,msg.y,s,"#665555",vx,vy,1+Math.random(),true,true));
                 }
+            } else {
+                Init();
+                LoadLevel(level);
             }
+        } else if (msg.type === "playerAddLurker") {
+            lurkers.push(new Lurker(msg.cb,msg.d));
         }
         messages.splice(0,1);
     }
 
     // DEBUG: is this effect good?
     if (!player.active){ return; }
+
+    for (let i = 0; i < terrain.length; i++) {
+        terrain[i].Tick(dT);
+    }
 
     player.Collision(terrain);
 
@@ -215,6 +227,17 @@ function Tick(dT) {
     for (let i = 0; i < enemies.length; i++) {
         enemies[i].Collision(terrain, player);
         enemies[i].Tick(dT);
+    }
+
+    let deadLurker = -1;
+    for (let i = 0; i < lurkers.length; i++) {
+        lurkers[i].Tick(dT);
+        if (!lurkers[i].active) {
+            deadLurker = i;
+        }
+    }
+    if (deadLurker !== -1) {
+        lurkers.splice(deadLurker,1);
     }
 
     // DEBUG
@@ -250,6 +273,10 @@ function Draw() {
     for (let i = 0; i < particles.length; i++) {
         particles[i].Draw(ctx,camera);
     }
+
+    for (let i = 0; i < lurkers.length; i++) {
+        lurkers[i].Draw(ctx,camera);
+    }
 }
 
 function Debug() {
@@ -268,9 +295,8 @@ function Debug() {
     /* */
 
     if (levelEnd.reached) {
-        level = PLAYGROUND;
         Init();
-        LoadLevel(level);
+        LoadLevel(PLAYGROUND);
         /*
         let fsize = 60;
         ctx.font = ""+fsize+"px Verdana";
