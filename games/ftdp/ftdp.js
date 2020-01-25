@@ -49,7 +49,7 @@ var lurkers = [];
 
 Init();
 //LoadLevel(LEVEL_0);
-LoadLevel(TESTGROUND); // DEBUG
+LoadLevel(LEVEL_1); // DEBUG
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
@@ -106,9 +106,9 @@ function LoadLevel(l) {
     for (let i = 0; i < level.terrain.length; i++) {
         let t = level.terrain[i];
         if (t[0] === "r") { // Rectangle
-            terrain.push(new Rectangle(t[1], t[2], t[3], t[4], t[5]));
+            terrain.push(new Rectangle(t[1],t[2],t[3],t[4],t[5]));
         } else if (t[0] === "rr") { // RotatedRectangle
-            terrain.push(new RotatedRectangle(t[1], t[2], t[3], t[4], t[5]));
+            terrain.push(new RotatedRectangle(t[1],t[2],t[3],t[4],t[5],t[6]));
         } else if (t[0] === "bb") { // Block Blade
             terrain.push(new BlockBlade(t[1],t[2],t[3],t[4],t[5],t[6],t[7]));
         } else if (t[0] === "kd") {
@@ -197,13 +197,40 @@ function Tick(dT) {
                     particles.push(new HitParticle(msg.x,msg.y,s,"#665555",vx,vy,1+Math.random(),true,true));
                 }
             } else {
-                Init();
-                LoadLevel(level);
+                lurkers.push(new Lurker(function (dT,v) {
+                    if (!v.good) {
+                        v.good = true;
+                        v.elapsed = 0;
+                    } else {
+                        v.elapsed += dT;
+                    }
+
+                    if (v.elapsed > 1000) {
+                        messages.push({type:"reload"});
+                        return false;
+                    }
+
+                    return true;
+                }));
             }
         } else if (msg.type === "playerAddLurker") {
             lurkers.push(new Lurker(msg.cb,msg.d));
+        } else if (msg.type === "reload") {
+            Init();
+            LoadLevel(level);
         }
         messages.splice(0,1);
+    }
+    
+    let deadLurker = -1;
+    for (let i = 0; i < lurkers.length; i++) {
+        lurkers[i].Tick(dT);
+        if (!lurkers[i].active) {
+            deadLurker = i;
+        }
+    }
+    if (deadLurker !== -1) {
+        lurkers.splice(deadLurker,1);
     }
 
     // DEBUG: is this effect good?
@@ -229,17 +256,6 @@ function Tick(dT) {
     for (let i = 0; i < enemies.length; i++) {
         enemies[i].Collision(terrain, player);
         enemies[i].Tick(dT);
-    }
-
-    let deadLurker = -1;
-    for (let i = 0; i < lurkers.length; i++) {
-        lurkers[i].Tick(dT);
-        if (!lurkers[i].active) {
-            deadLurker = i;
-        }
-    }
-    if (deadLurker !== -1) {
-        lurkers.splice(deadLurker,1);
     }
 
     // DEBUG

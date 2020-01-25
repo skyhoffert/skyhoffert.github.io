@@ -109,7 +109,8 @@ class RotatedRectangle extends Terrain {
         c.closePath();
         c.fill();
 
-        if (this.topOnly) {c.strokeStyle = this.color;
+        if (this.topOnly) {
+            c.strokeStyle = this.color;
             c.beginPath();
             c.moveTo(pt1.x, pt1.y);
             c.lineTo(pt2.x, pt2.y);
@@ -447,14 +448,15 @@ class Player {
     Hit() {
         if (this.iframeTime <= 0) {
             this.currentHits--;
-            this.iframeTime = this.iframeTimeMax + this.hitActiveTimerMax;
             this.active = false;
-            this.hitActiveTimer = this.hitActiveTimerMax;
 
             let dead = false;
-            if (this.currentHits === 0) {
-                this.Respawn();
+            if (this.currentHits <= 0) {
+                //this.Respawn();
                 dead = true;
+            } else {
+                this.hitActiveTimer = this.hitActiveTimerMax;
+                this.iframeTime = this.iframeTimeMax + this.hitActiveTimerMax;
             }
 
             this.messageQueue.push({type:"playerHit",id:this.playerID,x:this.x,y:this.y,dead:dead});

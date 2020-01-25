@@ -5,14 +5,14 @@
 
 const LEVEL_0 = {
     terrain: [
-        ["rr",-308,-72,40,20,-pi/6,true],// "start" ramp
+        ["rr",-308,-72,40,20,-pi/6,true], // "start" ramp
         ["rr",330,-68,185,80,pi/8,true],
         ["rr",1050,-68,185,80,-pi/8,true],
         ["r",0,30,800,200,false],
         ["r",-600,-330,400,800,false],
         ["r",420,-105,40,70,false],
         ["r",700,-310,200,40,false],
-        ["r",-360,-80,80,20,false],// "start" platform
+        ["r",-360,-80,80,20,false], // "start" platform
         ["r",690,30,580,200,false],
         ["r",960,-105,40,70,false],
 
@@ -26,32 +26,32 @@ const LEVEL_0 = {
         ["r",2450,-460,200,80,true],
 
         ["rr",2178,-740,20,110,-pi/64,false],
-        ["r",2180,-200,400,1000,false],// left building
+        ["r",2180,-200,400,1000,false], // left building
 
         ["r",1550,-310,200,40,false],
         ["r",1800,-910,40,300,false],
 
         ["rr",2750,-720,20,40,pi/64,false],
         ["r",2680,-710,40,20,false],
-        ["r",2750,-200,400,1000,false],// right building
+        ["r",2750,-200,400,1000,false], // right building
 
         ["r",3150,-810,40,400,false],
-        ["r",3400,-510,300,40,false],// enemy platform
+        ["r",3400,-510,300,40,false], // enemy platform
 
         ["r",3100,-210,300,40,false],
-        ["r",3570,-590,40,200,true],// harmful wall by floating platform
-        ["r",3450,30,1000,200,false],// ground after buildings
-        ["r",4100,0,300,250,false],// platform with enemies
+        ["r",3570,-590,40,200,true], // harmful wall by floating platform
+        ["r",3450,30,1000,200,false], // ground after buildings
+        ["r",4100,0,300,250,false], // platform with enemies
 
-        ["rr",5760,-72,40,20,pi/6,true],// "end" ramp
-        ["rr",4550,-475,40,650,-pi/32,false],// building wall left
-        ["rr",4850,-390,250,670,-pi/32,false],// building wall right
+        ["rr",5760,-72,40,20,pi/6,true], // "end" ramp
+        ["rr",4550,-475,40,650,-pi/32,false], // building wall left
+        ["rr",4850,-390,250,670,-pi/32,false], // building wall right
 
-        ["r",5350,-90,200,40,true],// platform with enemy at end
+        ["r",5350,-90,200,40,true], // platform with enemy at end
 
-        ["r",5050,30,1600,200,false],// final ground
-        ["r",5810,-80,80,20,false],// "end" platform
-        ["r",6050,-430,400,2000,false],// right bound
+        ["r",5050,30,1600,200,false], // final ground
+        ["r",5810,-80,80,20,false], // "end" platform
+        ["r",6050,-430,400,2000,false], // right bound
         
         ["bb",700,-260,40,0.015], // block blades
         ["bb",1550,-260,40,0.015],
@@ -95,7 +95,7 @@ const LEVEL_0 = {
         ["bgr",2400,-155,180,380,2,"#004400","#000200"],
         ["bgr",2800,-105,140,290,2,"#004400","#000200"],
 
-        ["bgr",8000,-800,40,40,10,"#668866","#061206"],// moon
+        ["bgr",8000,-800,40,40,10,"#668866","#061206"], // moon
     ],
     enemies: [
         ["m",800,-100,1,1],
@@ -117,8 +117,85 @@ const LEVEL_0 = {
         ["c",4700,-1050],
         ["c",4975,-90],
     ],
-    camera: {x:-100,y:-500,z:1.2,lb:-500,rb:5950,bb:0,tp:10000},
+    camera: {x:-100,y:-500,z:1.2,lb:-500,rb:5950,bb:0,tb:10000},
     levelEnd: {x:5810,y:-140,w:80,h:100}
+};
+
+const LEVEL_1 = {
+    terrain: [
+        ["rr",-408,-2,40,20,-pi/6,true], // "start" ramp
+        ["r",-600,-200,200,1000,false], // left wall
+        ["r",100,100,1200,200,false], // ground for start
+        ["r",-460,-10,80,20,false], // Start platform
+        
+        ["r",-100,-22,40,40,true], // mulper here
+        ["r",200,-22,40,40,true],
+        
+        ["r",1300,100,1200,200,false], // ground for skyscraper
+        ["r",1880,-2000,40,4000,false], // right skyscraper wall
+        ["r",720,-2104,40,4000,false], // left skyscraper wall
+        ["kd",720,-52,40,100,{x:650,y:-20}], // entrance to skyscraper
+        ["bb",1600,-20,30,0.015], // first floor blade
+        
+        // first/second floor
+        ["r",1220,-124,960,40,false], // first floor ceiling
+        ["r",1680,-394,40,500,false], // first floor elevator
+        ["r",1630,-624,60,40,false], // first floor elevator landing
+        ["r",1520,-514,40,540,false],
+        ["r",1080,-514,40,540,false], // second floor coin room right wall
+        ["r",1300,-534,80,580,false], // sulper wall
+        ["r",1680,-804,360,40,false], // second floor upper ledge right
+        ["r",920,-804,360,40,false], // second floor upper ledge left
+        ["bb",1720,-120,40,0.015], // first floor elevator blade
+        ["bb",1560,-340,35,0.015], // first floor elevator blade 2
+        // Second floor coin room
+        ["otb",900,-280,120,40,0.4,3],
+        ["otb",900,-430,120,40,0.4,3],
+        ["otb",900,-580,120,40,0.4,3],
+        ["bb",990,-280,50,0.015],
+        ["bb",1030,-280,50,0.015],
+        ["bb",770,-430,50,0.015],
+        ["bb",810,-430,50,0.015],
+        ["bb",990,-580,50,0.015],
+        ["bb",1030,-580,50,0.015],
+        // Second floor upper part
+        ["r",1611,-982,497,84,false], // second floor upper ceiling right
+        ["r",989,-982,497,84,false], // second floor upper ceiling left
+        ["kd",1300,-960,120,40,{x:800,y:-880}],
+        ["kd",1300,-1004,120,40,{x:1800,y:-880}],
+    ],
+    background: [
+        ["bgr",2000,0,200,1000,4,"#003300","#000500"],
+
+        ["bgr",1300,-400,1150,1000,0,"#003300","#000500"],
+    ],
+    enemies: [
+        ["m",0,-10,1,1],
+
+        // First floor julpers
+        ["j",900,-20,2,0.015],
+        ["j",1000,-20,0.2,0.015],
+        ["j",1100,-20,2,0.015],
+        ["j",1200,-20,0.2,0.015],
+        ["j",1300,-20,2,0.015],
+
+        // Sulper wall on second floor
+        ["s",1350,-384,0.04],
+        ["s",1350,-684,0.04],
+        ["s",1250,-384,0.04],
+        ["s",1250,-684,0.04],
+        
+        ["j",990,-814,0.2,0.01],
+        ["j",1610,-814,0.2,0.01],
+    ],
+    player: [-460,-400,12,"#9999ff","#060610"],
+    coins: [
+        ["c",50,-100],
+        ["c",1560,-280],
+        ["c",900,-700],
+    ],
+    camera: {x:-300,y:-300,z:1.2,lb:-600,rb:10000,bb:50,tb:-10000},
+    levelEnd: {x:0,y:10000,w:100,h:100}
 };
 
 const PLAYGROUND = {
@@ -143,7 +220,7 @@ const PLAYGROUND = {
     player: [0,0,12,"#9999ff","#060610"],
     coins: [
     ],
-    camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tp:-1000},
+    camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tb:-1000},
     levelEnd: {x:0,y:10000,w:100,h:100}
 };
 
@@ -181,6 +258,6 @@ const TESTGROUND = {
     player: [0,300,12,"#9999ff","#060610"],
     coins: [
     ],
-    camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tp:-1000},
+    camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tb:-1000},
     levelEnd: {x:0,y:10000,w:100,h:100}
 };
