@@ -146,28 +146,43 @@ const LEVEL_1 = {
         ["r",1300,-534,80,580,false], // sulper wall
         ["r",1680,-804,360,40,false], // second floor upper ledge right
         ["r",920,-804,360,40,false], // second floor upper ledge left
-        ["bb",1720,-120,40,0.015], // first floor elevator blade
+        ["bb",1720,-120,40,-0.015], // first floor elevator blade
         ["bb",1560,-340,35,0.015], // first floor elevator blade 2
         // Second floor coin room
         ["otb",900,-280,120,40,0.4,3],
         ["otb",900,-430,120,40,0.4,3],
         ["otb",900,-580,120,40,0.4,3],
-        ["bb",990,-280,50,0.015],
+        ["bb",990,-280,50,-0.015],
         ["bb",1030,-280,50,0.015],
         ["bb",770,-430,50,0.015],
-        ["bb",810,-430,50,0.015],
-        ["bb",990,-580,50,0.015],
+        ["bb",810,-430,50,-0.015],
+        ["bb",990,-580,50,-0.015],
         ["bb",1030,-580,50,0.015],
         // Second floor upper part
         ["r",1611,-982,497,84,false], // second floor upper ceiling right
         ["r",989,-982,497,84,false], // second floor upper ceiling left
         ["kd",1300,-960,120,40,{x:800,y:-880}],
         ["kd",1300,-1004,120,40,{x:1800,y:-880}],
+
+        // Third floor
+        ["r",1300,-1150,900,40,false], // ground
+        ["bb",1100,-1040,40,0.015],
+        ["bb",1500,-1040,40,-0.015],
+        ["r",1300,-1210,600,80,false], // platform
+        ["r",1610,-1400,500,40,false], // third floor upper ceiling right
+        ["r",989,-1400,497,40,false], // third floor upper ceiling left
+        ["bb",1250,-1400,50,-0.015],
+
+        // Fourth floor
+        ["r",1380,-1470,40,100,false], // entrance wall
+        ["r",1350,-1540,1020,40,false], // ground
     ],
     background: [
         ["bgr",2000,0,200,1000,4,"#003300","#000500"],
 
-        ["bgr",1300,-400,1150,1000,0,"#003300","#000500"],
+        ["bgr",1300,-400,1150,1000,0,"#003300","#000500"], // First/second floor skyscraper bg
+        ["bgr",1300,-1150,1150,400,0,"#003300","#000500"], // Third floor skyscraper bg
+        ["bgr",1300,-2000,1150,800,0,"#003300","#000500"], // Fourth floor skyscraper bg
     ],
     enemies: [
         ["m",0,-10,1,1],
@@ -185,14 +200,20 @@ const LEVEL_1 = {
         ["s",1250,-384,0.04],
         ["s",1250,-684,0.04],
         
+        // Sulpers blocking keys
         ["j",990,-814,0.2,0.01],
         ["j",1610,-814,0.2,0.01],
+        
+        // Third floor mulpers
+        ["m",1300,-1250,1,1],
+        ["m",1300,-1250,-1,1],
     ],
     player: [-460,-400,12,"#9999ff","#060610"],
     coins: [
         ["c",50,-100],
         ["c",1560,-280],
         ["c",900,-700],
+        ["c",1300,-1100],
     ],
     camera: {x:-300,y:-300,z:1.2,lb:-600,rb:10000,bb:50,tb:-10000},
     levelEnd: {x:0,y:10000,w:100,h:100}

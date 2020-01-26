@@ -137,11 +137,11 @@ function LoadLevel(l) {
     for (let i = 0; i < level.enemies.length; i++) {
         let e = level.enemies[i];
         if (e[0] === "m") { // Coin
-            enemies.push(new Mulper(e[1],e[2],e[3],e[4]));
+            enemies.push(new Mulper(e[1],e[2],e[3],e[4],messages));
         } else if (e[0] === "j") {
-            enemies.push(new Julper(e[1],e[2],e[3],e[4]));
+            enemies.push(new Julper(e[1],e[2],e[3],e[4],messages));
         } else if (e[0] === "s") {
-            enemies.push(new Sulper(e[1],e[2],e[3]));
+            enemies.push(new Sulper(e[1],e[2],e[3],messages));
         }
     }
     
@@ -170,33 +170,28 @@ function Tick(dT) {
 
     camera.Tick(dT);
 
-    let deadParticle = -1;
-    for (let i = 0; i < particles.length; i++) {
+    for (let i = particles.length-1; i >= 0; i--) {
         particles[i].Collision(terrain);
         particles[i].Tick(dT);
-        if (deadParticle === -1 && !particles[i].active) {
-            deadParticle = i;
+        if (!particles[i].active) {
+            particles.splice(i,1);
         }
-    }
-    if (deadParticle !== -1) {
-        particles.splice(deadParticle,1);
     }
 
     // Read messages from players and process.
-    if (messages.length > 0) {
-        let msg = messages[0];
+    for (let i = messages.length-1; i >= 0; i--) {
+        let msg = messages[i];
         if (msg.type === "playerHit") {
-            if (!msg.dead) {
-                camera.Shake(15,0.6);
-                for (let i = 0; i < 50; i++) {
-                    let a = Math.random() * pi/2 + pi/4;
-                    let m = Math.random()/2;
-                    let vx = Math.cos(a)*m;
-                    let vy = -Math.sin(a)*m;
-                    let s = Math.random()*2+1;
-                    particles.push(new HitParticle(msg.x,msg.y,s,"#665555",vx,vy,1+Math.random(),true,true));
-                }
-            } else {
+            camera.Shake(15,0.6);
+            for (let i = 0; i < 50; i++) {
+                let a = Math.random() * pi/2 + pi/4;
+                let m = Math.random()/2;
+                let vx = Math.cos(a)*m;
+                let vy = -Math.sin(a)*m;
+                let s = Math.random()*2+1;
+                particles.push(new HitParticle(msg.x,msg.y,s,"#665555",vx,vy,1+Math.random(),true,true));
+            }
+            if (msg.dead) {
                 lurkers.push(new Lurker(function (dT,v) {
                     if (!v.good) {
                         v.good = true;
@@ -218,8 +213,11 @@ function Tick(dT) {
         } else if (msg.type === "reload") {
             Init();
             LoadLevel(level);
+        } else if (msg.type === "enemyParticle") {
+            let s = Math.random()*2+0.6;
+            particles.push(new HitParticle(msg.x,msg.y,s,"red",0,0,1+Math.random(),false,false,false));
         }
-        messages.splice(0,1);
+        messages.splice(i,1);
     }
     
     let deadLurker = -1;

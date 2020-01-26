@@ -260,7 +260,7 @@ class Key {
 class KeyDoor extends Terrain {
     constructor(x,y,w,h,kp) {
         super(x,y,w,h,false);
-        this.unlocked = false;
+        this.unlocked = true;
         this.key = new Key(kp.x,kp.y);
         this.color = "#ff00ff";
         this.colorFill = "#1a001a";
@@ -654,7 +654,7 @@ class Player {
             let ang = Math.atan2(this.vy,this.vx);
 
             c.fillStyle = this.colorFill;
-            if (this.iframeTime > 0 && ((this.elapsed*100)%50) < 25) {
+            if ((this.iframeTime > 0 && ((this.elapsed*100)%50) < 25) || this.currentHits === 0) {
                 c.strokeStyle = this.iframeColor;
             } else {
                 c.strokeStyle = this.color;
@@ -723,7 +723,7 @@ class Player {
 }
 
 class Mulper {
-    constructor(x,y,xmod=1,fmod=1) {
+    constructor(x,y,xmod=1,fmod=1,msgq) {
         this.x = x;
         this.y = y;
         this.vxMax = 0.08;
@@ -739,6 +739,9 @@ class Mulper {
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
         this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
         this.sensors = {left:-1, right:-1};
+        this.messageQueue = msgq;
+        this.particleTimerMax = 0.05;
+        this.particleTimer = 0;
     }
 
     Collision(t,p) {
@@ -768,16 +771,28 @@ class Mulper {
 
         this.y += this.vy * dT;
 
-        this.vx = this.vxMax * dT * Math.abs(Math.cos(this.elapsed)) * Math.sign(this.vx);
+        this.vx = this.vxMax * dT * Math.abs(Math.sin(this.elapsed)) * Math.sign(this.vx);
 
         if (this.collisions.left !== -1) {
             this.vx = this.vx < 0 ? -this.vx : this.vx;
+            this.elapsed = 0;
         } else if (this.collisions.right !== -1) {
             this.vx = this.vx > 0 ? -this.vx : this.vx;
+            this.elapsed = 0;
         } else if(this.sensors.left === -1) {
             this.vx = this.vx < 0 ? -this.vx : this.vx;
+            this.elapsed = 0;
         } else if(this.sensors.right === -1) {
             this.vx = this.vx > 0 ? -this.vx : this.vx;
+            this.elapsed = 0;
+        }
+
+        // A trail of particles below.
+        if (this.particleTimer > 0) {
+            this.particleTimer -= dT/1000;
+        } else {
+            this.particleTimer = this.particleTimerMax;
+            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vx)*this.size*3/4,y:this.y+this.size-2});
         }
 
         this.x += this.vx;
@@ -800,7 +815,7 @@ class Mulper {
 }
 
 class Julper {
-    constructor(x,y,tw,js) {
+    constructor(x,y,tw,js,msgq) {
         this.x = x;
         this.y = y;
         this.vx = 0;
@@ -819,6 +834,7 @@ class Julper {
         this.timeLeftWait = tw;
         this.jumping = false;
         this.onCeiling = false;
+        this.messageQueue = msgq;
     }
 
     Collision(t,p) {
@@ -904,7 +920,7 @@ class Julper {
 }
 
 class Sulper {
-    constructor(x,y,s) {
+    constructor(x,y,s,msgq) {
         this.x = x;
         this.y = y;
         this.vx = 0;
@@ -923,6 +939,9 @@ class Sulper {
             // relative to the clingObject. Face 0 is the right face, Face 1 is top, etc. going
             // counterclockwise around the object.
         this.inCam = false;
+        this.messageQueue = msgq;
+        this.particleTimerMax = 0.05;
+        this.particleTimer = 0;
     }
 
     Collision(t,p) {
@@ -1008,6 +1027,14 @@ class Sulper {
                 this.vy = -this.speed;
                 this.vx = 0;
             }
+        }
+        
+        // A trail of particles below.
+        if (this.particleTimer > 0) {
+            this.particleTimer -= dT/1000;
+        } else {
+            this.particleTimer = this.particleTimerMax;
+            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vy)*this.size*3/4,y:this.y+Math.sign(this.vx)*this.size*3/4});
         }
 
         this.y += this.vy * dT;
@@ -1279,7 +1306,7 @@ class LevelEnd {
 }
 
 class HitParticle {
-    constructor(x,y,s,c,vx,vy,tA,drag=false,collision=false) {
+    constructor(x,y,s,c,vx,vy,tA,drag=false,collision=false,grav=true) {
         this.x = x;
         this.y = y;
         this.vx = vx;
@@ -1289,7 +1316,7 @@ class HitParticle {
         this.timeAlive = tA;
         this.hasDrag = drag;
         this.hasCollision = collision;
-        this.grav = 0.0008;
+        this.grav = grav ? 0.0008 : 0;
         this.active = true;
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
         this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
@@ -1347,6 +1374,9 @@ class HitParticle {
             c.beginPath();
             c.arc(px, py, this.size/cam.zoom, 0, 2*pi);
             c.fill();
+        } else {
+            // Kill if not in the current view.
+            this.active = false;
         }
     }
 }
