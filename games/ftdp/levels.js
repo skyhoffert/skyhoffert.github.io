@@ -104,7 +104,7 @@ const LEVEL_0 = {
         ["m",4100,-100,-1,1],
         ["m",5350,-100,2,0.7],
     ],
-    player: [-360,-720,12,"#9999ff","#060610"],
+    player: [-360,-720,12,"#9999ff","#060610",{left:-10000,right:10000,top:-10000,bottom:10000}],
     coins: [
         ["c",0,-160],
         ["c",700,-350],
@@ -132,8 +132,8 @@ const LEVEL_1 = {
         ["r",200,-22,40,40,true],
         
         ["r",1300,100,1200,200,false], // ground for skyscraper
-        ["r",1880,-2000,40,4000,false], // right skyscraper wall
-        ["r",720,-2104,40,4000,false], // left skyscraper wall
+        ["r",1880,-1030,40,2600,false], // right skyscraper wall
+        ["r",720,-1312,40,2416,false], // left skyscraper wall
         ["kd",720,-52,40,100,{x:650,y:-20}], // entrance to skyscraper
         ["bb",1600,-20,30,0.015], // first floor blade
         
@@ -176,13 +176,34 @@ const LEVEL_1 = {
         // Fourth floor
         ["r",1380,-1470,40,100,false], // entrance wall
         ["r",1350,-1540,1020,40,false], // ground
+        // Steps
+        ["r",1410,-1600,900,80,false],
+        ["r",1460,-1680,800,80,false],
+        ["r",1510,-1760,700,80,false],
+        ["r",1560,-1840,600,80,false],
+        ["r",1610,-1920,500,80,false],
+        ["r",1660,-2000,400,80,false],
+        ["r",1710,-2080,300,80,false],
+        ["r",1760,-2160,200,80,false],
+        ["r",890,-2350,300,40,false], // Secret coin ledge
+        ["rr",2072,-2442,40,160,pi/5,false], // overhand steep wall
+        ["r",1390,-2500,1300,40,false], // Ceiling
+        ["r",1930,-2350,140,40,false], // Overhand ledge
+        ["r",2135,-2385,60,40,false], // Overhand ledge landing
+
+        // Fifth floor
+        ["r",1880,-3150,40,1000,false], // right wall
+        ["r",1650,-3020,40,1000,false], // elevator wall
+        ["r",1300,-3670,1200,40,false], // Ceiling
+        ["bb",1765,-3000,40,0.015,{x:1765,y:-2650},{x:1765,y:-3570},3], // elevator blade
+        ["bb",1765,-3000,40,0.015,{x:1765,y:-3570},{x:1765,y:-2650},3], // elevator blade
     ],
     background: [
         ["bgr",2000,0,200,1000,4,"#003300","#000500"],
 
         ["bgr",1300,-400,1150,1000,0,"#003300","#000500"], // First/second floor skyscraper bg
         ["bgr",1300,-1150,1150,400,0,"#003300","#000500"], // Third floor skyscraper bg
-        ["bgr",1300,-2000,1150,800,0,"#003300","#000500"], // Fourth floor skyscraper bg
+        ["bgr",1300,-1910,1150,1020,0,"#003300","#000500"], // Fourth floor skyscraper bg
     ],
     enemies: [
         ["m",0,-10,1,1],
@@ -207,13 +228,22 @@ const LEVEL_1 = {
         // Third floor mulpers
         ["m",1300,-1250,1,1],
         ["m",1300,-1250,-1,1],
+        
+        // Stairs Julpers
+        ["j",1000,-1620,1,0.018],
+        ["j",1200,-2080,1,0.018],
+        ["j",1400,-1940,1,0.018],
+        ["j",1600,-2400,1,0.018],
     ],
-    player: [-460,-400,12,"#9999ff","#060610"],
+    player: [-460,-400,12,"#9999ff","#060610",{left:-10000,right:10000,top:-10000,bottom:20}],
     coins: [
         ["c",50,-100],
         ["c",1560,-280],
         ["c",900,-700],
         ["c",1300,-1100],
+        ["rc",1000,-1450],
+        ["c",890,-2390],
+        ["c",2350,-2500],
     ],
     camera: {x:-300,y:-300,z:1.2,lb:-600,rb:10000,bb:50,tb:-10000},
     levelEnd: {x:0,y:10000,w:100,h:100}
@@ -238,7 +268,7 @@ const PLAYGROUND = {
     ],
     enemies: [
     ],
-    player: [0,0,12,"#9999ff","#060610"],
+    player: [0,0,12,"#9999ff","#060610",{left:-10000,right:10000,top:-10000,bottom:10000}],
     coins: [
     ],
     camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tb:-1000},
@@ -276,7 +306,7 @@ const TESTGROUND = {
         ["s",0,80,0.04],
         ["s",0,80,-0.04],
     ],
-    player: [0,300,12,"#9999ff","#060610"],
+    player: [0,300,12,"#9999ff","#060610",{left:-10000,right:10000,top:-10000,bottom:10000}],
     coins: [
     ],
     camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tb:-1000},

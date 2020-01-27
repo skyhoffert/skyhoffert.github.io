@@ -441,8 +441,43 @@ class Player {
         this.active = true;
     }
 
-    CollectCoins(v) {
-        this.coins += v;
+    CollectCoins(t) {
+        if (t === 0) {
+            this.coins++;
+        } else if (t === 1) {
+            this.messageQueue.push({type:"playerAddLurker",cb:function (dT,v) {
+                if (!v.good) {
+                    v.elapsed = 0;
+                    v.good = true;
+                    v.rechargeDur = 1;
+                    v.fadeDur = 0.6;
+                    player.iframeTime = 1000;
+                } else {
+                    v.elapsed += dT/1000;
+                    if (v.elapsed > v.rechargeDur + v.fadeDur) {
+                        return false;
+                    } else if (v.elapsed > v.rechargeDur) {
+                        player.iframeTime = 0;
+                        player.currentHits = player.maxHits;
+                        return true;
+                    }
+                }
+
+                return true;
+            }, d:function (c,cam,v) {
+                if (v.elapsed <= v.rechargeDur) {
+                    c.fillStyle = "white";
+                    c.globalAlpha = (v.elapsed/v.rechargeDur)*0.3;
+                    c.fillRect(0,0,WIDTH,HEIGHT);
+                    c.globalAlpha = 1.0;
+                } else {
+                    c.fillStyle = "white";
+                    c.globalAlpha = (1-(v.elapsed-v.rechargeDur)/v.fadeDur)*0.7;
+                    c.fillRect(0,0,WIDTH,HEIGHT);
+                    c.globalAlpha = 1.0;
+                }
+            }});
+        }
     }
 
     Hit() {
@@ -522,27 +557,6 @@ class Player {
             this.wallSliding = false;
             if (this.startLocked) {
                 this.startLocked = false;
-
-                /* DEBUG : just showing off the power of a lurker.
-                this.messageQueue.push({type:"playerAddLurker",cb:function(dT,v) {
-                    if (!v.good) {
-                        v.elapsed = 0;
-                        v.good = true;
-                        player.lurkLocked = true;
-                    } else {
-                        v.elapsed += dT;
-                    }
-
-                    camera.target = {x:2000,y:-400};
-                    
-                    if (v.elapsed > 3000) {
-                        camera.target = player;
-                        player.lurkLocked = false;
-                        return false;
-                    }
-                    return true;
-                },d:function(c,cam){}});
-                */
             }
         }
 
@@ -575,7 +589,7 @@ class Player {
         
         // Jumping logical block.
         if (this.startLocked || this.lurkLocked) {
-        } else if (this.keys[" "] && this.canJump) {
+        } else if ((this.keys[" "] || this.keys["w"]) && this.canJump) {
             if (this.wallSliding && this.collisions.top === -1 && this.collisions.bottom === -1) {
                 this.vy = this.jumpVelocity*this.wallJumpYFactor * dT;
                 this.canJump = false;
@@ -599,7 +613,7 @@ class Player {
             }
         } else if (this.jumpFrames !== 0) {
             this.jumpFrames = 0;
-            if (!this.keys[" "]) {
+            if (!this.keys[" "] || this.keys["w"]) {
                 this.canJump = false;
             }
         }
@@ -627,7 +641,12 @@ class Player {
 
         if (this.y > this.offworld.bottom) {
             console.log("player is off screen");
-            this.Respawn();
+            this.y = this.offworld.bottom-1;
+            this.grav = 0;
+            this.vy = 0;
+            this.isDrawn = false;
+            this.currentHits = 0;
+            this.messageQueue.push({type:"playerHit",id:this.playerID,x:this.x,y:this.y,dead:true});
         }
 
         if (this.iframeTime > 0) {
@@ -792,7 +811,8 @@ class Mulper {
             this.particleTimer -= dT/1000;
         } else {
             this.particleTimer = this.particleTimerMax;
-            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vx)*this.size*3/4,y:this.y+this.size-2});
+            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vx)*this.size*3/4,
+                y:this.y+this.size-2,n:1,xvar:0,yvar:0});
         }
 
         this.x += this.vx;
@@ -835,6 +855,8 @@ class Julper {
         this.jumping = false;
         this.onCeiling = false;
         this.messageQueue = msgq;
+        this.particleTimerMax = 0.05;
+        this.particleTimer = 0;
     }
 
     Collision(t,p) {
@@ -885,6 +907,12 @@ class Julper {
                 this.jumping = true;
 
                 if (this.onCeiling) {
+                    this.messageQueue.push({type:"enemyParticle",x:this.x,y:this.y-this.size+2,n:10,xvar:this.size*3/4,yvar:0});
+                } else {
+                    this.messageQueue.push({type:"enemyParticle",x:this.x,y:this.y+this.size-2,n:10,xvar:this.size*3/4,yvar:0});
+                }
+
+                if (this.onCeiling) {
                     this.y += 3;
                     this.onCeiling = false;
                 } else {
@@ -896,6 +924,8 @@ class Julper {
         this.y += this.vy * dT;
 
         this.x += this.vx;
+        
+        // A trail of particles below.
     }
 
     Draw(c,cam) {
@@ -1034,7 +1064,8 @@ class Sulper {
             this.particleTimer -= dT/1000;
         } else {
             this.particleTimer = this.particleTimerMax;
-            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vy)*this.size*3/4,y:this.y+Math.sign(this.vx)*this.size*3/4});
+            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vy)*this.size*3/4,
+                y:this.y+Math.sign(this.vx)*this.size*3/4,n:1,xvar:0,yvar:0});
         }
 
         this.y += this.vy * dT;
@@ -1138,7 +1169,7 @@ class Camera {
         this.y -= (this.y - (this.target.y-40))*this.verticalFactor;
 
         if (this.y + this.height/2 > this.bounds.bottom) {
-            this.y -= this.y + this.height/2 - this.bounds.bottom;
+            this.y = this.bounds.bottom - this.height/2;
         }
 
         if (this.shaking) {
@@ -1162,7 +1193,7 @@ class Coin {
     constructor(x,y) {
         this.x = x;
         this.y = y;
-        this.value = 1;
+        this.type = 0; // 0 is default coin
         this.width = 20;
         this.height = 20;
         this.color = "cyan";
@@ -1194,6 +1225,47 @@ class Coin {
         c.fillRect(px, py, wid/cam.zoom, this.height/cam.zoom);
         c.strokeStyle = this.color;
         c.strokeRect(px, py, wid/cam.zoom, this.height/cam.zoom);
+    }
+}
+
+class RechargeCoin {
+    constructor(x,y) {
+        this.x = x;
+        this.y = y;
+        this.type = 1; // 1 is a recharge coin
+        this.width = 12;
+        this.height = 12;
+        this.color = "#9999ff";
+        this.elapsed = 0;
+        this.bounds = {left:x-this.width/2,right:x+this.width/2,top:y-this.height/2,bottom:y+this.height/2};
+    }
+
+    Collision(p) {
+        if (Distance(this.x,this.y,p.x,p.y) < p.size+this.width) {
+            return true;
+        }
+        return false;
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/250;
+        if (this.elapsed > 2*pi) {
+            this.elapsed -= 2*pi;
+        }
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)) { return; }
+
+        let wid = Math.abs(this.width * Math.cos(this.elapsed));
+        let px = (-cam.x + cam.width/2 + this.x)/cam.zoom;
+        let py = (-cam.y + cam.height/2 + this.y)/cam.zoom;
+        c.beginPath();
+        c.ellipse(px,py,wid,this.height,0,0,2*pi);
+        c.fillStyle = BG_COLOR;
+        c.fill();
+        c.strokeStyle = this.color;
+        c.stroke();
     }
 }
 
@@ -1398,6 +1470,6 @@ class Lurker {
     }
 
     Draw(ctx,cam) {
-        this.d(ctx,cam);
+        this.d(ctx,cam,this.vals);
     }
 }

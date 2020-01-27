@@ -39,7 +39,6 @@ var terrain = [];
 var background = [];
 var enemies = [];
 var coins = [];
-var coinsHit = [];
 var particles = [];
 var messages = [];// Message queue for players.
 var player = null;
@@ -92,7 +91,6 @@ function Init() {
     background = [];
     enemies = [];
     coins = [];
-    coinsHit = [];
     particles = [];
     messages = [];// Message queue for players.
     player = null;
@@ -111,9 +109,9 @@ function LoadLevel(l) {
             terrain.push(new RotatedRectangle(t[1],t[2],t[3],t[4],t[5],t[6]));
         } else if (t[0] === "bb") { // Block Blade
             terrain.push(new BlockBlade(t[1],t[2],t[3],t[4],t[5],t[6],t[7]));
-        } else if (t[0] === "kd") {
+        } else if (t[0] === "kd") { // Key Door
             terrain.push(new KeyDoor(t[1],t[2],t[3],t[4],t[5]));
-        } else if (t[0] === "otb") {
+        } else if (t[0] === "otb") { // One-Touch Block
             terrain.push(new OneTouchBlock(t[1],t[2],t[3],t[4],t[5],t[6]));
         }
     }
@@ -121,16 +119,18 @@ function LoadLevel(l) {
     for (let i = 0; i < level.background.length; i++) {
         let b = level.background[i];
         if (b[0] === "bgr") { // BGRect
-            background.push(new BGRect(b[1], b[2], b[3], b[4], b[5], b[6],b[7]));
+            background.push(new BGRect(b[1],b[2],b[3],b[4],b[5],b[6],b[7]));
         } else if (b[0] === "bgs") { // BGShape
-            background.push(new BGShape(b[1], b[2], b[3], b[4], b[5],b[6]));
+            background.push(new BGShape(b[1],b[2],b[3],b[4],b[5],b[6]));
         }
     }
     
     for (let i = 0; i < level.coins.length; i++) {
         let c = level.coins[i];
         if (c[0] === "c") { // Coin
-            coins.push(new Coin(c[1], c[2]));
+            coins.push(new Coin(c[1],c[2]));
+        } else if (c[0] === "rc") {
+            coins.push(new RechargeCoin(c[1],c[2]));
         }
     }
     
@@ -147,6 +147,7 @@ function LoadLevel(l) {
     
     player = new Player(level.player[0],level.player[1],level.player[2],level.player[3],
         level.player[4],messages);
+    player.offworld = level.player[5];
     
     levelEnd = new LevelEnd(level.levelEnd.x, level.levelEnd.y, level.levelEnd.w, level.levelEnd.h);
     
@@ -214,8 +215,12 @@ function Tick(dT) {
             Init();
             LoadLevel(level);
         } else if (msg.type === "enemyParticle") {
-            let s = Math.random()*2+0.6;
-            particles.push(new HitParticle(msg.x,msg.y,s,"red",0,0,1+Math.random(),false,false,false));
+            for (let i = 0; i < msg.n; i++) {
+                let s = Math.random()*2+0.6;
+                particles.push(new HitParticle(msg.x+(Math.random()-0.5)*msg.xvar,
+                    msg.y+(Math.random()-0.5)*msg.yvar,s,"red",0,0,1+Math.random(),
+                    false,false,false));
+            }
         }
         messages.splice(i,1);
     }
@@ -240,15 +245,12 @@ function Tick(dT) {
 
     player.Collision(terrain);
 
-    for (let i = 0; i < coins.length; i++) {
+    for (let i = coins.length-1; i >= 0; i--) {
         coins[i].Tick(dT);
-        let coll = coins[i].Collision(player);
-        if (coll) { coinsHit.push(i); }
-    }
-    if (coinsHit.length > 0) {
-        player.CollectCoins(coins[coinsHit[0]].value);
-        coins.splice(coinsHit[0],1);
-        coinsHit.splice(0,1);
+        if (coins[i].Collision(player)) {
+            player.CollectCoins(coins[i].type);
+            coins.splice(i,1);
+        }
     }
 
     for (let i = 0; i < enemies.length; i++) {
