@@ -260,7 +260,7 @@ class Key {
 class KeyDoor extends Terrain {
     constructor(x,y,w,h,kp) {
         super(x,y,w,h,false);
-        this.unlocked = true;
+        this.unlocked = false; // DEBUG
         this.key = new Key(kp.x,kp.y);
         this.color = "#ff00ff";
         this.colorFill = "#1a001a";
@@ -325,9 +325,8 @@ class OneTouchBlock extends Terrain {
         let hit = x > this.bounds.left && x < this.bounds.right &&
             y > this.bounds.top && y < this.bounds.bottom;
         
-        if (p && hit) {
+        if (p && hit && this.timeLeftStaying <= 0 && this.timeLeftGone <= 0) {
             this.timeLeftStaying = this.timeStay;
-            this.hittable = false;
             this.timeLeftGone = this.timeGone;
         }
 
@@ -335,10 +334,10 @@ class OneTouchBlock extends Terrain {
     }
 
     Tick(dT) {
-        if (this.hittable) { return; }
         if (this.timeLeftStaying > 0) {
             this.timeLeftStaying -= dT/1000;
         } else if (this.timeLeftGone > 0) {
+            this.hittable = false;
             this.timeLeftGone -= dT/1000;
         } else {
             this.hittable = true;
@@ -699,6 +698,11 @@ class Player {
                 c.beginPath();
                 c.arc(px, py, 200*this.iframeTime, 0, 2*pi);
                 c.fill();
+                c.globalAlpha = 1.0;
+            } else if (this.currentHits === 0) {
+                c.globalAlpha = 0.5;
+                c.fillStyle = "black";
+                c.fillRect(0,0,WIDTH,HEIGHT);
                 c.globalAlpha = 1.0;
             }
         }
@@ -1355,6 +1359,7 @@ class LevelEnd {
         this.height = h;
         this.bounds = {left:x-this.width/2,right:x+this.width/2,top:y-this.height/2,bottom:y+this.height/2};
         this.reached = false;
+        this.color = "white";
     }
 
     Contains(x,y) {

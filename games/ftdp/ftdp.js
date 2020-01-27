@@ -47,8 +47,7 @@ var camera = null;
 var lurkers = [];
 
 Init();
-//LoadLevel(LEVEL_0);
-LoadLevel(LEVEL_1); // DEBUG
+LoadLevel("level0");
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
@@ -100,7 +99,7 @@ function Init() {
 }
 
 function LoadLevel(l) {
-    level = l;
+    level = LEVELS[l];
     for (let i = 0; i < level.terrain.length; i++) {
         let t = level.terrain[i];
         if (t[0] === "r") { // Rectangle
@@ -213,7 +212,7 @@ function Tick(dT) {
             lurkers.push(new Lurker(msg.cb,msg.d));
         } else if (msg.type === "reload") {
             Init();
-            LoadLevel(level);
+            LoadLevel(level.name);
         } else if (msg.type === "enemyParticle") {
             for (let i = 0; i < msg.n; i++) {
                 let s = Math.random()*2+0.6;
@@ -295,6 +294,8 @@ function Draw() {
     for (let i = 0; i < lurkers.length; i++) {
         lurkers[i].Draw(ctx,camera);
     }
+
+    levelEnd.Draw(ctx,camera);
 }
 
 function Debug() {
@@ -314,7 +315,7 @@ function Debug() {
 
     if (levelEnd.reached) {
         Init();
-        LoadLevel(PLAYGROUND);
+        LoadLevel(level.nextLevel);
         /*
         let fsize = 60;
         ctx.font = ""+fsize+"px Verdana";

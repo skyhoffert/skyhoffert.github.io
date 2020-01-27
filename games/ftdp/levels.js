@@ -3,7 +3,9 @@
 // Levels for ftdp.
 //
 
-const LEVEL_0 = {
+const LEVELS = {
+level0:{
+    name:"level0",
     terrain: [
         ["rr",-308,-72,40,20,-pi/6,true], // "start" ramp
         ["rr",330,-68,185,80,pi/8,true],
@@ -118,13 +120,14 @@ const LEVEL_0 = {
         ["c",4975,-90],
     ],
     camera: {x:-100,y:-500,z:1.2,lb:-500,rb:5950,bb:0,tb:10000},
-    levelEnd: {x:5810,y:-140,w:80,h:100}
-};
-
-const LEVEL_1 = {
+    levelEnd: {x:5810,y:-140,w:80,h:100},
+    nextLevel: "level1"
+},
+level1:{
+    name:"level1",
     terrain: [
         ["rr",-408,-2,40,20,-pi/6,true], // "start" ramp
-        ["r",-600,-200,200,1000,false], // left wall
+        ["r",-600,-1800,200,4000,false], // left wall
         ["r",100,100,1200,200,false], // ground for start
         ["r",-460,-10,80,20,false], // Start platform
         
@@ -149,9 +152,9 @@ const LEVEL_1 = {
         ["bb",1720,-120,40,-0.015], // first floor elevator blade
         ["bb",1560,-340,35,0.015], // first floor elevator blade 2
         // Second floor coin room
-        ["otb",900,-280,120,40,0.4,3],
-        ["otb",900,-430,120,40,0.4,3],
-        ["otb",900,-580,120,40,0.4,3],
+        ["otb",900,-280,120,40,0,3],
+        ["otb",900,-430,120,40,0,3],
+        ["otb",900,-580,120,40,0,3],
         ["bb",990,-280,50,-0.015],
         ["bb",1030,-280,50,0.015],
         ["bb",770,-430,50,0.015],
@@ -193,10 +196,78 @@ const LEVEL_1 = {
 
         // Fifth floor
         ["r",1880,-3150,40,1000,false], // right wall
+        ["rr",1569,-3478,140,40,pi/10,false], // elevator exit ramp
         ["r",1650,-3020,40,1000,false], // elevator wall
         ["r",1300,-3670,1200,40,false], // Ceiling
         ["bb",1765,-3000,40,0.015,{x:1765,y:-2650},{x:1765,y:-3570},3], // elevator blade
         ["bb",1765,-3000,40,0.015,{x:1765,y:-3570},{x:1765,y:-2650},3], // elevator blade
+        ["r",1400,-3580,40,140,false], // shortcut blocking wall
+        ["otb",1238,-3570,80,40,0,4], // otb on shortcut
+        // Right section
+        ["r",1400,-3250,160,40,false], // top platform
+        ["r",1550,-2990,160,40,false], // middle platform
+        ["bb",1500,-3100,40,0.015,{x:1400,y:-3100},{x:1600,y:-3100},1], // middle blade
+        ["bb",1500,-2800,40,-0.015,{x:1350,y:-2900},{x:1600,y:-2900},1.2], // bottom blade
+        // Bottom section
+        ["r",1250,-2770,450,40,false], // bottom section ceiling
+        ["bb",1250,-2700,40,0.015,{x:1000,y:-2700},{x:1500,y:-2700},2], // top blade
+        ["bb",1250,-2570,40,0.015,{x:1500,y:-2570},{x:1000,y:-2570},2], // bottom blade
+        // Left section
+        ["rr",830,-2900,200,40,-pi/12,false], // bottom
+        ["rr",1170,-3060,200,40,pi/12,false], // middle
+        ["rr",920,-3200,120,40,-pi/20,false], // top
+        ["rr",1180,-3400,120,40,pi/8,false], // top top
+        ["bb",1080,-3000,40,-0.015,{x:840,y:-3030},{x:1200,y:-2860},1.8], // bottom blade
+        ["bb",1080,-3000,40,-0.015,{x:900,y:-3080},{x:1200,y:-3180},2], // middle blade
+        ["bb",1080,-3000,40,-0.015,{x:1080,y:-3150},{x:1080,y:-3600},1.4], // top blade
+        ["r",864,-3390,40,160,true], // harmful at exit
+        ["otb",792,-3390,100,40,0,2], // otb on exit
+        ["r",720,-3080,40,860,false], // left wall
+        ["r",1300,-3190,40,800,true], // central harmful wall
+        // Nook
+        ["r",820,-2670,160,40,false], // nook ceiling
+        ["r",880,-2585,40,130,false], // nook right wall
+        ["rr",512,-3454,240,40,pi/10,false], // left overhang ramp
+        ["r",660,-3490,80,40,false], // left overhang landing
+        // Ceiling Section
+        ["r",1300,-3880,1200,40,false], // Ceiling
+        ["kd",720,-3775,40,166,{x:780,y:-2590}], // Ceiling key door
+        ["r",1300,-3710,150,36,true], // mulper block
+        // Overhand Section
+        ["rr",460,-3000,80,500,pi/24,false], // Overhang rotated part
+        ["rr",225,-3060,40,400,pi/24,false], // Overhang rotated part matching
+        ["rr",168,-3250,100,40,-pi/24,false], // Leftmost platform
+        ["rr",245,-2600,200,40,-pi/16,false], // bottom ledge
+        ["otb",525,-2500,160,40,0,3], // otb at way bottom
+        ["bb",540,-2850,30,0.015], // bottom blade
+        ["bb",690,-2920,30,-0.015], // middle blade
+        ["bb",520,-2990,30,0.015], // top blade
+
+        // Roof
+        ["r",1300,-4400,80,1000,false], // Spire
+        // OTB left path to top
+        ["otb",1100,-4200,40,40,0,2], // otb wall jumper
+        ["otb",1060,-4240,120,40,0,3], // otb landing
+        ["otb",900,-4460,120,40,0,3], // otb 2
+        ["otb",1200,-4700,120,40,0,3], // otb 3
+        // TODO: OTBs make harder
+        // OTB coin path on right
+        ["otb",2100,-3800,120,40,0.05,1.2],
+        ["otb",2100,-3600,120,40,0.05,1.2],
+        ["otb",2100,-3450,200,40,0.05,1.2],
+        ["otb",2300,-3350,100,40,0.05,1.2],
+        ["otb",2520,-3250,110,40,0.05,1.2],
+        ["otb",2340,-3190,80,40,0.05,1.2],
+        ["otb",2480,-3000,120,40,0.05,1.2],
+        ["otb",2750,-2920,100,40,0.5,1.4],
+        // Right path
+        ["otb",1500,-4130,120,40,0.02,2],
+        ["rr",1600,-4400,200,40,pi/16,false],
+        ["r",1500,-4680,40,250,false], // vertical wall closest to top
+        ["rr",1604,-4836,250,40,pi/8,false], // platform to jump to end
+        ["bb",1500,-4820,30,-0.015], // left blade
+        ["bb",1700,-4900,30,0.015], // right blade
+        ["bb",1700,-4900,30,0.015,{x:1380,y:-4930},{x:1560,y:-5090},1], // final blade
     ],
     background: [
         ["bgr",2000,0,200,1000,4,"#003300","#000500"],
@@ -234,6 +305,11 @@ const LEVEL_1 = {
         ["j",1200,-2080,1,0.018],
         ["j",1400,-1940,1,0.018],
         ["j",1600,-2400,1,0.018],
+        
+        // Fifth floor mulper block
+        ["j",1100,-3700,0.8,0.016],
+        ["m",1300,-3720,2,0.5],
+        ["j",1500,-3700,0.8,0.016],
     ],
     player: [-460,-400,12,"#9999ff","#060610",{left:-10000,right:10000,top:-10000,bottom:20}],
     coins: [
@@ -244,12 +320,17 @@ const LEVEL_1 = {
         ["rc",1000,-1450],
         ["c",890,-2390],
         ["c",2350,-2500],
+        ["c",1250,-2635],
+        ["c",520,-2910],
+        ["c",2750,-2980],
+        ["c",1730,-4770],
     ],
     camera: {x:-300,y:-300,z:1.2,lb:-600,rb:10000,bb:50,tb:-10000},
-    levelEnd: {x:0,y:10000,w:100,h:100}
-};
-
-const PLAYGROUND = {
+    levelEnd: {x:1300,y:-4950,w:80,h:100},
+    nextLevel: "playground"
+},
+playground:{
+    name:"playground",
     terrain: [
         ["r",-500,0,80,1000,false],
         ["r",500,0,80,1000,false],
@@ -272,10 +353,11 @@ const PLAYGROUND = {
     coins: [
     ],
     camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tb:-1000},
-    levelEnd: {x:0,y:10000,w:100,h:100}
-};
-
-const TESTGROUND = {
+    levelEnd: {x:0,y:10000,w:100,h:100},
+    nextLevel: "playground"
+},
+testground:{
+    name:"testground",
     terrain: [
         ["r",-500,0,80,1000,false],
         ["r",500,0,80,1000,false],
@@ -288,10 +370,10 @@ const TESTGROUND = {
 
         ["kd",-400,400,40,100,{x:-350,y:300}],
 
-        ["otb",300,300,100,40,0.4,4],
-        ["otb",240,140,80,40,0.4,4],
-        ["otb",325,0,90,40,0.4,4],
-        ["otb",300,-140,90,40,0.4,4],
+        ["otb",300,300,100,40,0,4],
+        ["otb",240,140,80,40,0,4],
+        ["otb",325,0,90,40,0,4],
+        ["otb",300,-140,90,40,0,4],
         
         ["bb",450,200,40,0.015], // Final blade
         ["bb",0,0,40,0.02,{x:-300,y:200},{x:300,y:-300},3], // Final blade
@@ -310,5 +392,7 @@ const TESTGROUND = {
     coins: [
     ],
     camera: {x:0,y:0,z:1.2,lb:-1000,rb:1000,bb:1000,tb:-1000},
-    levelEnd: {x:0,y:10000,w:100,h:100}
+    levelEnd: {x:0,y:10000,w:100,h:100},
+    nextLevel: "testground"
+}
 };
