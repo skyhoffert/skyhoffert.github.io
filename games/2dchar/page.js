@@ -20,10 +20,8 @@ var testBone2 = new Bone(20,0,10,0,4,"red");
 testBoneChild.AddChild(testBone2);
 world.push(testBone2);
 
-for (let i = 0; i < 100; i++) {
-    let a = i/100 * 2*pi;
-    console.log(""+Math.round(cosF(a)*1000)/1000+","+Math.round(Math.cos(a)*1000)/1000);
-}
+var human = new HumanBody(WIDTH/2,HEIGHT*3/4);
+world.push(human);
 
 function Tick(dT) {
     for (let i = 0; i < world.length; i++) {
@@ -40,8 +38,11 @@ function Tick(dT) {
     testBone.Rotate(0.01);
     testBoneChild.Rotate(-0.027);
     testBone2.Rotate(0.049);
+    human.bones[0].Rotate(-0.01);
+    human.bones[4].Rotate(sinF(elapsed+pi/2)/100);
 }
 
+var elapsed = 0;
 var prevTime = Date.now();
 var frames = 0;
 var time = 0;
@@ -50,6 +51,7 @@ function Update() {
     let now = Date.now();
     let dT = now - prevTime;
     time += dT;
+    elapsed += dT/1000;
 
     if (true || dT >= 1000/FPS) {
         Tick(dT);
@@ -57,7 +59,7 @@ function Update() {
         frames++;
     }
 
-    if (time > 4000) {
+    if (time > 10000) {
         console.log("[DEBUG] FPS:"+Math.round(frames/time*1000*1000)/1000);
         time = 0;
         frames = 0;
