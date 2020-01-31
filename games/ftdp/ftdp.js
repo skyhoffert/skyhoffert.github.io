@@ -37,6 +37,7 @@ var level = null;
 var cursor = {x:0,y:0};
 var terrain = [];
 var background = [];
+var foreground = [];
 var enemies = [];
 var coins = [];
 var particles = [];
@@ -88,6 +89,7 @@ function Init() {
     cursor = {x:0,y:0};
     terrain = [];
     background = [];
+    foreground = [];
     enemies = [];
     coins = [];
     particles = [];
@@ -112,6 +114,10 @@ function LoadLevel(l) {
             terrain.push(new KeyDoor(t[1],t[2],t[3],t[4],t[5]));
         } else if (t[0] === "otb") { // One-Touch Block
             terrain.push(new OneTouchBlock(t[1],t[2],t[3],t[4],t[5],t[6]));
+        } else if (t[0] === "bgr") {
+            terrain.push(new Rectangle(t[1],t[2],t[3],t[4],t[5]));
+            terrain[terrain.length-1].hasCollision = false;
+            terrain[terrain.length-1].color = "#043003";
         }
     }
     
@@ -121,6 +127,13 @@ function LoadLevel(l) {
             background.push(new BGRect(b[1],b[2],b[3],b[4],b[5],b[6],b[7]));
         } else if (b[0] === "bgs") { // BGShape
             background.push(new BGShape(b[1],b[2],b[3],b[4],b[5],b[6]));
+        }
+    }
+
+    for (let i = 0; i < level.foreground.length; i++) {
+        let f = level.foreground[i];
+        if (f[0] === "p") {
+            foreground.push(new Plant(f[1],f[2],f[3],f[4],f[5]));
         }
     }
     
@@ -235,6 +248,10 @@ function Tick(dT) {
         lurkers.splice(deadLurker,1);
     }
 
+    for (let i = 0; i < foreground.length; i++) {
+        foreground[i].Tick(dT);
+    }
+
     // DEBUG: is this effect good?
     if (!player.active){ return; }
 
@@ -295,7 +312,12 @@ function Draw() {
         lurkers[i].Draw(ctx,camera);
     }
 
+    // DEBUG
     levelEnd.Draw(ctx,camera);
+
+    for (let i = 0; i < foreground.length; i++) {
+        foreground[i].Draw(ctx,camera);
+    }
 }
 
 function Debug() {
@@ -304,14 +326,6 @@ function Debug() {
         time = 0;
         frames = 0;
     }
-
-    /* DEBUG: vertical line *
-    ctx.strokeStyle = "white";
-    ctx.beginPath();
-    ctx.moveTo(WIDTH/2, 0);
-    ctx.lineTo(WIDTH/2, HEIGHT);
-    ctx.stroke();
-    /* */
 
     if (levelEnd.reached) {
         Init();

@@ -33,9 +33,12 @@ class Terrain {
 class Rectangle extends Terrain {
     constructor(x,y,w,h,hf=false) {
         super(x,y,w,h,hf);
+        this.hasCollision = true;
     }
 
     Contains(x,y) {
+        if (!this.hasCollision) { return false; }
+        
         return x > this.bounds.left && x < this.bounds.right &&
             y > this.bounds.top && y < this.bounds.bottom;
     }
@@ -145,6 +148,7 @@ class BlockBlade extends Terrain {
         this.transitionSpeed = spd;
         this.timeInTransition = this.transitionSpeed;
         this.goingToPt2 = true;
+        this.colorDark = "darkred";
     }
 
     Contains(x,y) {
@@ -192,7 +196,23 @@ class BlockBlade extends Terrain {
         } else {
             if (!InCam(cam, this)) { return; }
         }
+        
 
+        // Darker blade
+        c.beginPath();
+        c.moveTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle+pi/3)*this.width)/cam.zoom,
+            (-cam.y + cam.height/2 + this.y - Math.sin(this.angle+pi/3)*this.height)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle+pi)*this.width)/cam.zoom,
+            (-cam.y + cam.height/2 + this.y - Math.sin(this.angle+pi)*this.height)/cam.zoom);
+        c.lineTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle-pi/3)*this.width)/cam.zoom,
+            (-cam.y + cam.height/2 + this.y - Math.sin(this.angle-pi/3)*this.height)/cam.zoom);
+        c.closePath();
+        c.fillStyle = this.colorFill;
+        c.fill();
+        c.strokeStyle = this.colorDark;
+        c.stroke();
+
+        // Primary blade
         c.beginPath();
         c.moveTo((-cam.x + cam.width/2 + this.x+Math.cos(this.angle-pi*2/3)*this.width)/cam.zoom,
             (-cam.y + cam.height/2 + this.y - Math.sin(this.angle-pi*2/3)*this.height)/cam.zoom);
@@ -215,6 +235,41 @@ class BlockBlade extends Terrain {
             c.stroke();
             c.globalAlpha = 1.0;
         }
+    }
+}
+
+class Plant {
+    constructor(x,y,w,h,c) {
+        this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.color = c;
+        this.offsetX = 0;
+        this.elapsed = 0;
+        this.speedRandFactor = Math.random()*2;
+        this.bounds = {left:this.x-this.width,right:this.x+this.width,top:this.y-this.height,bottom:this.y};
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/1000;
+        this.offsetX = Math.cos(this.elapsed*(4+this.speedRandFactor))*2;
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)) { return; }
+
+        c.beginPath();
+        // left leaf
+        c.moveTo((-cam.x + cam.width/2 + this.x)/cam.zoom,(-cam.y + cam.height/2 + this.y)/cam.zoom);
+        c.quadraticCurveTo((-cam.x + cam.width/2 + this.x+this.offsetX)/cam.zoom,(-cam.y + cam.height/2 + this.y-this.height)/cam.zoom, 
+            (-cam.x + cam.width/2 + this.x-this.width+this.offsetX)/cam.zoom,(-cam.y + cam.height/2 + this.y-this.height+this.offsetX)/cam.zoom);
+        // right leaf
+        c.moveTo((-cam.x + cam.width/2 + this.x)/cam.zoom,(-cam.y + cam.height/2 + this.y)/cam.zoom);
+        c.quadraticCurveTo((-cam.x + cam.width/2 + this.x+this.offsetX)/cam.zoom,(-cam.y + cam.height/2 + this.y-this.height)/cam.zoom, 
+            (-cam.x + cam.width/2 + this.x+this.width+this.offsetX)/cam.zoom,(-cam.y + cam.height/2 + this.y-this.height*2/3-this.offsetX)/cam.zoom);
+        c.strokeStyle = this.color;
+        c.stroke();
     }
 }
 
@@ -1374,8 +1429,6 @@ class LevelEnd {
         if (InCam(cam, this)) {
             let px = (-cam.x + cam.width/2 + this.x-this.width/2)/cam.zoom;
             let py = (-cam.y + cam.height/2 + this.y-this.height/2)/cam.zoom;
-            c.fillStyle = BG_COLOR;
-            c.fillRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
             c.strokeStyle = this.color;
             c.strokeRect(px, py, this.width/cam.zoom, this.height/cam.zoom);
         }
