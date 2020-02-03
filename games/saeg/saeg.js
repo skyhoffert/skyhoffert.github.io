@@ -54,7 +54,7 @@ canvas.addEventListener("mousemove", function (evt) {
 canvas.addEventListener("mousedown", function (evt) {
     gameStage.UserInput({type:"mouseButton",down:true});
 }, false);
-canvas.addEventListener("mousedown", function (evt) {
+canvas.addEventListener("mouseup", function (evt) {
     gameStage.UserInput({type:"mouseButton",down:false});
 }, false);
 
