@@ -27,7 +27,7 @@ var rect = canvas.getBoundingClientRect(), // abs. size of element
 console.log("(w="+canvas.style.width+",h="+canvas.style.height+")");
 
 var prevTime = window.performance.now();
-var gameStage = new GameStage();
+var gameStage = new Testground();
 
 var frames = 0;
 var time = 0;

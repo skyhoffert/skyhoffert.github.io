@@ -1,8 +1,29 @@
 // Sky Hoffert
 // Util for saeg.
 
-function Raycast(x,y,md,w,t) {
-    // TODO: return distance and FIRST object that collides with
+function Raycast(x,y,a,md,w,t) {
+    let dx = cosF(a);
+    let dy = -sinF(a);
+    let mag = Distance(0,0,dx,dy);
+    dx = dx / mag;
+    dy = dy / mag;
+    let rv = {hit:false};
+
+
+    for (let i = 0; i <= md && !rv.hit; i++) {
+        for (let j=0; j < t.length; j++) {
+            if (w[t[j]].Contains({x:x+dx*i,y:y+dy*i})) {
+                rv.hit = true;
+                rv.dist = i;
+                rv.widx = j;
+                rv.hitpt = {x:x+dx*i,y:y+dy*i};
+                rv.obj = w[t[j]];
+                break;
+            }
+        }
+    }
+
+    return rv;
 }
 
 function Distance(x,y,x2,y2) {

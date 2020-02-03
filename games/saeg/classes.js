@@ -10,10 +10,35 @@ class GameObject {
         this.bounds = {left:0,right:0,top:0,bottom:0};
     }
     
-    Contains(x,y) { return this.Contains({x:x,y:y}); }
     Contains(p) { return false; }
     Tick(dT) {}
     Draw(c) {}
+}
+
+class DebugRay extends GameObject {
+    constructor(x,y,x2,y2,c) {
+        super(x,y,10,c);
+        this.x2 = x2;
+        this.y2 = y2;
+        this.active = true;
+        this.lineWidth = 1;
+    }
+
+    Tick(dT) {}
+
+    Draw(c) {
+        if (this.active) {
+            let pos = gameStage.camera.ScreenPosition(this.x,this.y);
+            let pos2 = gameStage.camera.ScreenPosition(this.x2,this.y2);
+            c.beginPath();
+            c.moveTo(pos.x,pos.y);
+            c.lineTo(pos2.x,pos2.y);
+            c.strokeStyle = this.color;
+            c.lineWidth = this.lineWidth;
+            c.stroke();
+            this.active = false;
+        }
+    }
 }
 
 class Player extends GameObject {
@@ -34,6 +59,11 @@ class Player extends GameObject {
 
     Tick(dT) {
         this.angle += 0.002*dT;
+
+        let rc = Raycast(this.x,this.y,this.angle,200,this.gameStage.world,this.gameStage.terrain);
+        if (rc.hit) {
+            this.gameStage.Add(new DebugRay(this.x,this.y,rc.hitpt.x,rc.hitpt.y,"white"),"debug");
+        }
     }
 
     Draw(ctx) {
@@ -66,12 +96,17 @@ class Triangle extends GameObject {
         this.p3 = p3;
         this.thirdSideDraw = dts;
         this.gameStage = gs;
+        this.areaSquared = Math.sqrt(AOTS(this.p1,this.p2,this.p3));
     }
 
     Contains(p) {
-        let area1 = AOTS(this.p1,this.p2,p);
-        let area2 = AOTS(this.p2,this.p3,p);
-        let area3 = AOTS(this.p1,this.p3,p);
+        let area1 = Math.sqrt(AOTS(this.p1,this.p2,p));
+        let area2 = Math.sqrt(AOTS(this.p2,this.p3,p));
+        let area3 = Math.sqrt(AOTS(this.p1,this.p3,p));
+
+        if (area1 + area2 + area3 <= this.areaSquared) {
+            return true;
+        }
 
         return false;
     }
@@ -133,26 +168,29 @@ class GameStage {
         this.world = [];
         this.terrain = [];
         this.players = [];
+        this.debugObjs = [];
         this.drawOrder = [];
         this.camera = new Camera(-WIDTH/2,WIDTH/2,-HEIGHT/2,HEIGHT/2);
-
-        this.localPlayerID = 0;
-        this.Add(new Player(0,0,this.localPlayerID,this),"player");
-
-        this.Add(new Triangle({x:-100,y:-100},{x:100,y:-100},{x:0,y:-200},"red",true,this),"terrain");
+        this.localPlayerID = -1;
     }
 
     Add(o,t) {
         if (t === "player") {
-            this.players.push(this.world.length-1);
+            this.players.push(this.world.length);
         } else if (t === "terrain") {
-            this.terrain.push(this.world.length-1);
+            this.terrain.push(this.world.length);
+        } else if (t === "debug") {
+            this.debugObjs.push(this.world.length);
         }
 
         this.world.push(o);
 
         // TODO: i dont think this must be done every time something is added
         this.AdjustDrawOrder();
+    }
+
+    Remove(i) {
+        // TODO: remove from world, cascade to other arrays.
     }
 
     AdjustDrawOrder() {
@@ -176,6 +214,8 @@ class GameStage {
     }
 
     UserInput(t) {
+        if (this.localPlayerID === -1 || this.world.length === 0) { return; }
+
         // Apply user input to the local player.
         if (t.type === "key") {
             this.world[this.players[this.localPlayerID]].keys[t.key] = t.down;
@@ -202,5 +242,15 @@ class GameStage {
         for (let i = 0; i < this.drawOrder.length; i++) {
             this.world[this.drawOrder[i]].Draw(ctx);
         }
+    }
+}
+
+class Testground extends GameStage {
+    constructor() {
+        super();
+        this.Add(new Player(0,0,this.localPlayerID,this),"player");
+        this.localPlayerID = 0;
+
+        this.Add(new Triangle({x:-100,y:-100},{x:100,y:-100},{x:0,y:-200},"red",true,this),"terrain");
     }
 }
