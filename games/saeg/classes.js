@@ -50,8 +50,8 @@ class Player extends GameObject {
         this.colorFill = "#101020";
         this.vx = 0;
         this.vy = 0;
-        this.accel = 0.0006;
-        this.size = 20;
+        this.accel = 0.00025;
+        this.size = 12;
         this.id = id;
         this.keys = {};
         this.mouse = {x:0,y:0,down:false};
@@ -59,22 +59,23 @@ class Player extends GameObject {
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
         this.angle = 0;
         this.sensors = [
-            {angle:0,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI/4,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI/2,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI*3/4,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI*5/4,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI*3/2,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
-            {angle:PI*7/4,dist:-1,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*0/1,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*1/4,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*1/2,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*3/4,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*1/1,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*5/4,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*3/2,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
+            {angle:PI*7/4,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
         ];
         for (let i = 0; i < this.sensors.length; i++) {
             this.gameStage.Add(this.sensors[i].ray,"debug");
         }
+        this.drawDebugRays = false;
 
         this.bumpTimer = 0.0;
-        this.bumpTimerMax = 100;
-        this.bumpRange = this.size/2;
+        this.bumpTimerMax = 50;
+        this.bumpRange = this.size;
         this.bumpFactor = 0.5;
     }
 
@@ -97,16 +98,21 @@ class Player extends GameObject {
         let numHits = 0;
         let maxDist = -1;
         let maxDistIdx = -1;
-        let castDist = 50;
+        let castDist = this.size*2;
         let castStep = 2;
         for (let i = 0; i < this.sensors.length; i++) {
             let rc = Raycast(this.x,this.y,this.sensors[i].angle,castDist,this.gameStage.world,this.gameStage.terrain,castStep);
-            this.sensors[i].ray.x = this.x;
-            this.sensors[i].ray.y = this.y;
+            if (this.drawDebugRays) {
+                this.sensors[i].ray.x = this.x;
+                this.sensors[i].ray.y = this.y;
+            }
             if (rc.hit) {
-                this.sensors[i].ray.x2 = rc.hitpt.x;
-                this.sensors[i].ray.y2 = rc.hitpt.y;
-                this.sensors[i].ray.color = "red";
+                if (this.drawDebugRays) {
+                    this.sensors[i].ray.x2 = rc.hitpt.x;
+                    this.sensors[i].ray.y2 = rc.hitpt.y;
+                    this.sensors[i].ray.color = "red";
+                }
+                this.sensors[i].obj = rc.obj;
                 this.sensors[i].dist = rc.dist;
                 if (rc.dist < this.bumpRange) {
                     numHits++;
@@ -116,12 +122,14 @@ class Player extends GameObject {
                     maxDistIdx = i;
                 }
             } else {
-                this.sensors[i].ray.x2 = this.x+castDist*cosF(this.sensors[i].angle);
-                this.sensors[i].ray.y2 = this.y-castDist*sinF(this.sensors[i].angle);
-                this.sensors[i].ray.color = "green";
+                if (this.drawDebugRays) {
+                    this.sensors[i].ray.x2 = this.x+castDist*cosF(this.sensors[i].angle);
+                    this.sensors[i].ray.y2 = this.y-castDist*sinF(this.sensors[i].angle);
+                    this.sensors[i].ray.color = "green";
+                }
                 this.sensors[i].dist = -1;
                 if (castDist > maxDist) {
-                    maxDist = rc.dist;
+                    maxDist = castDist;
                     maxDistIdx = i;
                 }
             }
@@ -129,25 +137,66 @@ class Player extends GameObject {
         
         if (this.bumpTimer <= 0) {
             if (numHits < 8) {
+                let hits = {left:false,right:false,up:false,down:false};
+                // Right sensor hit.
                 if (this.sensors[0].dist !== -1 && this.sensors[0].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vx = this.vx > 0 ? -this.vx*this.bumpFactor : this.vx;
-                    this.x -= this.sensors[0].dist + 1;
+                    this.x -= this.bumpRange - this.sensors[0].dist;
+                    hits.right = true;
                 } 
+                // Left sensor.
                 if (this.sensors[4].dist !== -1 && this.sensors[4].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vx = this.vx < 0 ? -this.vx*this.bumpFactor : this.vx;
-                    this.x += this.sensors[4].dist + 1;
+                    this.x += this.bumpRange - this.sensors[4].dist + 1;
+                    hits.left = true;
                 }
+                // Up sensor.
                 if (this.sensors[2].dist !== -1 && this.sensors[2].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vy = this.vy < 0 ? -this.vy*this.bumpFactor : this.vy;
-                    this.y += this.sensors[2].dist + 1;
+                    this.y += this.bumpRange - this.sensors[2].dist + 1;
+                    hits.up = true;
                 }
+                // Down sensor.
                 if (this.sensors[6].dist !== -1 && this.sensors[6].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vy = this.vy > 0 ? -this.vy*this.bumpFactor : this.vy;
-                    this.y -= this.sensors[6].dist + 1;
+                    this.y -= this.bumpRange - this.sensors[6].dist + 1;
+                    hits.down = true;
+                }
+                // Up-Right sensor.
+                if (!hits.up && !hits.right && this.sensors[1].dist !== -1 && this.sensors[1].dist <= this.bumpRange) {
+                    this.bumpTimer = this.bumpTimerMax;
+                    this.vx = this.vx > 0 ? -this.vx*this.bumpFactor : this.vx;
+                    this.vy = this.vy < 0 ? -this.vy*this.bumpFactor : this.vy;
+                    this.x -= this.bumpRange/2 - this.sensors[1].dist/2 + 1;
+                    this.y -= this.bumpRange/2 - this.sensors[1].dist/2 + 1;
+                }
+                // Up-Left sensor.
+                if (!hits.up && !hits.left && this.sensors[3].dist !== -1 && this.sensors[3].dist <= this.bumpRange) {
+                    this.bumpTimer = this.bumpTimerMax;
+                    this.vx = this.vx < 0 ? -this.vx*this.bumpFactor : this.vx;
+                    this.vy = this.vy < 0 ? -this.vy*this.bumpFactor : this.vy;
+                    this.x += this.bumpRange/2 - this.sensors[3].dist/2 + 1;
+                    this.y -= this.bumpRange/2 - this.sensors[3].dist/2 + 1;
+                }
+                // Down-Left sensor.
+                if (!hits.down && !hits.left && this.sensors[5].dist !== -1 && this.sensors[5].dist <= this.bumpRange) {
+                    this.bumpTimer = this.bumpTimerMax;
+                    this.vx = this.vx < 0 ? -this.vx*this.bumpFactor : this.vx;
+                    this.vy = this.vy > 0 ? -this.vy*this.bumpFactor : this.vy;
+                    this.x += this.bumpRange/2 - this.sensors[5].dist/2 + 1;
+                    this.y += this.bumpRange/2 - this.sensors[5].dist/2 + 1;
+                }
+                // Down-Right sensor.
+                if (!hits.down && !hits.right && this.sensors[7].dist !== -1 && this.sensors[7].dist <= this.bumpRange) {
+                    this.bumpTimer = this.bumpTimerMax;
+                    this.vx = this.vx > 0 ? -this.vx*this.bumpFactor : this.vx;
+                    this.vy = this.vy > 0 ? -this.vy*this.bumpFactor : this.vy;
+                    this.x -= this.bumpRange/2 - this.sensors[7].dist/2 + 1;
+                    this.y -= this.bumpRange/2 - this.sensors[7].dist/2 + 1;
                 }
             } else {
                 this.vx = 0;
@@ -156,6 +205,9 @@ class Player extends GameObject {
         } else {
             this.bumpTimer -= dT;
         }
+        
+        // Adjust bounds.
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
     }
 
     Draw(ctx) {
@@ -165,6 +217,7 @@ class Player extends GameObject {
         ctx.beginPath();
         ctx.moveTo(pos.x+cosF(this.angle)*this.size,pos.y-sinF(this.angle)*this.size);
         ctx.lineTo(pos.x+cosF(this.angle+PI*3/4)*this.size,pos.y-sinF(this.angle+PI*3/4)*this.size);
+        ctx.lineTo(pos.x+cosF(this.angle+PI)*this.size/3,pos.y-sinF(this.angle+PI)*this.size/3);
         ctx.lineTo(pos.x+cosF(this.angle+PI*5/4)*this.size,pos.y-sinF(this.angle+PI*5/4)*this.size);
         ctx.closePath();
         ctx.fillStyle = this.colorFill;
@@ -233,6 +286,28 @@ class Triangle extends GameObject {
     }
 }
 
+class Rectangle extends GameObject {
+    constructor(l,t,r,b,c,gs) {
+        super((l+r)/2,(b+t)/2,-1,c);
+        this.t1 = new Triangle({x:l,y:t},{x:l,y:b},{x:r,y:b},c,false,gs);
+        this.t2 = new Triangle({x:l,y:t},{x:r,y:t},{x:r,y:b},c,false,gs);
+    }
+
+    Contains(p) {
+        return this.t1.Contains(p) || this.t2.Contains(p);
+    }
+    
+    Tick(dT){
+        this.t1.Tick(dT);
+        this.t2.Tick(dT);
+    }
+
+    Draw(c) {
+        this.t1.Draw(c);
+        this.t2.Draw(c);
+    }
+}
+
 class Camera {
     constructor(l,r,t,b) {
         this.bounds = {left:l,right:r,top:t,bottom:b};
@@ -270,11 +345,17 @@ class Camera {
 
     Tick(dT) {
         if (this.target && this.tracking) {
-            let dx = this.target.x - this.x;
-            let dy = this.target.y - this.y;
+            let dx = 0;
+            let dy = 0;
+            if (typeof this.target.vx !== undefined) {
+                dx = this.target.x - this.x + this.target.vx*300;
+                dy = this.target.y - this.y + this.target.vy*300;
+            } else {
+                dx = this.target.x - this.x;
+                dy = this.target.y - this.y;
+            }
 
-            this.x += dx*this.trackingFactor * dT;
-            this.y += dy*this.trackingFactor * dT;
+            this.Move(dx*this.trackingFactor * dT, dy*this.trackingFactor * dT);
         }
     }
 }
@@ -413,7 +494,10 @@ class Testground extends GameStage {
 
         this.Add(new Triangle({x:-200,y:-120},{x:300,y:-100},{x:0,y:-300},"red",true,this),"terrain");
         this.Add(new Triangle({x:-500,y:100},{x:500,y:200},{x:0,y:600},"red",true,this),"terrain");
-        this.Add(new Triangle({x:200,y:-200},{x:200,y:200},{x:400,y:200},"red",false,this),"terrain");
-        this.Add(new Triangle({x:400,y:200},{x:400,y:-200},{x:200,y:-200},"red",false,this),"terrain");
+        //this.Add(new Triangle({x:200,y:-200},{x:200,y:200},{x:400,y:200},"red",false,this),"terrain");
+        //this.Add(new Triangle({x:400,y:200},{x:400,y:-200},{x:200,y:-200},"red",false,this),"terrain");
+        this.Add(new Rectangle(200,-200,400,200,"red",this),"terrain");
+
+        this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
     }
 }

@@ -83,7 +83,7 @@ function Update() {
     frames++;
     time += dT;
     if (time > FPS_TIMER) {
-        console.log("[DEBUG] FPS = "+frames/time*1000);
+        console.log("[DEBUG] FPS = "+Math.round(frames/time*1000*10)/10);
         frames = 0;
         time = 0;
     }
