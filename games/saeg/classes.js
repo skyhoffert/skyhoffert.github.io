@@ -77,6 +77,9 @@ class Player extends GameObject {
         this.bumpTimerMax = 50;
         this.bumpRange = this.size;
         this.bumpFactor = 0.5;
+
+        this.maxLives = 3;
+        this.lives = this.maxLives;
     }
 
     Contains(p) {
@@ -114,7 +117,7 @@ class Player extends GameObject {
                 }
                 this.sensors[i].obj = rc.obj;
                 this.sensors[i].dist = rc.dist;
-                if (rc.dist < this.bumpRange) {
+                if (rc.dist <= this.bumpRange) {
                     numHits++;
                 }
                 if (rc.dist > maxDist) {
@@ -133,6 +136,10 @@ class Player extends GameObject {
                     maxDistIdx = i;
                 }
             }
+        }
+        
+        if (numHits > 0) {
+            this.lives--;
         }
         
         if (this.bumpTimer <= 0) {
@@ -225,6 +232,22 @@ class Player extends GameObject {
         ctx.lineWidth = 3;
         ctx.strokeStyle = this.color;
         ctx.stroke();
+
+        let lsize = 30;
+        ctx.fillStyle = this.colorFill;
+        ctx.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
+        ctx.fillRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
+        ctx.fillRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        ctx.strokeStyle = this.color;
+        if (this.lives > 2) {
+            ctx.strokeRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        }
+        if (this.lives > 1) {
+            ctx.strokeRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
+        }
+        if (this.lives > 0) {
+            ctx.strokeRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
+        }
     }
 }
 
@@ -321,7 +344,11 @@ class Camera {
     }
     
     SetTarget(o) {
-        this.tracking = true;
+        if (o === null) {
+            this.tracking = false;
+        } else {
+            this.tracking = true;
+        }
         this.target = o;
     }
 
@@ -499,5 +526,17 @@ class Testground extends GameStage {
         this.Add(new Rectangle(200,-200,400,200,"red",this),"terrain");
 
         this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
+    }
+
+    Tick(dT) {
+        super.Tick(dT);
+
+        if (this.world[this.players[this.localPlayerID]] && this.world[this.players[this.localPlayerID]].lives <= 0) {
+            this.camera.SetTarget(null);
+            this.Remove(this.players[this.localPlayerID]);
+            this.localPlayerID = 0;
+            this.Add(new Player(0,0,this.localPlayerID,this),"player");
+            this.camera.SetTarget(this.world[this.players[this.localPlayerID]]);
+        }
     }
 }
