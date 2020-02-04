@@ -97,9 +97,10 @@ class Player extends GameObject {
         let numHits = 0;
         let maxDist = -1;
         let maxDistIdx = -1;
-        let castDist = 200;
+        let castDist = 50;
+        let castStep = 2;
         for (let i = 0; i < this.sensors.length; i++) {
-            let rc = Raycast(this.x,this.y,this.sensors[i].angle,castDist,this.gameStage.world,this.gameStage.terrain,3);
+            let rc = Raycast(this.x,this.y,this.sensors[i].angle,castDist,this.gameStage.world,this.gameStage.terrain,castStep);
             this.sensors[i].ray.x = this.x;
             this.sensors[i].ray.y = this.y;
             if (rc.hit) {

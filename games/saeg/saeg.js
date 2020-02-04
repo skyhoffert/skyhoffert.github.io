@@ -5,6 +5,7 @@ var canvas = document.getElementById("canvas");
 canvas.width = WIDTH;
 canvas.height = HEIGHT;
 var context = canvas.getContext("2d");
+var hasFocus = false;
 
 var taller = window.innerWidth < (window.innerHeight-100) * 4/3;
 if (!taller) {
@@ -69,6 +70,13 @@ function Update() {
     let now = window.performance.now();
     let dT = now - prevTime;
     prevTime = now;
+    
+    hasFocus = document.hasFocus();
+    if (!hasFocus) { return; }
+
+    if (dT > 1000/60) {
+        dT = 1000/60;
+    }
 
     Tick(dT);
 
