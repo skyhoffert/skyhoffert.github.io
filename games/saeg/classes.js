@@ -45,11 +45,10 @@ class DebugRay extends GameObject {
 }
 
 class DebugUI extends GameObject {
-    constructor(gs) {
+    constructor() {
         super(0,0,100,"#303030");
         this.width = 200;
         this.height = 100;
-        this.gameStage = gs;
         this.visible = true;
 
         this.lines = [
@@ -67,26 +66,9 @@ class DebugUI extends GameObject {
     }
 
     Draw(c) {
-        let player = this.gameStage.world[this.gameStage.players[this.gameStage.localPlayerID]];
-        let lsize = 20;
-        c.fillStyle = player.colorFill;
-        c.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
-        c.fillRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
-        c.fillRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
-        c.lineWidth = 3;
-        c.strokeStyle = player.color;
-        if (player.lives > 2) {
-            c.strokeRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
-        }
-        if (player.lives > 1) {
-            c.strokeRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
-        }
-        if (player.lives > 0) {
-            c.strokeRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
-        }
-        
         if (!this.visible) { return; }
 
+        // Debug Menu
         c.fillStyle = this.color;
         c.fillRect(0,HEIGHT-this.lines.length*this.fsize-this.ypad*2,200,100);
         c.font = ""+this.fsize+"px Verdana";
@@ -94,6 +76,52 @@ class DebugUI extends GameObject {
         for (let i = 0; i < this.lines.length; i++) {
             c.fillText(this.lines[i], this.xpad, HEIGHT-this.lines.length*this.fsize+i*this.fsize);
         }
+    }
+}
+
+class PlayerUI extends GameObject {
+    constructor(p) {
+        super(0,0,100,"black");
+        this.player = p;
+    }
+
+    Draw(c) {
+        // Lives.
+        let lsize = 20;
+        c.fillStyle = this.player.colorFill;
+        c.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
+        c.fillRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
+        c.fillRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        c.lineWidth = 3;
+        c.strokeStyle = this.player.color;
+        if (this.player.lives > 2) {
+            c.strokeRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        }
+        if (this.player.lives > 1) {
+            c.strokeRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
+        }
+        if (this.player.lives > 0) {
+            c.strokeRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
+        }
+
+        // Pellet shooter.
+        let wid = (1 - this.player.pelletCooldown / this.player.pelletCooldownMax)**2 * (lsize*2-10);
+        c.fillStyle = "#102010";
+        c.fillRect(WIDTH/2-(lsize*2-10)/2,HEIGHT-lsize-15,(lsize*2-10),5);
+        c.fillStyle = "green";
+        c.fillRect(WIDTH/2-wid/2,HEIGHT-lsize-15,wid,5);
+
+        // Strafe.
+        wid = (1 - this.player.strafeTimerLeft / this.player.strafeTimerMax)**2 * lsize;
+        c.fillStyle = this.player.colorFill;
+        c.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-15,lsize,5);
+        c.fillStyle = this.player.color;
+        c.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-15,wid,5);
+        wid = (1 - this.player.strafeTimerRight / this.player.strafeTimerMax)**2 * lsize;
+        c.fillStyle = this.player.colorFill;
+        c.fillRect(WIDTH/2+lsize*2,HEIGHT-lsize-15,-lsize,5);
+        c.fillStyle = this.player.color;
+        c.fillRect(WIDTH/2+lsize*2,HEIGHT-lsize-15,-wid,5);
     }
 }
 
@@ -137,9 +165,31 @@ class Player extends GameObject {
         this.lives = this.maxLives;
 
         this.pelletSpeed = 0.6;
+        this.pelletCooldown = 0;
+        this.pelletCooldownMax = 1000;
+        this.pelletWantToFire = false;
 
-        this.debugUI = new DebugUI(this.gameStage);
+        this.strafeTimerLeft = 0;
+        this.strafeTimerRight = 0;
+        this.strafeTimerMax = 800;
+        this.strafeImpulse = 0.0085;
+
+        this.exhaustCooldown = 0;
+        this.exhaustCooldownMax = 50;
+
+        this.debugUI = new DebugUI();
         this.gameStage.Add(this.debugUI,"debug");
+        this.playerUI = new PlayerUI(this);
+        this.gameStage.Add(this.playerUI,"debug");
+    }
+
+    Die() {
+        for (let i = 0; i < this.sensors.length; i++) {
+            this.sensors[i].active = false;
+        }
+
+        this.debugUI.active = false;
+        this.playerUI.active = false;
     }
 
     Contains(p) {
@@ -170,8 +220,7 @@ class Player extends GameObject {
                 this.mouse.downL = t.down;
 
                 if (t.down) {
-                    this.gameStage.Add(new Pellet(this.x,this.y,this.vx+this.pelletSpeed*cosF(this.angle),
-                        this.vy-this.pelletSpeed*sinF(this.angle),3,this.gameStage),"pellet");
+                    this.pelletWantToFire = true;
                 }
             } else if (t.btn === 2) {
                 this.mouse.downR = t.down;
@@ -182,23 +231,47 @@ class Player extends GameObject {
     Tick(dT) {
         let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
         this.angle = Math.atan2(-(this.mouse.y-pos.y),this.mouse.x-pos.x);
-        
+
+        if (this.exhaustCooldown > 0) {
+            this.exhaustCooldown -= dT;
+        }
+
         // Forward/backward acceleration.
         if (this.keys["w"] || this.keys[" "]) {
             this.vx += cosF(this.angle) * this.accel * dT;
             this.vy -= sinF(this.angle) * this.accel * dT;
+            
+            if (this.exhaustCooldown <= 0) {
+                let ro = Math.random()*PI/8 - PI/16;
+                this.gameStage.Add(new Pellet(this.x-this.size*cosF(this.angle),this.y+this.size*sinF(this.angle),
+                    this.vx-this.pelletSpeed*cosF(this.angle+ro), this.vy+this.pelletSpeed*sinF(this.angle+ro),1,"#204020",this.gameStage),"pellet");
+                this.exhaustCooldown = this.exhaustCooldownMax;
+            }
         } else if (this.keys["s"]) {
             this.vx -= cosF(this.angle) * this.accelReverse * dT;
             this.vy += sinF(this.angle) * this.accelReverse * dT;
         }
 
         // Strafing.
+        if (this.strafeTimerLeft > 0) {
+            this.strafeTimerLeft -= dT;
+        }
+        if (this.strafeTimerRight > 0) {
+            this.strafeTimerRight -= dT;
+        }
+
         if (this.keys["a"]) {
-            this.vx += cosF(this.angle + PI*1/3) * this.accelStrafe * dT;
-            this.vy -= sinF(this.angle + PI*1/3) * this.accelStrafe * dT;
+            if (this.strafeTimerLeft <= 0) {
+                this.vx += cosF(this.angle + PI/2) * this.strafeImpulse * dT;
+                this.vy -= sinF(this.angle + PI/2) * this.strafeImpulse * dT;
+                this.strafeTimerLeft = this.strafeTimerMax;
+            }
         } else if (this.keys["d"]) {
-            this.vx += cosF(this.angle - PI*1/3) * this.accelStrafe * dT;
-            this.vy -= sinF(this.angle - PI*1/3) * this.accelStrafe * dT;
+            if (this.strafeTimerRight <= 0) {
+                this.vx += cosF(this.angle - PI/2) * this.strafeImpulse * dT;
+                this.vy -= sinF(this.angle - PI/2) * this.strafeImpulse * dT;
+                this.strafeTimerRight = this.strafeTimerMax;
+            }
         }
 
         this.x += this.vx * dT;
@@ -321,6 +394,19 @@ class Player extends GameObject {
         
         // Adjust bounds.
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        // Pellet stuff.
+        if (this.pelletCooldown <= 0) {
+            if (this.pelletWantToFire) {
+                this.gameStage.Add(new Pellet(this.x,this.y,this.vx+this.pelletSpeed*cosF(this.angle),
+                    this.vy-this.pelletSpeed*sinF(this.angle),3,"green",this.gameStage),"pellet");
+                this.pelletWantToFire = false;
+                this.pelletCooldown = this.pelletCooldownMax;
+            }
+        } else {
+            this.pelletCooldown -= dT;
+            this.pelletWantToFire = false;
+        }
     }
 
     Draw(c) {
@@ -424,8 +510,8 @@ class Rectangle extends GameObject {
 }
 
 class Pellet extends GameObject {
-    constructor(x,y,vx,vy,s,gs) {
-        super(x,y,0,"green");
+    constructor(x,y,vx,vy,s,c,gs) {
+        super(x,y,0,c);
         this.size = s;
         this.vx = vx;
         this.vy = vy;
@@ -673,6 +759,7 @@ class Testground extends GameStage {
         super.Tick(dT);
 
         if (this.world[this.players[this.localPlayerID]] && this.world[this.players[this.localPlayerID]].lives <= 0) {
+            this.world[this.players[this.localPlayerID]].Die();
             this.camera.SetTarget(null);
             this.Remove(this.players[this.localPlayerID]);
             this.localPlayerID = 0;
