@@ -53,10 +53,10 @@ canvas.addEventListener("mousemove", function (evt) {
     gameStage.UserInput({type:"mouseMove",x:mpos.x,y:mpos.y});
 }, false);
 canvas.addEventListener("mousedown", function (evt) {
-    gameStage.UserInput({type:"mouseButton",down:true});
+    gameStage.UserInput({type:"mouseButton",btn:evt.button,down:true});
 }, false);
 canvas.addEventListener("mouseup", function (evt) {
-    gameStage.UserInput({type:"mouseButton",down:false});
+    gameStage.UserInput({type:"mouseButton",btn:evt.button,down:false});
 }, false);
 
 function Tick(dT) {

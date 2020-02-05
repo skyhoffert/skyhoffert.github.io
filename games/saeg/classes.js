@@ -44,6 +44,54 @@ class DebugRay extends GameObject {
     }
 }
 
+class DebugUI extends GameObject {
+    constructor(gs) {
+        super(0,0,100,"#303030");
+        this.width = 200;
+        this.height = 100;
+        this.gameStage = gs;
+
+        this.lines = [
+            "w: move toward cursor",
+            "s: move away from cursor",
+            "a/d: strafe",
+            "c: lock/unlock camera",
+            "left click: fire pellet",
+            "right click: move camera",
+        ];
+    }
+
+    Draw(c) {
+        let player = this.gameStage.world[this.gameStage.players[this.gameStage.localPlayerID]];
+        let lsize = 30;
+        c.fillStyle = player.colorFill;
+        c.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
+        c.fillRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
+        c.fillRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        c.strokeStyle = player.color;
+        if (player.lives > 2) {
+            c.strokeRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        }
+        if (player.lives > 1) {
+            c.strokeRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
+        }
+        if (player.lives > 0) {
+            c.strokeRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
+        }
+
+        let xpad = 5;
+        let ypad = 5;
+        let fsize = 8;
+        c.fillStyle = this.color;
+        c.fillRect(0,HEIGHT-this.lines.length*fsize-ypad*2,200,100);
+        c.font = ""+fsize+"px Verdana";
+        c.fillStyle = "white";
+        for (let i = 0; i < this.lines.length; i++) {
+            c.fillText(this.lines[i], xpad, HEIGHT-this.lines.length*fsize+i*fsize);
+        }
+    }
+}
+
 class Player extends GameObject {
     constructor(x,y,id,gs) {
         super(x,y,0,"#404080");
@@ -51,10 +99,11 @@ class Player extends GameObject {
         this.vx = 0;
         this.vy = 0;
         this.accel = 0.00025;
+        this.accelStrafe = this.accel/3;
         this.size = 12;
         this.id = id;
         this.keys = {};
-        this.mouse = {x:0,y:0,down:false};
+        this.mouse = {x:0,y:0,downL:false,downR:false};
         this.gameStage = gs;
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
         this.angle = 0;
@@ -80,19 +129,67 @@ class Player extends GameObject {
 
         this.maxLives = 3;
         this.lives = this.maxLives;
+
+        this.pelletSpeed = 0.6;
+
+        this.gameStage.Add(new DebugUI(this.gameStage),"debug");
     }
 
     Contains(p) {
         return false;
     }
 
+    Input(t) {
+        if (t.type === "key") {
+            this.keys[t.key] = t.down;
+
+            if (t.key === "c" && t.down) {
+                if (this.gameStage.camera.target == null) {
+                    this.gameStage.camera.SetTarget(this);
+                } else {
+                    this.gameStage.camera.target = null;
+                }
+            }
+        } else if (t.type === "mouseMove") {
+            if (this.mouse.downR && this.gameStage.camera.target == null) {
+                this.gameStage.camera.Move(this.mouse.x-t.x,this.mouse.y-t.y);
+            }
+            this.mouse.x = t.x;
+            this.mouse.y = t.y;
+        } else if (t.type === "mouseButton") {
+            if (t.btn === 0) {
+                this.mouse.downL = t.down;
+
+                if (t.down) {
+                    this.gameStage.Add(new Pellet(this.x,this.y,this.vx+this.pelletSpeed*cosF(this.angle),
+                        this.vy-this.pelletSpeed*sinF(this.angle),3,this.gameStage),"pellet");
+                }
+            } else if (t.btn === 2) {
+                this.mouse.downR = t.down;
+            }
+        }
+    }
+
     Tick(dT) {
         let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
         this.angle = Math.atan2(-(this.mouse.y-pos.y),this.mouse.x-pos.x);
         
-        if (this.keys[" "]) {
+        // Forward/backward acceleration.
+        if (this.keys["w"] || this.keys[" "]) {
             this.vx += cosF(this.angle) * this.accel * dT;
             this.vy -= sinF(this.angle) * this.accel * dT;
+        } else if (this.keys["s"]) {
+            this.vx -= cosF(this.angle) * this.accel * dT;
+            this.vy += sinF(this.angle) * this.accel * dT;
+        }
+
+        // Strafing.
+        if (this.keys["a"]) {
+            this.vx += cosF(this.angle + PI*1/3) * this.accelStrafe * dT;
+            this.vy -= sinF(this.angle + PI*1/3) * this.accelStrafe * dT;
+        } else if (this.keys["d"]) {
+            this.vx += cosF(this.angle - PI*1/3) * this.accelStrafe * dT;
+            this.vy -= sinF(this.angle - PI*1/3) * this.accelStrafe * dT;
         }
 
         this.x += this.vx * dT;
@@ -217,37 +314,21 @@ class Player extends GameObject {
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
     }
 
-    Draw(ctx) {
+    Draw(c) {
         if (!this.gameStage.camera.InCam(this)) { return; }
 
         let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
-        ctx.beginPath();
-        ctx.moveTo(pos.x+cosF(this.angle)*this.size,pos.y-sinF(this.angle)*this.size);
-        ctx.lineTo(pos.x+cosF(this.angle+PI*3/4)*this.size,pos.y-sinF(this.angle+PI*3/4)*this.size);
-        ctx.lineTo(pos.x+cosF(this.angle+PI)*this.size/3,pos.y-sinF(this.angle+PI)*this.size/3);
-        ctx.lineTo(pos.x+cosF(this.angle+PI*5/4)*this.size,pos.y-sinF(this.angle+PI*5/4)*this.size);
-        ctx.closePath();
-        ctx.fillStyle = this.colorFill;
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = this.color;
-        ctx.stroke();
-
-        let lsize = 30;
-        ctx.fillStyle = this.colorFill;
-        ctx.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
-        ctx.fillRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
-        ctx.fillRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
-        ctx.strokeStyle = this.color;
-        if (this.lives > 2) {
-            ctx.strokeRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
-        }
-        if (this.lives > 1) {
-            ctx.strokeRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
-        }
-        if (this.lives > 0) {
-            ctx.strokeRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
-        }
+        c.beginPath();
+        c.moveTo(pos.x+cosF(this.angle)*this.size,pos.y-sinF(this.angle)*this.size);
+        c.lineTo(pos.x+cosF(this.angle+PI*3/4)*this.size,pos.y-sinF(this.angle+PI*3/4)*this.size);
+        c.lineTo(pos.x+cosF(this.angle+PI)*this.size/3,pos.y-sinF(this.angle+PI)*this.size/3);
+        c.lineTo(pos.x+cosF(this.angle+PI*5/4)*this.size,pos.y-sinF(this.angle+PI*5/4)*this.size);
+        c.closePath();
+        c.fillStyle = this.colorFill;
+        c.fill();
+        c.lineWidth = 3;
+        c.strokeStyle = this.color;
+        c.stroke();
     }
 }
 
@@ -289,26 +370,28 @@ class Triangle extends GameObject {
 
     Tick(dT){}
 
-    Draw(ctx) {
+    Draw(c) {
         let sp1 = this.gameStage.camera.ScreenPosition(this.p1.x,this.p1.y);
         let sp2 = this.gameStage.camera.ScreenPosition(this.p2.x,this.p2.y);
         let sp3 = this.gameStage.camera.ScreenPosition(this.p3.x,this.p3.y);
 
-        ctx.beginPath();
-        ctx.moveTo(sp1.x,sp1.y);
-        ctx.lineTo(sp2.x,sp2.y);
-        ctx.lineTo(sp3.x,sp3.y);
+        c.beginPath();
+        c.moveTo(sp1.x,sp1.y);
+        c.lineTo(sp2.x,sp2.y);
+        c.lineTo(sp3.x,sp3.y);
         if (this.thirdSideDraw) {
-            ctx.closePath();
+            c.closePath();
         }
-        ctx.fillStyle = this.colorFill;
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = this.color;
-        ctx.stroke();
+        c.fillStyle = this.colorFill;
+        c.fill();
+        c.lineWidth = 3;
+        c.strokeStyle = this.color;
+        c.stroke();
     }
 }
 
+// Rectangles are a combination of two rectangles. As of now, they can only be drawn if exactly
+// square with the viewport.
 class Rectangle extends GameObject {
     constructor(l,t,r,b,c,gs) {
         super((l+r)/2,(b+t)/2,-1,c);
@@ -328,6 +411,48 @@ class Rectangle extends GameObject {
     Draw(c) {
         this.t1.Draw(c);
         this.t2.Draw(c);
+    }
+}
+
+class Pellet extends GameObject {
+    constructor(x,y,vx,vy,s,gs) {
+        super(x,y,0,"green");
+        this.size = s;
+        this.vx = vx;
+        this.vy = vy;
+        this.gameStage = gs;
+        // Adjust bounds.
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        this.lifetime = 2000;
+    }
+
+    Contains(p) { return false; }
+
+    Tick(dT) {
+        this.lifetime -= dT;
+
+        this.x += this.vx * dT;
+        this.y += this.vy * dT;
+
+        // Adjust bounds.
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        let rc = Raycast(this.x,this.y,0,1,this.gameStage.world,this.gameStage.terrain,1);
+
+        if (rc.hit || this.lifetime <= 0) {
+            this.active = false;
+        }
+    }
+
+    Draw(c) {
+        if (!this.gameStage.camera.InCam(this)) { return; }
+
+        let pos = this.gameStage.camera.ScreenPosition(this.x, this.y);
+        c.beginPath();
+        c.arc(pos.x,pos.y,this.size,0,TWOPI);
+        c.strokeStyle = this.color;
+        c.stroke();
     }
 }
 
@@ -392,6 +517,7 @@ class GameStage {
         this.world = [];
         this.terrain = [];
         this.players = [];
+        this.pellets = [];
         this.debugObjs = [];
         this.drawOrder = [];
         this.camera = new Camera(-WIDTH/2,WIDTH/2,-HEIGHT/2,HEIGHT/2);
@@ -405,6 +531,8 @@ class GameStage {
             this.terrain.push(this.world.length);
         } else if (t === "debug") {
             this.debugObjs.push(this.world.length);
+        } else if (t === "pellet") {
+            this.pellets.push(this.world.length);
         }
 
         this.world.push(o);
@@ -421,6 +549,7 @@ class GameStage {
         for (let j = 0; j < this.terrain.length; j++) {
             if (this.terrain[j] === i) {
                 this.terrain.splice(j,1);
+                j--;
             } else if (this.terrain[j] > i) {
                 this.terrain[j]--;
             }
@@ -430,8 +559,19 @@ class GameStage {
         for (let j = 0; j < this.players.length; j++) {
             if (this.players[j] === i) {
                 this.players.splice(j,1);
-            } else if (this.terrain[j] > i) {
+                j--;
+            } else if (this.players[j] > i) {
                 this.players[j]--;
+            }
+        }
+
+        // remove from pellets.
+        for (let j = 0; j < this.pellets.length; j++) {
+            if (this.pellets[j] === i) {
+                this.pellets.splice(j,1);
+                j--;
+            } else if (this.pellets[j] > i) {
+                this.pellets[j]--;
             }
         }
 
@@ -439,7 +579,8 @@ class GameStage {
         for (let j = 0; j < this.debugObjs.length; j++) {
             if (this.debugObjs[j] === i) {
                 this.debugObjs.splice(j,1);
-            } else if (this.terrain[j] > i) {
+                j--;
+            } else if (this.debugObjs[j] > i) {
                 this.debugObjs[j]--;
             }
         }
@@ -448,7 +589,8 @@ class GameStage {
         for (let j = 0; j < this.drawOrder.length; j++) {
             if (this.drawOrder[j] === i) {
                 this.drawOrder.splice(j,1);
-            } else if (this.terrain[j] > i) {
+                j--;
+            } else if (this.drawOrder[j] > i) {
                 this.drawOrder[j]--;
             }
         }
@@ -480,14 +622,7 @@ class GameStage {
         if (this.localPlayerID === -1 || this.world.length === 0) { return; }
 
         // Apply user input to the local player.
-        if (t.type === "key") {
-            this.world[this.players[this.localPlayerID]].keys[t.key] = t.down;
-        } else if (t.type === "mouseMove") {
-            this.world[this.players[this.localPlayerID]].mouse.x = t.x;
-            this.world[this.players[this.localPlayerID]].mouse.y = t.y;
-        } else if (t.type === "mouseButton") {
-            this.world[this.players[this.localPlayerID]].mouse.down = t.down;
-        }
+        this.world[this.players[this.localPlayerID]].Input(t);
     }
 
     Tick(dT) {
@@ -502,12 +637,12 @@ class GameStage {
         }
     }
 
-    Draw(ctx) {
-        ctx.fillStyle = "black";
-        ctx.fillRect(0,0,WIDTH,HEIGHT);
+    Draw(c) {
+        c.fillStyle = "black";
+        c.fillRect(0,0,WIDTH,HEIGHT);
 
         for (let i = 0; i < this.drawOrder.length; i++) {
-            this.world[this.drawOrder[i]].Draw(ctx);
+            this.world[this.drawOrder[i]].Draw(c);
         }
     }
 }
@@ -517,12 +652,9 @@ class Testground extends GameStage {
         super();
         this.Add(new Player(0,0,this.localPlayerID,this),"player");
         this.localPlayerID = 0;
-        this.camera.SetTarget(this.world[this.players[this.localPlayerID]]);
 
         this.Add(new Triangle({x:-200,y:-120},{x:300,y:-100},{x:0,y:-300},"red",true,this),"terrain");
         this.Add(new Triangle({x:-500,y:100},{x:500,y:200},{x:0,y:600},"red",true,this),"terrain");
-        //this.Add(new Triangle({x:200,y:-200},{x:200,y:200},{x:400,y:200},"red",false,this),"terrain");
-        //this.Add(new Triangle({x:400,y:200},{x:400,y:-200},{x:200,y:-200},"red",false,this),"terrain");
         this.Add(new Rectangle(200,-200,400,200,"red",this),"terrain");
 
         this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
@@ -536,7 +668,6 @@ class Testground extends GameStage {
             this.Remove(this.players[this.localPlayerID]);
             this.localPlayerID = 0;
             this.Add(new Player(0,0,this.localPlayerID,this),"player");
-            this.camera.SetTarget(this.world[this.players[this.localPlayerID]]);
         }
     }
 }
