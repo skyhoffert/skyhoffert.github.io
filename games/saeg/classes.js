@@ -50,6 +50,7 @@ class DebugUI extends GameObject {
         this.width = 200;
         this.height = 100;
         this.gameStage = gs;
+        this.visible = true;
 
         this.lines = [
             "w: move toward cursor",
@@ -58,16 +59,21 @@ class DebugUI extends GameObject {
             "c: lock/unlock camera",
             "left click: fire pellet",
             "right click: move camera",
+            "x: hide this menu"
         ];
+        this.xpad = 5;
+        this.ypad = 5;
+        this.fsize = 8;
     }
 
     Draw(c) {
         let player = this.gameStage.world[this.gameStage.players[this.gameStage.localPlayerID]];
-        let lsize = 30;
+        let lsize = 20;
         c.fillStyle = player.colorFill;
         c.fillRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
         c.fillRect(WIDTH/2-lsize/2,HEIGHT-lsize-5,lsize,lsize);
         c.fillRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
+        c.lineWidth = 3;
         c.strokeStyle = player.color;
         if (player.lives > 2) {
             c.strokeRect(WIDTH/2+lsize,HEIGHT-lsize-5,lsize,lsize);
@@ -78,16 +84,15 @@ class DebugUI extends GameObject {
         if (player.lives > 0) {
             c.strokeRect(WIDTH/2-lsize*2,HEIGHT-lsize-5,lsize,lsize);
         }
+        
+        if (!this.visible) { return; }
 
-        let xpad = 5;
-        let ypad = 5;
-        let fsize = 8;
         c.fillStyle = this.color;
-        c.fillRect(0,HEIGHT-this.lines.length*fsize-ypad*2,200,100);
-        c.font = ""+fsize+"px Verdana";
+        c.fillRect(0,HEIGHT-this.lines.length*this.fsize-this.ypad*2,200,100);
+        c.font = ""+this.fsize+"px Verdana";
         c.fillStyle = "white";
         for (let i = 0; i < this.lines.length; i++) {
-            c.fillText(this.lines[i], xpad, HEIGHT-this.lines.length*fsize+i*fsize);
+            c.fillText(this.lines[i], this.xpad, HEIGHT-this.lines.length*this.fsize+i*this.fsize);
         }
     }
 }
@@ -99,6 +104,7 @@ class Player extends GameObject {
         this.vx = 0;
         this.vy = 0;
         this.accel = 0.00025;
+        this.accelReverse = this.accel/2;
         this.accelStrafe = this.accel/3;
         this.size = 12;
         this.id = id;
@@ -132,7 +138,8 @@ class Player extends GameObject {
 
         this.pelletSpeed = 0.6;
 
-        this.gameStage.Add(new DebugUI(this.gameStage),"debug");
+        this.debugUI = new DebugUI(this.gameStage);
+        this.gameStage.Add(this.debugUI,"debug");
     }
 
     Contains(p) {
@@ -149,6 +156,8 @@ class Player extends GameObject {
                 } else {
                     this.gameStage.camera.target = null;
                 }
+            } else if (t.key === "x" && t.down) {
+                this.debugUI.visible = !this.debugUI.visible;
             }
         } else if (t.type === "mouseMove") {
             if (this.mouse.downR && this.gameStage.camera.target == null) {
@@ -179,8 +188,8 @@ class Player extends GameObject {
             this.vx += cosF(this.angle) * this.accel * dT;
             this.vy -= sinF(this.angle) * this.accel * dT;
         } else if (this.keys["s"]) {
-            this.vx -= cosF(this.angle) * this.accel * dT;
-            this.vy += sinF(this.angle) * this.accel * dT;
+            this.vx -= cosF(this.angle) * this.accelReverse * dT;
+            this.vy += sinF(this.angle) * this.accelReverse * dT;
         }
 
         // Strafing.
