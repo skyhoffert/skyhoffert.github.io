@@ -47,7 +47,7 @@ class DebugRay extends GameObject {
 class DebugUI extends GameObject {
     constructor() {
         super(0,0,100,"#303030");
-        this.width = 200;
+        this.width = 140;
         this.height = 100;
         this.visible = true;
 
@@ -70,11 +70,96 @@ class DebugUI extends GameObject {
 
         // Debug Menu
         c.fillStyle = this.color;
-        c.fillRect(0,HEIGHT-this.lines.length*this.fsize-this.ypad*2,200,100);
-        c.font = ""+this.fsize+"px Verdana";
+        c.fillRect(0,HEIGHT-this.lines.length*this.fsize-this.ypad*2,this.width,this.height);
+        c.font = ""+this.fsize+"px Monospace";
         c.fillStyle = "white";
         for (let i = 0; i < this.lines.length; i++) {
             c.fillText(this.lines[i], this.xpad, HEIGHT-this.lines.length*this.fsize+i*this.fsize);
+        }
+    }
+}
+
+class MenuButton extends GameObject {
+    constructor(x,y,w,h,t,tc,f,rect={}) {
+        super(x,y,100,"white");
+        this.width = w;
+        this.height = h;
+        this.text = t;
+        this.textColor = tc;
+        this.font = f;
+        this.bounds = {left:x-w/2,right:x+w/2,top:y-h/2,bottom:y+h/2};
+        if (rect.drawn) {
+            this.drawRect = true;
+            this.color = rect.color;
+            this.colorFill = rect.colorFill;
+            this.borderWidth = rect.borderWidth;
+        }
+    }
+
+    Contains(p) {
+        return p.x > this.bounds.left && p.x < this.bounds.right && p.y > this.bounds.top && p.y < this.bounds.bottom;
+    }
+
+    Draw(c) {
+        if (this.drawRect) {
+            c.fillStyle = this.colorFill;
+            c.strokeStyle = this.color;
+            c.lineWidth = this.borderWidth;
+            c.fillRect(this.x-this.width/2,this.y-this.height/2,this.width,this.height);
+            c.strokeRect(this.x-this.width/2,this.y-this.height/2,this.width,this.height);
+        }
+        c.font = this.font;
+        let tw = c.measureText(this.text).width;
+        c.fillStyle = this.textColor;
+        c.fillText(this.text,this.x-tw/2,this.y+(parseInt(this.font))/2);
+    }
+}
+
+class MainMenuUI extends GameObject {
+    constructor() {
+        super(0,0,100,"white");
+        this.mouse = {x:0,y:0};
+
+        this.buttons = [];
+
+        // Title
+        this.buttons.push({obj:new MenuButton(WIDTH/2,60,360,100,"name todo","white","120px Monospace"),func: function() {}});
+
+        // Start
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,360,100,"Start","white","60px Monospace"),
+            func: function() {
+                gameStage = new Testground();
+            }});
+
+        // Other
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2+120,360,100,"...","white","60px Monospace"),
+            func: function() {
+                // TODO
+            }});
+    }
+
+    UserInput(t) {
+        if (t.type === "key") {
+            if (t.key === "Enter" && t.down) {
+                gameStage = new Testground();
+            }
+        } else if (t.type === "mouseMove") {
+            this.mouse.x = t.x;
+            this.mouse.y = t.y;
+        } else if (t.type === "mouseButton") {
+            if (t.down) {
+                for (let i = 0; i < this.buttons.length; i++) {
+                    if (this.buttons[i].obj.Contains({x:this.mouse.x,y:this.mouse.y})) {
+                        this.buttons[i].func();
+                    }
+                }
+            }
+        }
+    }
+
+    Draw(c) {
+        for (let i = 0; i < this.buttons.length; i++) {
+            this.buttons[i].obj.Draw(c);
         }
     }
 }
@@ -169,6 +254,12 @@ class Player extends GameObject {
         this.pelletCooldownMax = 1000;
         this.pelletWantToFire = false;
 
+        this.pelletAudio = new Audio("audio/shoot.wav");
+        this.pelletAudio.volume = 0.05;
+        this.accelAudio = new Audio("audio/accel.wav");
+        this.accelAudio.volume = 0.1;
+        this.accelAudio.loop = true;
+
         this.strafeTimerLeft = 0;
         this.strafeTimerRight = 0;
         this.strafeTimerMax = 800;
@@ -240,6 +331,7 @@ class Player extends GameObject {
         if (this.keys["w"] || this.keys[" "]) {
             this.vx += cosF(this.angle) * this.accel * dT;
             this.vy -= sinF(this.angle) * this.accel * dT;
+            this.accelAudio.play();
             
             if (this.exhaustCooldown <= 0) {
                 let ro = Math.random()*PI/8 - PI/16;
@@ -250,6 +342,8 @@ class Player extends GameObject {
         } else if (this.keys["s"]) {
             this.vx -= cosF(this.angle) * this.accelReverse * dT;
             this.vy += sinF(this.angle) * this.accelReverse * dT;
+        } else {
+            this.accelAudio.pause();
         }
 
         // Strafing.
@@ -402,6 +496,7 @@ class Player extends GameObject {
                     this.vy-this.pelletSpeed*sinF(this.angle),3,"green",this.gameStage),"pellet");
                 this.pelletWantToFire = false;
                 this.pelletCooldown = this.pelletCooldownMax;
+                this.pelletAudio.play();
             }
         } else {
             this.pelletCooldown -= dT;
@@ -753,6 +848,11 @@ class Testground extends GameStage {
         this.Add(new Rectangle(200,-200,400,200,"red",this),"terrain");
 
         this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
+        
+        this.bgmusic = new Audio("audio/bgmusic.mp3");
+        this.bgmusic.volume = 0.2;
+        this.bgmusic.loop = true;
+        this.bgmusic.play();
     }
 
     Tick(dT) {
@@ -765,5 +865,22 @@ class Testground extends GameStage {
             this.localPlayerID = 0;
             this.Add(new Player(0,0,this.localPlayerID,this),"player");
         }
+    }
+}
+
+class MainMenu extends GameStage {
+    constructor() {
+        super();
+
+        this.menu = new MainMenuUI();
+        this.Add(this.menu,"debug");
+    }
+
+    UserInput(t) {
+        super.UserInput(t);
+
+        this.menu.UserInput(t);
+
+        this.userInteracted = true;
     }
 }
