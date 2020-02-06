@@ -34,6 +34,8 @@ var frames = 0;
 var time = 0;
 const FPS_TIMER = 6000;
 
+var firstInteraction = false;
+
 function GetMousePos(evt) {
     return {
         x: (evt.clientX - rect.left) * scaleX,   // scale mouse coordinates after they have
@@ -54,6 +56,14 @@ canvas.addEventListener("mousemove", function (evt) {
 }, false);
 canvas.addEventListener("mousedown", function (evt) {
     gameStage.UserInput({type:"mouseButton",btn:evt.button,down:true});
+    
+    // We can only add the beforeunload event listener once the user has interacted with the page.
+    if (!firstInteraction) {
+        firstInteraction = true;
+        window.addEventListener("beforeunload", function(e) {
+            return e.returnValue = "reason";
+        });
+    }
 }, false);
 canvas.addEventListener("mouseup", function (evt) {
     gameStage.UserInput({type:"mouseButton",btn:evt.button,down:false});

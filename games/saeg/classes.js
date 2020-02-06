@@ -94,6 +94,8 @@ class MenuButton extends GameObject {
             this.colorFill = rect.colorFill;
             this.borderWidth = rect.borderWidth;
         }
+
+        this.drawn = true;
     }
 
     Contains(p) {
@@ -101,6 +103,8 @@ class MenuButton extends GameObject {
     }
 
     Draw(c) {
+        if (!this.drawn) { return; }
+
         if (this.drawRect) {
             c.fillStyle = this.colorFill;
             c.strokeStyle = this.color;
@@ -111,7 +115,30 @@ class MenuButton extends GameObject {
         c.font = this.font;
         let tw = c.measureText(this.text).width;
         c.fillStyle = this.textColor;
-        c.fillText(this.text,this.x-tw/2,this.y+(parseInt(this.font))/2);
+        c.fillText(this.text,this.x-tw/2,this.y+(parseInt(this.font))/2-3);
+    }
+}
+
+class TitleButton extends MenuButton {
+    constructor() {
+        super(WIDTH/2,50,0,0,"Stymphalian Zero","white","80px Monospace");
+    }
+
+    Draw(c) {
+        this.x += 4;
+        this.y += 4;
+        this.textColor = "#404040";
+        super.Draw(c);
+
+        this.x -= 2;
+        this.y -= 2;
+        this.textColor = "#a0a0a0";
+        super.Draw(c);
+
+        this.x -= 2;
+        this.y -= 2;
+        this.textColor = "white";
+        super.Draw(c);
     }
 }
 
@@ -122,26 +149,30 @@ class MainMenuUI extends GameObject {
 
         this.buttons = [];
 
+        this.fading = false;
+        this.fadingTimeMax = 2000;
+        this.fadingTime = this.fadingTimeMax;
+
         // Title
-        this.buttons.push({obj:new MenuButton(WIDTH/2,60,360,100,"name todo","white","120px Monospace"),func: function() {}});
+        this.buttons.push({obj:new TitleButton(),func: function() {}});
 
         // Start
-        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,360,100,"Start","white","60px Monospace"),
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,360,100,"Begin","white","60px Monospace"),
             func: function() {
-                gameStage = new Testground();
+                this.fading = true;
             }});
 
         // Other
         this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2+120,360,100,"...","white","60px Monospace"),
             func: function() {
-                // TODO
+                gameStage = new LevelsMenu();
             }});
     }
 
     UserInput(t) {
         if (t.type === "key") {
             if (t.key === "Enter" && t.down) {
-                gameStage = new Testground();
+                // TODO: when enter key is pressed
             }
         } else if (t.type === "mouseMove") {
             this.mouse.x = t.x;
@@ -151,7 +182,103 @@ class MainMenuUI extends GameObject {
                 for (let i = 0; i < this.buttons.length; i++) {
                     if (this.buttons[i].obj.Contains({x:this.mouse.x,y:this.mouse.y})) {
                         this.buttons[i].func();
+                        return true;
                     }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    Tick(dT) {
+        if (this.buttons[1].fading) {
+            this.fading = true;
+        }
+
+        if (this.fading) {
+            if (this.fadingTime > 0) {
+                this.fadingTime -= dT;
+            } else {
+                gameStage = new Testground();
+            }
+        }
+    }
+
+    Draw(c) {
+        for (let i = 0; i < this.buttons.length; i++) {
+            this.buttons[i].obj.Draw(c);
+        }
+
+        // Draw fade.
+        if (this.fading) {
+            c.globalAlpha = 1-(this.fadingTime/this.fadingTimeMax)**4;
+            c.fillStyle = "black";
+            c.fillRect(0,0,WIDTH,HEIGHT);
+            c.globalAlpha = 1.0;
+        }
+    }
+}
+
+class LevelsUI extends GameObject {
+    constructor() {
+        super(0,0,100,"white");
+        this.mouse = {x:0,y:0};
+
+        this.buttons = [];
+
+        this.fading = false;
+        this.fadingTimeMax = 2000;
+        this.fadingTime = this.fadingTimeMax;
+        this.targetLevel = null;
+
+        this.buttons.push({obj:new MenuButton(160,40,320,100,"<- Back","white","80px Monospace",),
+            func:function() {
+                gameStage = new MainMenu();
+            }});
+        // Stages
+        this.buttons.push({obj:new MenuButton(100,200,100,100,"1","white","80px Monospace",),
+            func: function() {
+                this.targetLevel = "Testground";
+                this.fading = true;
+            }});
+    }
+
+    UserInput(t) {
+        if (t.type === "mouseMove") {
+            this.mouse.x = t.x;
+            this.mouse.y = t.y;
+        } else if (t.type === "mouseButton") {
+            if (t.down) {
+                for (let i = 0; i < this.buttons.length; i++) {
+                    if (this.buttons[i].obj.Contains({x:this.mouse.x,y:this.mouse.y})) {
+                        this.buttons[i].func();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+    
+    Tick(dT) {
+        // Check if any buttons are "fading".
+        for (let i = 0; i < this.buttons.length; i++) {
+            if (this.buttons[i].fading) {
+                this.fading = true;
+                this.targetLevel = this.buttons[i].targetLevel;
+            }
+        }
+
+        if (this.fading) {
+            if (this.fadingTime > 0) {
+                this.fadingTime -= dT;
+            } else {
+                if (this.targetLevel === "Testground") {
+                    gameStage = new Testground();
+                } else {
+                    console.log(this.targetLevel);
                 }
             }
         }
@@ -161,6 +288,168 @@ class MainMenuUI extends GameObject {
         for (let i = 0; i < this.buttons.length; i++) {
             this.buttons[i].obj.Draw(c);
         }
+
+        // Draw fade.
+        if (this.fading) {
+            c.globalAlpha = 1-(this.fadingTime/this.fadingTimeMax)**4;
+            c.fillStyle = "black";
+            c.fillRect(0,0,WIDTH,HEIGHT);
+            c.globalAlpha = 1.0;
+        }
+    }
+}
+
+class PauseUI extends GameObject {
+    constructor() {
+        super(0,0,100,"white");
+
+        this.mouse = {x:0,y:0};
+        this.buttons = [];
+
+        this.active = false;
+
+        // Continue
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,300,100,"Continue","white","40px Monospace"),clicked:false,
+            func:function() {
+                this.clicked = true;
+            }});
+        // Menu
+        this.buttons.push({obj:new MenuButton(WIDTH-100,HEIGHT-25,200,40,"Main Menu","white","30px Monospace"),clicked:false,
+            func:function() {
+                this.clicked = true;
+            }});
+    }
+
+    UserInput(t) {
+        if (t.type === "key") {
+            if (t.key === "Escape" && t.down) {
+                this.active = !this.active;
+            }
+        } else if (t.type === "mouseMove") {
+            this.mouse.x = t.x;
+            this.mouse.y = t.y;
+        } else if (t.type === "mouseButton") {
+            if (this.active && t.down) {
+                for (let i = 0; i < this.buttons.length; i++) {
+                    if (this.buttons[i].obj.Contains({x:this.mouse.x,y:this.mouse.y})) {
+                        this.buttons[i].func();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    Tick(dT) {
+        // TODO: this is a messy solution. Better way?
+        if (this.active) {
+            if (this.buttons[0].clicked) {
+                this.buttons[0].clicked = false;
+                this.active = false;
+            } else if (this.buttons[1].clicked) {
+                this.buttons[1].clicked = false;
+                if (confirm("You will lose progress!")) {
+                    gameStage.Destroy();
+                    gameStage = new MainMenu();
+                }
+            }
+        }
+    }
+    
+    Draw(c) {
+        if (!this.active) { return; }
+
+        c.globalAlpha = 0.7;
+        c.fillStyle = "black";
+        c.fillRect(0,0,WIDTH,HEIGHT);
+        c.globalAlpha = 1.0;
+
+        for (let i = 0; i < this.buttons.length; i++) {
+            this.buttons[i].obj.Draw(c);
+        }
+    }
+}
+
+class GameUI extends GameObject {
+    constructor(gs) {
+        super(0,0,100,"white");
+        this.mouse = {x:0,y:0};
+        this.buttons = [];
+        this.gameStage = gs;
+        
+        this.fading = true;
+        this.fadingTimeMax = 2000;
+        this.fadingTime = this.fadingTimeMax;
+
+        // Music
+        this.buttons.push({obj:new MenuButton(7,7,14,14,"m","white","14px Monospace",
+            {drawn:true,color:"white",colorFill:"#222222",borderWidth:2}),func: function() {
+                if (this.obj.text === "x") {
+                    this.obj.text = "m";
+                } else {
+                    this.obj.text = "x";
+                }
+                gs.ToggleMusic();
+            }});
+        // Sounds
+        this.buttons.push({obj:new MenuButton(21,7,14,14,"s","white","14px Monospace",
+            {drawn:true,color:"white",colorFill:"#222222",borderWidth:2}),func: function() {
+                if (this.obj.text === "x") {
+                    this.obj.text = "s";
+                } else {
+                    this.obj.text = "x";
+                }
+                gs.ToggleSound();
+            }});
+            
+        // Pause menu
+        this.pauseUI = new PauseUI();
+    }
+
+    UserInput(t) {
+        if (t.type === "mouseMove") {
+            this.mouse.x = t.x;
+            this.mouse.y = t.y;
+        } else if (t.type === "mouseButton") {
+            if (t.down) {
+                for (let i = 0; i < this.buttons.length; i++) {
+                    if (this.buttons[i].obj.Contains({x:this.mouse.x,y:this.mouse.y})) {
+                        this.buttons[i].func();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return this.pauseUI.UserInput(t);
+    }
+
+    Tick(dT) {
+        if (this.fading && this.fadingTime > 0) {
+            this.fadingTime -= dT;
+        } else if (this.fadingTime <= 0) {
+            this.fading = false;
+        }
+
+        this.pauseUI.Tick(dT);
+    }
+    
+    Draw(c) {
+        for (let i = 0; i < this.buttons.length; i++) {
+            this.buttons[i].obj.Draw(c);
+        }
+
+        // Draw fade.
+        if (this.fading) {
+            c.globalAlpha = (this.fadingTime/this.fadingTimeMax)**4;
+            c.fillStyle = "black";
+            c.fillRect(0,0,WIDTH,HEIGHT);
+            c.globalAlpha = 1.0;
+        }
+
+        this.pauseUI.Draw(c);
     }
 }
 
@@ -254,6 +543,7 @@ class Player extends GameObject {
         this.pelletCooldownMax = 1000;
         this.pelletWantToFire = false;
 
+        this.playAudio = true;
         this.pelletAudio = new Audio("audio/shoot.wav");
         this.pelletAudio.volume = 0.05;
         this.accelAudio = new Audio("audio/accel.wav");
@@ -274,6 +564,10 @@ class Player extends GameObject {
         this.gameStage.Add(this.playerUI,"debug");
     }
 
+    ToggleSound() {
+        this.playAudio = !this.playAudio;
+    }
+
     Die() {
         for (let i = 0; i < this.sensors.length; i++) {
             this.sensors[i].active = false;
@@ -281,6 +575,9 @@ class Player extends GameObject {
 
         this.debugUI.active = false;
         this.playerUI.active = false;
+
+        this.accelAudio.pause();
+        this.pelletAudio.pause();
     }
 
     Contains(p) {
@@ -288,6 +585,8 @@ class Player extends GameObject {
     }
 
     Input(t) {
+        if (this.gameStage.menu.pauseUI.active) { return; }
+
         if (t.type === "key") {
             this.keys[t.key] = t.down;
 
@@ -320,6 +619,8 @@ class Player extends GameObject {
     }
 
     Tick(dT) {
+        if (this.gameStage.menu.pauseUI.active) { return; }
+
         let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
         this.angle = Math.atan2(-(this.mouse.y-pos.y),this.mouse.x-pos.x);
 
@@ -331,7 +632,9 @@ class Player extends GameObject {
         if (this.keys["w"] || this.keys[" "]) {
             this.vx += cosF(this.angle) * this.accel * dT;
             this.vy -= sinF(this.angle) * this.accel * dT;
-            this.accelAudio.play();
+            if (this.playAudio) {
+                this.accelAudio.play();
+            }
             
             if (this.exhaustCooldown <= 0) {
                 let ro = Math.random()*PI/8 - PI/16;
@@ -496,7 +799,9 @@ class Player extends GameObject {
                     this.vy-this.pelletSpeed*sinF(this.angle),3,"green",this.gameStage),"pellet");
                 this.pelletWantToFire = false;
                 this.pelletCooldown = this.pelletCooldownMax;
-                this.pelletAudio.play();
+                if (this.playAudio) {
+                    this.pelletAudio.play();
+                }
             }
         } else {
             this.pelletCooldown -= dT;
@@ -620,6 +925,8 @@ class Pellet extends GameObject {
     Contains(p) { return false; }
 
     Tick(dT) {
+        if (this.gameStage.menu.pauseUI.active) { return; }
+
         this.lifetime -= dT;
 
         this.x += this.vx * dT;
@@ -712,6 +1019,12 @@ class GameStage {
         this.drawOrder = [];
         this.camera = new Camera(-WIDTH/2,WIDTH/2,-HEIGHT/2,HEIGHT/2);
         this.localPlayerID = -1;
+    }
+
+    Destroy() {
+        for (let i = 0; i < this.players.length; i++) {
+            this.world[this.players[i]].Die();
+        }
     }
 
     Add(o,t) {
@@ -853,6 +1166,35 @@ class Testground extends GameStage {
         this.bgmusic.volume = 0.2;
         this.bgmusic.loop = true;
         this.bgmusic.play();
+
+        this.menu = new GameUI(this);
+        this.Add(this.menu,"debug");
+    }
+
+    Destroy() {
+        super.Destroy();
+
+        this.bgmusic.pause();
+    }
+
+    ToggleMusic() {
+        if (this.bgmusic.paused) {
+            this.bgmusic.play();
+        } else {
+            this.bgmusic.pause();
+        }
+    }
+
+    ToggleSound() {
+        for (let i = 0; i < this.players.length; i++) {
+            this.world[this.players[i]].ToggleSound();
+        }
+    }
+    
+    UserInput(t) {
+        if (!this.menu.UserInput(t)) {
+            super.UserInput(t);
+        }
     }
 
     Tick(dT) {
@@ -880,7 +1222,20 @@ class MainMenu extends GameStage {
         super.UserInput(t);
 
         this.menu.UserInput(t);
+    }
+}
 
-        this.userInteracted = true;
+class LevelsMenu extends GameStage {
+    constructor() {
+        super();
+
+        this.menu = new LevelsUI();
+        this.Add(this.menu,"debug");
+    }
+
+    UserInput(t) {
+        super.UserInput(t);
+
+        this.menu.UserInput(t);
     }
 }
