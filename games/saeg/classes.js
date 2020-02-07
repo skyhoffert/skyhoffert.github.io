@@ -53,11 +53,12 @@ class DebugUI extends GameObject {
 
         this.lines = [
             "w: move toward cursor",
-            "s: move away from cursor",
+            "s: brake",
             "a/d: strafe",
             "c: lock/unlock camera",
             "left click: fire pellet",
             "right click: move camera",
+            "mouse wheel: zoom in/out",
             "x: hide this menu"
         ];
         this.xpad = 5;
@@ -99,7 +100,8 @@ class MenuButton extends GameObject {
     }
 
     Contains(p) {
-        return p.x > this.bounds.left && p.x < this.bounds.right && p.y > this.bounds.top && p.y < this.bounds.bottom;
+        return p.x > this.bounds.left && p.x < this.bounds.right && 
+            p.y > this.bounds.top && p.y < this.bounds.bottom;
     }
 
     Draw(c) {
@@ -157,13 +159,15 @@ class MainMenuUI extends GameObject {
         this.buttons.push({obj:new TitleButton(),func: function() {}});
 
         // Start
-        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2-30,360,100,"Begin","white","60px Monospace"),
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2-30,360,100,
+                "Begin","white","60px Monospace"),
             func: function() {
                 this.fading = true;
             }});
 
         // Other
-        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2+80,360,100,"Levels","white","60px Monospace"),
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2+80,360,100,
+                "Levels","white","60px Monospace"),
             func: function() {
                 gameStage = new LevelsMenu();
             }});
@@ -237,13 +241,15 @@ class LevelsUI extends GameObject {
                 gameStage = new MainMenu();
             }});
         // Stages
-        this.buttons.push({obj:new MenuButton(130,200,240,100,"Testground","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
+        this.buttons.push({obj:new MenuButton(130,200,240,100,
+                "Testground","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
             func: function() {
                 this.targetLevel = "Testground";
                 this.fading = true;
             }});
         // Stages
-        this.buttons.push({obj:new MenuButton(380,200,240,100,"TODO","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
+        this.buttons.push({obj:new MenuButton(380,200,240,100,
+                "TODO","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
             func: function() {
                 //this.targetLevel = "Asteroids";
                 //this.fading = true;
@@ -315,12 +321,14 @@ class PauseUI extends GameObject {
         this.active = false;
 
         // Continue
-        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,300,100,"Continue","white","40px Monospace"),clicked:false,
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,300,100,
+                "Continue","white","40px Monospace"),clicked:false,
             func:function() {
                 this.clicked = true;
             }});
         // Menu
-        this.buttons.push({obj:new MenuButton(WIDTH-100,HEIGHT-25,200,40,"Main Menu","white","30px Monospace"),clicked:false,
+        this.buttons.push({obj:new MenuButton(WIDTH-100,HEIGHT-25,200,40,
+                "Main Menu","white","30px Monospace"),clicked:false,
             func:function() {
                 this.clicked = true;
             }});
@@ -512,14 +520,13 @@ class Player extends GameObject {
         this.vx = 0;
         this.vy = 0;
         this.accel = 0.00025;
-        this.accelReverse = this.accel/2;
-        this.accelStrafe = this.accel/3;
         this.size = 12;
         this.id = id;
         this.keys = {};
         this.mouse = {x:0,y:0,downL:false,downR:false};
         this.gameStage = gs;
-        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,
+            top:this.y-this.size,bottom:this.y+this.size};
         this.angle = 0;
         this.sensors = [
             {angle:PI*0/1,dist:-1,obj:null,ray:new DebugRay(this.x,this.y,this.x,this.y,"red",false)},
@@ -560,9 +567,15 @@ class Player extends GameObject {
         this.strafeTimerRight = 0;
         this.strafeTimerMax = 800;
         this.strafeImpulse = 0.0085;
+        this.strafeLeftVel = 0;
+        this.strafeRightVel = 0;
+        this.strafeLeftVelTime = 0;
+        this.strafeRightVelTime = 0;
 
         this.exhaustCooldown = 0;
         this.exhaustCooldownMax = 50;
+
+        this.brakeIncrement = 0.0002;
 
         this.debugUI = new DebugUI();
         this.gameStage.Add(this.debugUI,"debug");
@@ -644,13 +657,24 @@ class Player extends GameObject {
             
             if (this.exhaustCooldown <= 0) {
                 let ro = Math.random()*PI/8 - PI/16;
-                this.gameStage.Add(new Pellet(this.x-this.size*cosF(this.angle),this.y+this.size*sinF(this.angle),
-                    this.vx-this.pelletSpeed*cosF(this.angle+ro), this.vy+this.pelletSpeed*sinF(this.angle+ro),1,"#204020",this.gameStage),"pellet");
+                this.gameStage.Add(new Pellet(this.x-this.size*cosF(this.angle),
+                    this.y+this.size*sinF(this.angle),
+                    this.vx-this.pelletSpeed*cosF(this.angle+ro),
+                    this.vy+this.pelletSpeed*sinF(this.angle+ro),
+                    1,"#406040",this.gameStage),"pellet");
                 this.exhaustCooldown = this.exhaustCooldownMax;
             }
         } else if (this.keys["s"]) {
-            this.vx -= cosF(this.angle) * this.accelReverse * dT;
-            this.vy += sinF(this.angle) * this.accelReverse * dT;
+            let vm = Distance(0,0,this.vx,this.vy);
+            let ang = Math.atan2(this.vy,this.vx);
+            if (vm > this.brakeIncrement * dT) {
+                vm -= this.brakeIncrement * dT;
+                this.vx = cosF(ang) * vm;
+                this.vy = sinF(ang) * vm;
+            } else {
+                this.vx = 0;
+                this.vy = 0;
+            }
         } else {
             this.accelAudio.pause();
         }
@@ -686,7 +710,8 @@ class Player extends GameObject {
         let castDist = this.size*2;
         let castStep = 2;
         for (let i = 0; i < this.sensors.length; i++) {
-            let rc = Raycast(this.x,this.y,this.sensors[i].angle,castDist,this.gameStage.world,this.gameStage.terrain,castStep);
+            let rc = Raycast(this.x,this.y,this.sensors[i].angle,castDist,
+                this.gameStage.world,this.gameStage.terrain,castStep);
             if (this.drawDebugRays) {
                 this.sensors[i].ray.x = this.x;
                 this.sensors[i].ray.y = this.y;
@@ -756,7 +781,8 @@ class Player extends GameObject {
                     hits.down = true;
                 }
                 // Up-Right sensor.
-                if (!hits.up && !hits.right && this.sensors[1].dist !== -1 && this.sensors[1].dist <= this.bumpRange) {
+                if (!hits.up && !hits.right && this.sensors[1].dist !== -1 &&
+                        this.sensors[1].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vx = this.vx > 0 ? -this.vx*this.bumpFactor : this.vx;
                     this.vy = this.vy < 0 ? -this.vy*this.bumpFactor : this.vy;
@@ -764,7 +790,8 @@ class Player extends GameObject {
                     this.y -= this.bumpRange/2 - this.sensors[1].dist/2 + 1;
                 }
                 // Up-Left sensor.
-                if (!hits.up && !hits.left && this.sensors[3].dist !== -1 && this.sensors[3].dist <= this.bumpRange) {
+                if (!hits.up && !hits.left && this.sensors[3].dist !== -1 &&
+                        this.sensors[3].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vx = this.vx < 0 ? -this.vx*this.bumpFactor : this.vx;
                     this.vy = this.vy < 0 ? -this.vy*this.bumpFactor : this.vy;
@@ -772,7 +799,8 @@ class Player extends GameObject {
                     this.y -= this.bumpRange/2 - this.sensors[3].dist/2 + 1;
                 }
                 // Down-Left sensor.
-                if (!hits.down && !hits.left && this.sensors[5].dist !== -1 && this.sensors[5].dist <= this.bumpRange) {
+                if (!hits.down && !hits.left && this.sensors[5].dist !== -1 &&
+                        this.sensors[5].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vx = this.vx < 0 ? -this.vx*this.bumpFactor : this.vx;
                     this.vy = this.vy > 0 ? -this.vy*this.bumpFactor : this.vy;
@@ -780,7 +808,8 @@ class Player extends GameObject {
                     this.y += this.bumpRange/2 - this.sensors[5].dist/2 + 1;
                 }
                 // Down-Right sensor.
-                if (!hits.down && !hits.right && this.sensors[7].dist !== -1 && this.sensors[7].dist <= this.bumpRange) {
+                if (!hits.down && !hits.right && this.sensors[7].dist !== -1 &&
+                        this.sensors[7].dist <= this.bumpRange) {
                     this.bumpTimer = this.bumpTimerMax;
                     this.vx = this.vx > 0 ? -this.vx*this.bumpFactor : this.vx;
                     this.vy = this.vy > 0 ? -this.vy*this.bumpFactor : this.vy;
@@ -796,7 +825,8 @@ class Player extends GameObject {
         }
         
         // Adjust bounds.
-        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,
+            top:this.y-this.size,bottom:this.y+this.size};
 
         // Pellet stuff.
         if (this.pelletCooldown <= 0) {
@@ -820,10 +850,14 @@ class Player extends GameObject {
 
         let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
         let poss = [];
-        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle)*this.size,this.y-sinF(this.angle)*this.size));
-        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI*3/4)*this.size,this.y-sinF(this.angle+PI*3/4)*this.size));
-        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI)*this.size/3,this.y-sinF(this.angle+PI)*this.size/3));
-        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI*5/4)*this.size,this.y-sinF(this.angle+PI*5/4)*this.size));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle)*this.size,
+            this.y-sinF(this.angle)*this.size));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI*3/4)*this.size,
+            this.y-sinF(this.angle+PI*3/4)*this.size));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI)*this.size/3,
+            this.y-sinF(this.angle+PI)*this.size/3));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI*5/4)*this.size,
+            this.y-sinF(this.angle+PI*5/4)*this.size));
         c.beginPath();
         c.moveTo(poss[0].x,poss[0].y);
         for (let i = 1; i < poss.length; i++) {
@@ -859,7 +893,8 @@ class Triangle extends GameObject {
 
     Contains(p) {
         // First, ensure the point is within the bounds of this object
-        if (p.x < this.bounds.left || p.x > this.bounds.right || p.y < this.bounds.top || p.y > this.bounds.bottom) {
+        if (p.x < this.bounds.left || p.x > this.bounds.right || 
+                p.y < this.bounds.top || p.y > this.bounds.bottom) {
             return false;
         }
 
@@ -928,7 +963,8 @@ class Pellet extends GameObject {
         this.vy = vy;
         this.gameStage = gs;
         // Adjust bounds.
-        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,
+            top:this.y-this.size,bottom:this.y+this.size};
 
         this.lifetime = 2000;
     }
@@ -944,7 +980,8 @@ class Pellet extends GameObject {
         this.y += this.vy * dT;
 
         // Adjust bounds.
-        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,
+            top:this.y-this.size,bottom:this.y+this.size};
 
         let rc = Raycast(this.x,this.y,0,1,this.gameStage.world,this.gameStage.terrain,1);
 
@@ -1015,7 +1052,8 @@ class Camera {
         this.zoom *= f;
         this.width /= f;
         this.height /= f;
-        this.bounds = {left:this.x-this.width/2,right:this.x+this.width/2,top:this.y-this.height/2,bottom:this.y+this.height/2};
+        this.bounds = {left:this.x-this.width/2,right:this.x+this.width/2,
+            top:this.y-this.height/2,bottom:this.y+this.height/2};
     }
 
     Zoom(f) {
@@ -1228,7 +1266,7 @@ class Testground extends GameStage {
         this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
         
         this.bgmusic = new Audio("audio/bgmusic.mp3");
-        this.bgmusic.volume = 0.2;
+        this.bgmusic.volume = 0.4;
         this.bgmusic.loop = true;
         this.bgmusic.play();
 
@@ -1267,7 +1305,8 @@ class Testground extends GameStage {
     Tick(dT) {
         super.Tick(dT);
 
-        if (this.world[this.players[this.localPlayerID]] && this.world[this.players[this.localPlayerID]].lives <= 0) {
+        if (this.world[this.players[this.localPlayerID]] && 
+                this.world[this.players[this.localPlayerID]].lives <= 0) {
             this.world[this.players[this.localPlayerID]].Die();
             this.camera.SetTarget(null);
             this.Remove(this.players[this.localPlayerID]);
