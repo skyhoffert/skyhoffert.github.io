@@ -580,6 +580,14 @@ class Player extends GameObject {
 
         this.brakeIncrement = 0.0002;
 
+        this.trailPts = [];
+        this.trailPtsMax = 10;
+        this.trailAddTimerMax = 10;
+        this.trailAddTimer = this.trailAddTimerMax;
+        for (let i = 0; i < this.trailPtsMax; i++) {
+            this.trailPts.push({x:this.x,y:this.y});
+        }
+
         this.debugUI = new DebugUI();
         this.gameStage.Add(this.debugUI,"debug");
         this.playerUI = new PlayerUI(this);
@@ -655,6 +663,7 @@ class Player extends GameObject {
             this.exhaustCooldown -= dT;
         }
 
+        // iframe timer.
         if (this.iframeTimer > 0) {
             this.iframeTimer -= dT;
             this.iframeBlinkTimer -= dT;
@@ -706,7 +715,6 @@ class Player extends GameObject {
         if (this.strafeTimerRight > 0) {
             this.strafeTimerRight -= dT;
         }
-
         if (this.keys["a"]) {
             if (this.strafeTimerLeft <= 0) {
                 this.vx += cosF(this.angle + PI/2) * this.strafeImpulse * dT;
@@ -765,6 +773,7 @@ class Player extends GameObject {
             }
         }
         
+        // Check if hit any terrain.
         if (numHits > 0) {
             if (this.iframeTimer <= 0) {
                 this.Hit();
@@ -865,12 +874,33 @@ class Player extends GameObject {
             this.pelletCooldown -= dT;
             this.pelletWantToFire = false;
         }
+
+        // Trail stuff
+        if (this.trailAddTimer > 0) {
+            this.trailAddTimer -= dT;
+        } else {
+            this.trailAddTimer = this.trailAddTimerMax;
+            this.trailPts.splice(this.trailPts.length-1,1);
+            this.trailPts.splice(0,0,{x:this.x,y:this.y});
+        }
     }
 
     Draw(c) {
         if (!this.gameStage.camera.InCam(this)) { return; }
 
-        let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
+        let p = this.gameStage.camera.ScreenPosition(this.trailPts[0].x,this.trailPts[0].y);
+        for (let i = 1; i < this.trailPtsMax; i++) {
+            c.beginPath();
+            c.moveTo(p.x,p.y);
+            p = this.gameStage.camera.ScreenPosition(this.trailPts[i].x,this.trailPts[i].y);
+            c.lineTo(p.x,p.y);
+            c.strokeStyle = this.color;
+            c.globalAlpha = (1-i/this.trailPtsMax)*0.7;
+            c.lineWidth = 10*(1-i/this.trailPtsMax)*this.gameStage.camera.zoom;
+            c.stroke();
+        }
+        c.globalAlpha = 1.0;
+
         let poss = [];
         poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle)*this.size,
             this.y-sinF(this.angle)*this.size));
@@ -992,12 +1022,24 @@ class Pellet extends GameObject {
             top:this.y-this.size,bottom:this.y+this.size};
 
         this.lifetime = 2000;
+        this.trailGainTimeMax = 10;
+        this.trailGainTime = this.trailGainTimeMax;
+        this.trails = 3;
+        this.trailsMax = 20;
+        this.trailSpacing = 5;
     }
 
     Contains(p) { return false; }
 
     Tick(dT) {
         if (this.gameStage.menu.pauseUI.active) { return; }
+
+        if (this.trailGainTime > 0) {
+            this.trailGainTime -= dT;
+        } else if (this.trails < this.trailsMax) {
+            this.trailGainTime = this.trailGainTimeMax;
+            this.trails++;
+        }
 
         this.lifetime -= dT;
 
@@ -1024,6 +1066,17 @@ class Pellet extends GameObject {
         c.lineWidth = 3*this.gameStage.camera.zoom;
         c.strokeStyle = this.color;
         c.stroke();
+
+        for (let i = 0; i < this.trails; i++) {
+            let p = this.gameStage.camera.ScreenPosition(this.x - this.vx*i*this.trailSpacing, this.y - this.vy*i*this.trailSpacing);
+            c.beginPath();
+            c.arc(p.x,p.y,this.size*this.gameStage.camera.zoom,0,TWOPI);
+            c.lineWidth = 3*this.gameStage.camera.zoom;
+            c.globalAlpha = 0.7/(i+1);
+            c.strokeStyle = this.color;
+            c.stroke();
+        }
+        c.globalAlpha = 1.0;
     }
 }
 
@@ -1133,13 +1186,13 @@ class GameStage {
         this.world = [];
         this.terrain = [];
         this.players = [];
-        this.pellets = [];
         this.debugObjs = [];
         this.drawOrder = [];
         this.camera = new Camera(-WIDTH/2,WIDTH/2,-HEIGHT/2,HEIGHT/2);
         this.localPlayerID = -1;
         this.zoomable = true;
         this.zoomFactor = 1.1;
+        this.cameraShouldTick = true;
     }
 
     Destroy() {
@@ -1155,8 +1208,6 @@ class GameStage {
             this.terrain.push(this.world.length);
         } else if (t === "debug") {
             this.debugObjs.push(this.world.length);
-        } else if (t === "pellet") {
-            this.pellets.push(this.world.length);
         }
 
         this.world.push(o);
@@ -1186,16 +1237,6 @@ class GameStage {
                 j--;
             } else if (this.players[j] > i) {
                 this.players[j]--;
-            }
-        }
-
-        // remove from pellets.
-        for (let j = 0; j < this.pellets.length; j++) {
-            if (this.pellets[j] === i) {
-                this.pellets.splice(j,1);
-                j--;
-            } else if (this.pellets[j] > i) {
-                this.pellets[j]--;
             }
         }
 
@@ -1257,7 +1298,9 @@ class GameStage {
     }
 
     Tick(dT) {
-        this.camera.Tick(dT);
+        if (this.cameraShouldTick) {
+            this.camera.Tick(dT);
+        }
 
         // Tick in reverse order so things can be removed.
         for (let i = this.world.length-1; i >= 0; i--) {
@@ -1329,6 +1372,8 @@ class Testground extends GameStage {
     }
 
     Tick(dT) {
+        this.cameraShouldTick = !this.menu.pauseUI.active;
+
         super.Tick(dT);
 
         if (this.world[this.players[this.localPlayerID]] && 
@@ -1336,8 +1381,9 @@ class Testground extends GameStage {
             this.world[this.players[this.localPlayerID]].Die();
             this.camera.SetTarget(null);
             this.Remove(this.players[this.localPlayerID]);
-            this.localPlayerID = 0;
-            this.Add(new Player(0,0,this.localPlayerID,this),"player");
+            // DEBUG
+            this.localPlayerID = -1;
+            //this.Add(new Player(0,0,this.localPlayerID,this),"player");
         }
     }
 }
