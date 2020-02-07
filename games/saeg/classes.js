@@ -551,6 +551,13 @@ class Player extends GameObject {
         this.maxLives = 3;
         this.lives = this.maxLives;
 
+        this.iframeTimer = 0;
+        this.iframeTimerMax = 1200;
+        this.iframeBlinkTimer = 0;
+        this.iframeBlinkTimerMax = 200;
+        this.iframeBlinkOn = false;
+        this.iframeColor = "#808090";
+
         this.pelletSpeed = 0.6;
         this.pelletCooldown = 0;
         this.pelletCooldownMax = 1000;
@@ -567,10 +574,6 @@ class Player extends GameObject {
         this.strafeTimerRight = 0;
         this.strafeTimerMax = 800;
         this.strafeImpulse = 0.0085;
-        this.strafeLeftVel = 0;
-        this.strafeRightVel = 0;
-        this.strafeLeftVelTime = 0;
-        this.strafeRightVelTime = 0;
 
         this.exhaustCooldown = 0;
         this.exhaustCooldownMax = 50;
@@ -597,6 +600,11 @@ class Player extends GameObject {
 
         this.accelAudio.pause();
         this.pelletAudio.pause();
+    }
+
+    Hit() {
+        this.lives--;
+        this.iframeTimer = this.iframeTimerMax;
     }
 
     Contains(p) {
@@ -645,6 +653,18 @@ class Player extends GameObject {
 
         if (this.exhaustCooldown > 0) {
             this.exhaustCooldown -= dT;
+        }
+
+        if (this.iframeTimer > 0) {
+            this.iframeTimer -= dT;
+            this.iframeBlinkTimer -= dT;
+            if (this.iframeBlinkTimer <= 0) {
+                this.iframeBlinkOn = !this.iframeBlinkOn;
+                this.iframeBlinkTimer = this.iframeBlinkTimerMax;
+            }
+        } else {
+            this.iframeBlinkTimer = 0;
+            this.iframeBlinkOn = false;
         }
 
         // Forward/backward acceleration.
@@ -746,7 +766,9 @@ class Player extends GameObject {
         }
         
         if (numHits > 0) {
-            this.lives--;
+            if (this.iframeTimer <= 0) {
+                this.Hit();
+            }
         }
         
         if (this.bumpTimer <= 0) {
@@ -868,6 +890,9 @@ class Player extends GameObject {
         c.fill();
         c.lineWidth = 3*this.gameStage.camera.zoom;
         c.strokeStyle = this.color;
+        if (this.iframeBlinkOn) {
+            c.strokeStyle = this.iframeColor;
+        }
         c.stroke();
     }
 }
@@ -875,7 +900,7 @@ class Player extends GameObject {
 class Triangle extends GameObject {
     constructor(p1,p2,p3,c,dts,gs) {
         super(0,0,-1,c);
-        this.colorFill = "#100202";
+        this.colorFill = "#200404";
         let l = p1.x <= p2.x && p1.x <= p3.x ? p1.x : p2.x <= p1.x && p2.x <= p3.x ? p2.x : p3.x;
         let r = p1.x >= p2.x && p1.x >= p3.x ? p1.x : p2.x >= p1.x && p2.x >= p3.x ? p2.x : p3.x;
         let t = p1.y <= p2.y && p1.y <= p3.y ? p1.y : p2.y <= p1.y && p2.y <= p3.y ? p2.y : p3.y;
@@ -1267,6 +1292,7 @@ class Testground extends GameStage {
         
         this.bgmusic = new Audio("audio/bgmusic.mp3");
         this.bgmusic.volume = 0.4;
+        this.bgmusic.volume = 0; // DEBUG
         this.bgmusic.loop = true;
         this.bgmusic.play();
 
