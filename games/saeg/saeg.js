@@ -68,6 +68,9 @@ canvas.addEventListener("mousedown", function (evt) {
 canvas.addEventListener("mouseup", function (evt) {
     gameStage.UserInput({type:"mouseButton",btn:evt.button,down:false});
 }, false);
+canvas.addEventListener("wheel", function (evt) {
+    gameStage.UserInput({type:"mouseWheel",dY:evt.deltaY});
+}, false);
 
 function Tick(dT) {
     gameStage.Tick(dT);

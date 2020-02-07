@@ -157,13 +157,13 @@ class MainMenuUI extends GameObject {
         this.buttons.push({obj:new TitleButton(),func: function() {}});
 
         // Start
-        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2,360,100,"Begin","white","60px Monospace"),
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2-30,360,100,"Begin","white","60px Monospace"),
             func: function() {
                 this.fading = true;
             }});
 
         // Other
-        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2+120,360,100,"...","white","60px Monospace"),
+        this.buttons.push({obj:new MenuButton(WIDTH/2,HEIGHT/2+80,360,100,"Levels","white","60px Monospace"),
             func: function() {
                 gameStage = new LevelsMenu();
             }});
@@ -232,15 +232,21 @@ class LevelsUI extends GameObject {
         this.fadingTime = this.fadingTimeMax;
         this.targetLevel = null;
 
-        this.buttons.push({obj:new MenuButton(160,40,320,100,"<- Back","white","80px Monospace",),
+        this.buttons.push({obj:new MenuButton(140,40,280,100,"<- Back","white","60px Monospace"),
             func:function() {
                 gameStage = new MainMenu();
             }});
         // Stages
-        this.buttons.push({obj:new MenuButton(100,200,100,100,"1","white","80px Monospace",),
+        this.buttons.push({obj:new MenuButton(130,200,240,100,"Testground","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
             func: function() {
                 this.targetLevel = "Testground";
                 this.fading = true;
+            }});
+        // Stages
+        this.buttons.push({obj:new MenuButton(380,200,240,100,"TODO","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
+            func: function() {
+                //this.targetLevel = "Asteroids";
+                //this.fading = true;
             }});
     }
 
@@ -813,15 +819,20 @@ class Player extends GameObject {
         if (!this.gameStage.camera.InCam(this)) { return; }
 
         let pos = this.gameStage.camera.ScreenPosition(this.x,this.y);
+        let poss = [];
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle)*this.size,this.y-sinF(this.angle)*this.size));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI*3/4)*this.size,this.y-sinF(this.angle+PI*3/4)*this.size));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI)*this.size/3,this.y-sinF(this.angle+PI)*this.size/3));
+        poss.push(this.gameStage.camera.ScreenPosition(this.x+cosF(this.angle+PI*5/4)*this.size,this.y-sinF(this.angle+PI*5/4)*this.size));
         c.beginPath();
-        c.moveTo(pos.x+cosF(this.angle)*this.size,pos.y-sinF(this.angle)*this.size);
-        c.lineTo(pos.x+cosF(this.angle+PI*3/4)*this.size,pos.y-sinF(this.angle+PI*3/4)*this.size);
-        c.lineTo(pos.x+cosF(this.angle+PI)*this.size/3,pos.y-sinF(this.angle+PI)*this.size/3);
-        c.lineTo(pos.x+cosF(this.angle+PI*5/4)*this.size,pos.y-sinF(this.angle+PI*5/4)*this.size);
+        c.moveTo(poss[0].x,poss[0].y);
+        for (let i = 1; i < poss.length; i++) {
+            c.lineTo(poss[i].x,poss[i].y);
+        }
         c.closePath();
         c.fillStyle = this.colorFill;
         c.fill();
-        c.lineWidth = 3;
+        c.lineWidth = 3*this.gameStage.camera.zoom;
         c.strokeStyle = this.color;
         c.stroke();
     }
@@ -879,7 +890,7 @@ class Triangle extends GameObject {
         }
         c.fillStyle = this.colorFill;
         c.fill();
-        c.lineWidth = 3;
+        c.lineWidth = 3*this.gameStage.camera.zoom;
         c.strokeStyle = this.color;
         c.stroke();
     }
@@ -947,7 +958,8 @@ class Pellet extends GameObject {
 
         let pos = this.gameStage.camera.ScreenPosition(this.x, this.y);
         c.beginPath();
-        c.arc(pos.x,pos.y,this.size,0,TWOPI);
+        c.arc(pos.x,pos.y,this.size*this.gameStage.camera.zoom,0,TWOPI);
+        c.lineWidth = 3*this.gameStage.camera.zoom;
         c.strokeStyle = this.color;
         c.stroke();
     }
@@ -963,6 +975,11 @@ class Camera {
         this.target = null;
         this.tracking = false;
         this.trackingFactor = 0.004;
+        this.zoom = 1.0;
+        this.shouldSmoothZoom = true;
+        this.smoothZooming = false;
+        this.targetZoom = 1.0;
+        this.maxSmoothZoomIncrement = 0.05;
     }
     
     SetTarget(o) {
@@ -980,16 +997,43 @@ class Camera {
     }
 
     ScreenPosition(x,y) {
-        return {x:x-this.x+this.width/2,y:y-this.y+this.height/2};
+        return {x:(x-this.x+this.width/2)*this.zoom,y:(y-this.y+this.height/2)*this.zoom};
     }
 
     Move(x,y) {
+        x /= this.zoom;
+        y /= this.zoom;
         this.bounds.left += x;
         this.bounds.right += x;
         this.x += x;
         this.bounds.top += y;
         this.bounds.bottom += y;
         this.y += y;
+    }
+
+    _Zoom(f) {
+        this.zoom *= f;
+        this.width /= f;
+        this.height /= f;
+        this.bounds = {left:this.x-this.width/2,right:this.x+this.width/2,top:this.y-this.height/2,bottom:this.y+this.height/2};
+    }
+
+    Zoom(f) {
+        if (this.shouldSmoothZoom) {
+            this.targetZoom = this.zoom*f;
+            this.smoothZooming = true;
+        } else {
+            this._Zoom(f);
+        }
+    }
+
+    ZoomTo(z) {
+        if (this.shouldSmoothZoom) {
+            this.targetZoom = z;
+            this.smoothZooming = true;
+        } else {
+            this._Zoom(z/this.zoom);
+        }
     }
 
     Tick(dT) {
@@ -1006,6 +1050,18 @@ class Camera {
 
             this.Move(dx*this.trackingFactor * dT, dy*this.trackingFactor * dT);
         }
+
+        if (this.smoothZooming) {
+            let dZ = (this.targetZoom-this.zoom)/10;
+            if (Math.abs(dZ) < 0.0002) {
+                this.smoothZooming = false;
+                this._Zoom(this.targetZoom/this.zoom);
+            } else if (Math.abs(dZ) > this.maxSmoothZoomIncrement) {
+                this._Zoom(1+Math.sign(dZ)*this.maxSmoothZoomIncrement);
+            } else {
+                this._Zoom(1+dZ);
+            }
+        }
     }
 }
 
@@ -1019,6 +1075,8 @@ class GameStage {
         this.drawOrder = [];
         this.camera = new Camera(-WIDTH/2,WIDTH/2,-HEIGHT/2,HEIGHT/2);
         this.localPlayerID = -1;
+        this.zoomable = true;
+        this.zoomFactor = 1.1;
     }
 
     Destroy() {
@@ -1122,6 +1180,13 @@ class GameStage {
     }
 
     UserInput(t) {
+        if (this.zoomable && t.type === "mouseWheel") {
+            if (t.dY < 0) {
+                this.camera.Zoom(this.zoomFactor);
+            } else {
+                this.camera.Zoom(1/this.zoomFactor);
+            }
+        }
         if (this.localPlayerID === -1 || this.world.length === 0) { return; }
 
         // Apply user input to the local player.
@@ -1193,7 +1258,9 @@ class Testground extends GameStage {
     
     UserInput(t) {
         if (!this.menu.UserInput(t)) {
-            super.UserInput(t);
+            if (!this.menu.pauseUI.active) {
+                super.UserInput(t);
+            }
         }
     }
 
@@ -1214,6 +1281,8 @@ class MainMenu extends GameStage {
     constructor() {
         super();
 
+        this.zoomable = false;
+
         this.menu = new MainMenuUI();
         this.Add(this.menu,"debug");
     }
@@ -1228,6 +1297,8 @@ class MainMenu extends GameStage {
 class LevelsMenu extends GameStage {
     constructor() {
         super();
+        
+        this.zoomable = false;
 
         this.menu = new LevelsUI();
         this.Add(this.menu,"debug");
