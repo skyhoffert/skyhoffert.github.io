@@ -9,8 +9,10 @@ class GameObject {
         this.color = c;
         this.bounds = {left:0,right:0,top:0,bottom:0};
         this.active = true;
+        this.type = "";
     }
     
+    Impact(t) {}
     Contains(p) { return false; }
     Tick(dT) {}
     Draw(c) {}
@@ -23,6 +25,7 @@ class DebugRay extends GameObject {
         this.y2 = y2;
         this.lineWidth = 1;
         this.singleFrame = sf;
+        this.type = "DebugRay";
     }
 
     Tick(dT) {
@@ -517,6 +520,7 @@ class Player extends GameObject {
     constructor(x,y,id,gs) {
         super(x,y,0,"#404080");
         this.colorFill = "#101020";
+        this.type = "Player";
         this.vx = 0;
         this.vy = 0;
         this.accel = 0.00025;
@@ -686,7 +690,7 @@ class Player extends GameObject {
             
             if (this.exhaustCooldown <= 0) {
                 let ro = Math.random()*PI/8 - PI/16;
-                this.gameStage.Add(new Pellet(this.x-this.size*cosF(this.angle),
+                this.gameStage.Add(new ExhaustPellet(this.x-this.size*cosF(this.angle),
                     this.y+this.size*sinF(this.angle),
                     this.vx-this.pelletSpeed*cosF(this.angle+ro),
                     this.vy+this.pelletSpeed*sinF(this.angle+ro),
@@ -927,10 +931,117 @@ class Player extends GameObject {
     }
 }
 
+class Asteroid extends GameObject{
+    constructor(x,y,vx,vy,s,c,gs) {
+        super(x,y,-1,c);
+        this.size = s;
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.colorFill = "#141414";
+        this.vx = vx;
+        this.vy = vy;
+        this.type = "Asteroid";
+        this.gameStage = gs;
+        this.angle = 0;
+        this.rotationRate = Math.random()/1000;
+        
+        this.surface = [{angle:0,distance:this.size}];
+        let i = 0;
+        while (this.surface[this.surface.length-1].angle < TWOPI) {
+            this.surface.push({angle:this.surface[i].angle + Math.random()*Math.PI/3+Math.PI/8,
+                distance:Math.random() * this.size/5 + this.size*9/10});
+            i++;
+        }
+        this.surface.splice(this.surface.length-1,1);
+    }
+
+    Impact(t) {
+        if (t === "Pellet") {
+            this.active = false;
+
+            // TODO: not super happy with this, but it works for now.
+            let tries = 0;
+            let rm = this.size**3;
+            while (rm - ASTEROID_MIN_MASS - rm/100 > ASTEROID_MIN_MASS && tries < 10) {
+                let gens = Math.random() * this.size*0.5;
+                let genm = gens**3;
+                if (genm > ASTEROID_MIN_MASS) {
+                    this.gameStage.Add(new Asteroid(this.x+(Math.random()-0.5)*this.size,this.y+(Math.random()-0.5)*this.size,
+                        this.vx*(Math.random()-0.2),this.vy*(Math.random()-0.2),gens,this.color,this.gameStage),"terrain");
+                    rm -= genm;
+                }
+                tries++;
+            }
+        }
+    }
+
+    Contains(p) {
+        return Distance(p.x,p.y,this.x,this.y) < this.size;
+    }
+
+    Tick(dT) {
+        this.x += this.vx * dT;
+        this.y += this.vy * dT;
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.angle += this.rotationRate * dT;
+    }
+
+    Draw(c) {
+        if (!this.gameStage.camera.InCam(this)) { return; }
+
+        c.beginPath();
+        let pos = this.gameStage.camera.ScreenPosition(this.x + cosF(this.surface[0].angle+this.angle)*this.surface[0].distance,
+            this.y - sinF(this.surface[0].angle+this.angle)*this.surface[0].distance);
+        c.moveTo(pos.x,pos.y);
+        for (let i = 1; i < this.surface.length; i++) {
+            pos = this.gameStage.camera.ScreenPosition(this.x + cosF(this.surface[i].angle+this.angle)*this.surface[i].distance,
+                this.y - sinF(this.surface[i].angle+this.angle)*this.surface[i].distance);
+            c.lineTo(pos.x,pos.y);
+        }
+        c.closePath();
+        c.fillStyle = this.colorFill;
+        c.fill();
+        c.strokeStyle = this.color;
+        c.lineWidth = 4*this.gameStage.camera.zoom;
+        c.stroke();
+    }
+}
+
+class AsteroidSpawner extends GameObject {
+    constructor(x,y,r,mvx,mvy,minS,maxS,gs) {
+        super(x,y,0,"gray");
+        this.mvx = mvx;
+        this.mvy = mvy;
+        this.minSize = minS;
+        this.maxSize = maxS;
+        this.gameStage = gs;
+
+        this.spawnTimerMax = r;
+        this.spawnTimer = this.spawnTimerMax;
+    }
+
+    Tick(dT) {
+        this.spawnTimer -= dT;
+        if (this.spawnTimer < 0) {
+            this.spawnTimer = this.spawnTimerMax;
+            let s = (this.maxSize - this.minSize)*Math.random() + this.minSize;
+            this.gameStage.Add(new Asteroid(this.x,this.y,(Math.random()-0.5)*this.mvx,(Math.random()-0.5)*this.mvy,s,this.color,this.gameStage),"terrain");
+        }
+    }
+
+    Draw(c) {
+        let p = this.gameStage.camera.ScreenPosition(this.x,this.y);
+        c.beginPath();
+        c.arc(p.x,p.y,20*this.gameStage.camera.zoom,0,TWOPI);
+        c.strokeStyle = this.color;
+        c.stroke();
+    }
+}
+
 class Triangle extends GameObject {
     constructor(p1,p2,p3,c,dts,gs) {
         super(0,0,-1,c);
         this.colorFill = "#200404";
+        this.type = "Triangle";
         let l = p1.x <= p2.x && p1.x <= p3.x ? p1.x : p2.x <= p1.x && p2.x <= p3.x ? p2.x : p3.x;
         let r = p1.x >= p2.x && p1.x >= p3.x ? p1.x : p2.x >= p1.x && p2.x >= p3.x ? p2.x : p3.x;
         let t = p1.y <= p2.y && p1.y <= p3.y ? p1.y : p2.y <= p1.y && p2.y <= p3.y ? p2.y : p3.y;
@@ -991,6 +1102,7 @@ class Triangle extends GameObject {
 class Rectangle extends GameObject {
     constructor(l,t,r,b,c,gs) {
         super((l+r)/2,(b+t)/2,-1,c);
+        this.type = "Rectangle";
         this.t1 = new Triangle({x:l,y:t},{x:l,y:b},{x:r,y:b},c,false,gs);
         this.t2 = new Triangle({x:l,y:t},{x:r,y:t},{x:r,y:b},c,false,gs);
     }
@@ -1014,6 +1126,7 @@ class Pellet extends GameObject {
     constructor(x,y,vx,vy,s,c,gs) {
         super(x,y,0,c);
         this.size = s;
+        this.type = "Pellet";
         this.vx = vx;
         this.vy = vy;
         this.gameStage = gs;
@@ -1052,7 +1165,10 @@ class Pellet extends GameObject {
 
         let rc = Raycast(this.x,this.y,0,1,this.gameStage.world,this.gameStage.terrain,1);
 
-        if (rc.hit || this.lifetime <= 0) {
+        if (rc.hit) {
+            this.active = false;
+            rc.obj.Impact(this.type);
+        } else if (this.lifetime <= 0) {
             this.active = false;
         }
     }
@@ -1077,6 +1193,13 @@ class Pellet extends GameObject {
             c.stroke();
         }
         c.globalAlpha = 1.0;
+    }
+}
+
+class ExhaustPellet extends Pellet {
+    constructor(x,y,vx,vy,s,c,gs) {
+        super(x,y,vx,vy,s,c,gs);
+        this.type = "ExhaustPellet";
     }
 }
 
@@ -1332,6 +1455,9 @@ class Testground extends GameStage {
         this.Add(new Rectangle(200,-200,400,200,"red",this),"terrain");
 
         this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
+
+        // DEBUG
+        this.Add(new AsteroidSpawner(-500,-500,3000,0.1,0.1,10,30,this),"debug");
         
         this.bgmusic = new Audio("audio/bgmusic.mp3");
         this.bgmusic.volume = 0.4;
