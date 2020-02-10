@@ -314,6 +314,30 @@ class LevelsUI extends GameObject {
     }
 }
 
+class LoadUI extends GameObject {
+    constructor() {
+        super(0,0,100,"white");
+        this.loadPercent = 0.01;
+        this.active = true;
+    }
+
+    Tick(dT) {
+        if (this.active) {
+            if (this.loadPercent >= 1) {
+                this.active = false;
+            }
+        }
+    }
+
+    Draw(c) {
+        if (!this.active) { return; }
+        c.fillStyle = this.color;
+        c.fillRect(WIDTH/4,HEIGHT*3/4,WIDTH/2*this.loadPercent,20);
+        c.strokeStyle = "gray";
+        c.strokeRect(WIDTH/4,HEIGHT*3/4,WIDTH/2,20);
+    }
+}
+
 class PauseUI extends GameObject {
     constructor() {
         super(0,0,100,"white");
@@ -573,6 +597,7 @@ class Player extends GameObject {
         this.accelAudio = new Audio("audio/accel.wav");
         this.accelAudio.volume = 0.1;
         this.accelAudio.loop = true;
+        this.nAudioClips = 2;
 
         this.strafeTimerLeft = 0;
         this.strafeTimerRight = 0;
@@ -596,6 +621,18 @@ class Player extends GameObject {
         this.gameStage.Add(this.debugUI,"debug");
         this.playerUI = new PlayerUI(this);
         this.gameStage.Add(this.playerUI,"debug");
+    }
+
+    // Returns percentage complete loading audio files.
+    AudioLoadPercent() {
+        let p = 0;
+        if (this.pelletAudio.readyState === 4) {
+            p += 1/this.nAudioClips;
+        }
+        if (this.accelAudio.readyState === 4) {
+            p += 1/this.nAudioClips;
+        }
+        return p;
     }
 
     ToggleSound() {
@@ -1534,6 +1571,9 @@ class GameStage {
 class Testground extends GameStage {
     constructor() {
         super();
+        this.musicloaded = false;
+        this.playerAudioLoaded = false;
+
         this.Add(new Player(0,0,this.localPlayerID,this),"player");
         this.localPlayerID = 0;
 
@@ -1551,13 +1591,29 @@ class Testground extends GameStage {
             this.Add(new Star((Math.random()-0.5)*WIDTH*20,(Math.random()-0.5)*HEIGHT*20,Math.random()*1.2+0.2,"white",this),"");
         }
         
+        this.menu = new GameUI(this);
+        this.Add(this.menu,"debug");
+        this.loadUI = new LoadUI(this);
+        this.Add(this.loadUI,"debug");
+
+        this.bgmusicLoadpercent = 0;
+        this.loadPercent = 0;
+        
         this.bgmusic = new Audio("audio/bgmusic.mp3");
         this.bgmusic.volume = 0.4;
         this.bgmusic.loop = true;
-        this.bgmusic.play();
-
-        this.menu = new GameUI(this);
-        this.Add(this.menu,"debug");
+        this.bgmusic.started = false;
+        this.bgmusic.addEventListener("loadeddata", function () {
+            if (gameStage.bgmusic.readyState === 2) {
+                if (gameStage.bgmusicLoadpercent < 0.4) {
+                    gameStage.bgmusicLoadpercent = 0.5;
+                }
+            }
+        }, false);
+        this.bgmusic.addEventListener("canplaythrough", function () {
+            gameStage.bgmusicLoadpercent = 1;
+            gameStage.musicloaded = true;
+        }, false);
     }
 
     Destroy() {
@@ -1581,6 +1637,7 @@ class Testground extends GameStage {
     }
     
     UserInput(t) {
+        if (!this.musicloaded || !this.playerAudioLoaded) { return; }
         if (!this.menu.UserInput(t)) {
             if (!this.menu.pauseUI.active) {
                 super.UserInput(t);
@@ -1589,6 +1646,25 @@ class Testground extends GameStage {
     }
 
     Tick(dT) {
+        let ml = true;
+        let pl = true;
+        if (!this.musicloaded) { ml = false; }
+        if (!this.playerAudioLoaded) {
+            let p = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
+            this.loadPercent = this.bgmusicLoadpercent/2 + p/2;
+            this.loadUI.loadPercent = this.loadPercent;
+            this.playerAudioLoaded = p >= 1;
+            if (!this.playerAudioLoaded) {
+                pl = false;
+            }
+        }
+        if (!ml || !pl) { return; } else {
+            if (!this.bgmusic.started) {
+                this.bgmusic.play();
+                this.bgmusic.started = true;
+            }
+        }
+
         this.cameraShouldTick = !this.menu.pauseUI.active;
 
         super.Tick(dT);
@@ -1598,9 +1674,8 @@ class Testground extends GameStage {
             this.world[this.players[this.localPlayerID]].Die();
             this.camera.SetTarget(null);
             this.Remove(this.players[this.localPlayerID]);
-            // DEBUG
-            this.localPlayerID = -1;
-            //this.Add(new Player(0,0,this.localPlayerID,this),"player");
+            this.localPlayerID = this.players.length;
+            this.Add(new Player(0,0,this.localPlayerID,this),"player");
         }
     }
 }
