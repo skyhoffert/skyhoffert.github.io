@@ -319,9 +319,11 @@ class LoadUI extends GameObject {
         super(0,0,100,"white");
         this.loadPercent = 0.01;
         this.active = true;
+        this.elapsed = 0;
     }
 
     Tick(dT) {
+        this.elapsed += dT;
         if (this.active) {
             if (this.loadPercent >= 1) {
                 this.active = false;
@@ -335,6 +337,13 @@ class LoadUI extends GameObject {
         c.fillRect(WIDTH/4,HEIGHT*3/4,WIDTH/2*this.loadPercent,20);
         c.strokeStyle = "gray";
         c.strokeRect(WIDTH/4,HEIGHT*3/4,WIDTH/2,20);
+
+        let ang = this.elapsed/200;
+        c.beginPath();
+        c.ellipse(WIDTH/2,HEIGHT*3/4-80,Math.abs(sinF(ang)*20),20,0,0,TWOPI);
+        c.fillStyle = "blue";
+        c.lineWidth = 3;
+        c.fill();
     }
 }
 
@@ -592,9 +601,9 @@ class Player extends GameObject {
         this.pelletWantToFire = false;
 
         this.playAudio = true;
-        this.pelletAudio = new Audio("audio/shoot.wav");
+        this.pelletAudio = AUDIO_shoot;
         this.pelletAudio.volume = 0.05;
-        this.accelAudio = new Audio("audio/accel.wav");
+        this.accelAudio = AUDIO_accel;
         this.accelAudio.volume = 0.1;
         this.accelAudio.loop = true;
         this.nAudioClips = 2;
@@ -991,8 +1000,7 @@ class Asteroid extends GameObject{
         }
         this.surface.splice(this.surface.length-1,1);
         
-        this.boomAudio = new Audio("audio/boom.wav");
-        this.boomAudio.volume = this.size/60;
+        this.boomAudio = AUDIO_boom;
 
         this.boomPellets = 1;
         this.boomPelletSpeed = 0.6;
@@ -1023,6 +1031,7 @@ class Asteroid extends GameObject{
                 tries++;
             }
 
+            this.boomAudio.volume = this.size/60;
             this.boomAudio.play();
         }
     }
@@ -1439,7 +1448,6 @@ class GameStage {
         this.localPlayerID = -1;
         this.zoomable = true;
         this.zoomFactor = 1.1;
-        this.cameraShouldTick = true;
     }
 
     Destroy() {
@@ -1545,9 +1553,7 @@ class GameStage {
     }
 
     Tick(dT) {
-        if (this.cameraShouldTick) {
-            this.camera.Tick(dT);
-        }
+        this.camera.Tick(dT);
 
         // Tick in reverse order so things can be removed.
         for (let i = this.world.length-1; i >= 0; i--) {
@@ -1571,8 +1577,8 @@ class GameStage {
 class Testground extends GameStage {
     constructor() {
         super();
-        this.musicloaded = false;
-        this.playerAudioLoaded = false;
+        this.loading = true;
+        LoadAudio("Testground");
 
         this.Add(new Player(0,0,this.localPlayerID,this),"player");
         this.localPlayerID = 0;
@@ -1595,25 +1601,10 @@ class Testground extends GameStage {
         this.Add(this.menu,"debug");
         this.loadUI = new LoadUI(this);
         this.Add(this.loadUI,"debug");
-
-        this.bgmusicLoadpercent = 0;
-        this.loadPercent = 0;
         
-        this.bgmusic = new Audio("audio/bgmusic.mp3");
+        this.bgmusic = AUDIO_bgmusic;
         this.bgmusic.volume = 0.4;
         this.bgmusic.loop = true;
-        this.bgmusic.started = false;
-        this.bgmusic.addEventListener("loadeddata", function () {
-            if (gameStage.bgmusic.readyState === 2) {
-                if (gameStage.bgmusicLoadpercent < 0.4) {
-                    gameStage.bgmusicLoadpercent = 0.5;
-                }
-            }
-        }, false);
-        this.bgmusic.addEventListener("canplaythrough", function () {
-            gameStage.bgmusicLoadpercent = 1;
-            gameStage.musicloaded = true;
-        }, false);
     }
 
     Destroy() {
@@ -1637,7 +1628,8 @@ class Testground extends GameStage {
     }
     
     UserInput(t) {
-        if (!this.musicloaded || !this.playerAudioLoaded) { return; }
+        if (this.loading) { return; }
+
         if (!this.menu.UserInput(t)) {
             if (!this.menu.pauseUI.active) {
                 super.UserInput(t);
@@ -1645,27 +1637,45 @@ class Testground extends GameStage {
         }
     }
 
-    Tick(dT) {
-        let ml = true;
-        let pl = true;
-        if (!this.musicloaded) { ml = false; }
-        if (!this.playerAudioLoaded) {
-            let p = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
-            this.loadPercent = this.bgmusicLoadpercent/2 + p/2;
-            this.loadUI.loadPercent = this.loadPercent;
-            this.playerAudioLoaded = p >= 1;
-            if (!this.playerAudioLoaded) {
-                pl = false;
-            }
+    CheckIfLoaded() {
+        let pl = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
+        let sl = 0;
+
+        // Check readystate of bgmusic audio object. Once it is 4, we are done.
+        if (this.bgmusic.readyState === 1) {
+            sl = 0.2;
+        } else if (this.bgmusic.readyState === 2) {
+            sl = 0.4;
+        } else if (this.bgmusic.readyState === 3) {
+            sl = 0.6;
+        } else if (this.bgmusic.readyState === 4) {
+            sl = 1;
         }
-        if (!ml || !pl) { return; } else {
-            if (!this.bgmusic.started) {
-                this.bgmusic.play();
-                this.bgmusic.started = true;
-            }
+        let lp = pl/2 + sl/2;
+
+        // Reflect load percentage in the loadUI.
+        this.loadUI.loadPercent = lp;
+
+        // Once lp reaches 100%, loading is over. We can play bg music and start running game.
+        // I also destory the loadUI here.
+        if (lp >= 1) {
+            this.bgmusic.play();
+            this.loadUI = null;
+            this.loading = false;
+        }
+    }
+
+    Tick(dT) {
+        if (this.loading) {
+            this.loadUI.Tick(dT);
+            this.CheckIfLoaded();
+            return;
         }
 
-        this.cameraShouldTick = !this.menu.pauseUI.active;
+        if (this.menu.pauseUI.active) {
+            this.menu.Tick(dT);
+            return;
+        }
 
         super.Tick(dT);
 
