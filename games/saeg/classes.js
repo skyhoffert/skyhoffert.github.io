@@ -617,6 +617,7 @@ class Player extends GameObject {
     Hit() {
         this.lives--;
         this.iframeTimer = this.iframeTimerMax;
+        this.gameStage.camera.Shake(4,1);
     }
 
     Contains(p) {
@@ -933,7 +934,7 @@ class Player extends GameObject {
 
 class Asteroid extends GameObject{
     constructor(x,y,vx,vy,s,c,gs) {
-        super(x,y,-1,c);
+        super(x,y,-10,c);
         this.size = s;
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
         this.colorFill = "#141414";
@@ -952,11 +953,24 @@ class Asteroid extends GameObject{
             i++;
         }
         this.surface.splice(this.surface.length-1,1);
+        
+        this.boomAudio = new Audio("audio/boom.wav");
+        this.boomAudio.volume = this.size/60;
+
+        this.boomPellets = 1;
+        this.boomPelletSpeed = 0.6;
     }
 
     Impact(t) {
         if (t === "Pellet") {
             this.active = false;
+
+            for (let i = 0; i < this.boomPellets*this.size; i++) {
+                this.gameStage.Add(new ExhaustPellet(this.x+2*(Math.random()-0.5)*this.size,this.y+2*(Math.random()-0.5)*this.size,
+                    this.vx+this.boomPelletSpeed*2*(Math.random()-0.5),
+                    this.vy+this.boomPelletSpeed*2*(Math.random()-0.5),
+                    1,"#402020",this.gameStage),"pellet");
+            }
 
             // TODO: not super happy with this, but it works for now.
             let tries = 0;
@@ -971,6 +985,8 @@ class Asteroid extends GameObject{
                 }
                 tries++;
             }
+
+            this.boomAudio.play();
         }
     }
 
@@ -1037,10 +1053,42 @@ class AsteroidSpawner extends GameObject {
     }
 }
 
+class Star extends GameObject {
+    constructor(x,y,s,c,gs) {
+        super(x,y,-100,c);
+        this.size = s;
+        this.gameStage = gs;
+        this.brightness = 1;
+        this.flickerFreq = (Math.random()+0.2)/100;
+        this.flickerMag = 0.2;
+        this.brightnessMin = 0.2;
+        this.elapsed = 0;
+    }
+
+    Tick(dT) {
+        this.elapsed += dT;
+        this.brightness = Math.abs(cosF(this.elapsed*this.flickerFreq))*this.flickerMag + this.brightnessMin;
+    }
+
+    Draw(c) {
+        let p = this.gameStage.camera.ScreenPosition(this.x,this.y);
+
+        // TODO: is this the best way?
+        if (p.x/10 < 0 || p.x/10 > WIDTH || p.y/10 < 0 || p.y/10 > HEIGHT) { return; }
+
+        c.beginPath();
+        c.arc(p.x/10,p.y/10,this.size,0,TWOPI);
+        c.fillStyle = this.color;
+        c.globalAlpha = this.brightness;
+        c.fill();
+        c.globalAlpha = 1;
+    }
+}
+
 class Triangle extends GameObject {
     constructor(p1,p2,p3,c,dts,gs) {
-        super(0,0,-1,c);
-        this.colorFill = "#200404";
+        super(0,0,-20,c);
+        this.colorFill = "#3e1b0d";
         this.type = "Triangle";
         let l = p1.x <= p2.x && p1.x <= p3.x ? p1.x : p2.x <= p1.x && p2.x <= p3.x ? p2.x : p3.x;
         let r = p1.x >= p2.x && p1.x >= p3.x ? p1.x : p2.x >= p1.x && p2.x >= p3.x ? p2.x : p3.x;
@@ -1078,6 +1126,8 @@ class Triangle extends GameObject {
     Tick(dT){}
 
     Draw(c) {
+        if (!this.gameStage.camera.InCam(this)) { return; }
+
         let sp1 = this.gameStage.camera.ScreenPosition(this.p1.x,this.p1.y);
         let sp2 = this.gameStage.camera.ScreenPosition(this.p2.x,this.p2.y);
         let sp3 = this.gameStage.camera.ScreenPosition(this.p3.x,this.p3.y);
@@ -1104,7 +1154,8 @@ class Rectangle extends GameObject {
         super((l+r)/2,(b+t)/2,-1,c);
         this.type = "Rectangle";
         this.t1 = new Triangle({x:l,y:t},{x:l,y:b},{x:r,y:b},c,false,gs);
-        this.t2 = new Triangle({x:l,y:t},{x:r,y:t},{x:r,y:b},c,false,gs);
+        // TODO: cheating to avoid line of empty between triangles.
+        this.t2 = new Triangle({x:l-1,y:t},{x:r-1,y:t},{x:r-1,y:b},c,false,gs);
     }
 
     Contains(p) {
@@ -1124,7 +1175,7 @@ class Rectangle extends GameObject {
 
 class Pellet extends GameObject {
     constructor(x,y,vx,vy,s,c,gs) {
-        super(x,y,0,c);
+        super(x,y,-1,c);
         this.size = s;
         this.type = "Pellet";
         this.vx = vx;
@@ -1134,12 +1185,15 @@ class Pellet extends GameObject {
         this.bounds = {left:this.x-this.size,right:this.x+this.size,
             top:this.y-this.size,bottom:this.y+this.size};
 
-        this.lifetime = 2000;
+        this.lifetimeMax = 2000;
+        this.lifetime = this.lifetimeMax;
         this.trailGainTimeMax = 10;
         this.trailGainTime = this.trailGainTimeMax;
         this.trails = 3;
         this.trailsMax = 20;
         this.trailSpacing = 5;
+
+        this.decays = false;
     }
 
     Contains(p) { return false; }
@@ -1177,10 +1231,15 @@ class Pellet extends GameObject {
         if (!this.gameStage.camera.InCam(this)) { return; }
 
         let pos = this.gameStage.camera.ScreenPosition(this.x, this.y);
+        let al = 1;
+        if (this.decays) {
+            al = this.lifetime/this.lifetimeMax;
+        }
         c.beginPath();
         c.arc(pos.x,pos.y,this.size*this.gameStage.camera.zoom,0,TWOPI);
         c.lineWidth = 3*this.gameStage.camera.zoom;
         c.strokeStyle = this.color;
+        c.globalAlpha = al;
         c.stroke();
 
         for (let i = 0; i < this.trails; i++) {
@@ -1188,7 +1247,7 @@ class Pellet extends GameObject {
             c.beginPath();
             c.arc(p.x,p.y,this.size*this.gameStage.camera.zoom,0,TWOPI);
             c.lineWidth = 3*this.gameStage.camera.zoom;
-            c.globalAlpha = 0.7/(i+1);
+            c.globalAlpha = 0.7/(i+1)*al;
             c.strokeStyle = this.color;
             c.stroke();
         }
@@ -1200,6 +1259,9 @@ class ExhaustPellet extends Pellet {
     constructor(x,y,vx,vy,s,c,gs) {
         super(x,y,vx,vy,s,c,gs);
         this.type = "ExhaustPellet";
+        this.decays = true;
+        this.lifetimeMax = 1000;
+        this.lifetime = this.lifetimeMax;
     }
 }
 
@@ -1218,6 +1280,10 @@ class Camera {
         this.smoothZooming = false;
         this.targetZoom = 1.0;
         this.maxSmoothZoomIncrement = 0.05;
+        
+        this.shaking = false;
+        this.shakeMag = 0;
+        this.shakeTime = 0;
     }
     
     SetTarget(o) {
@@ -1275,6 +1341,12 @@ class Camera {
         }
     }
 
+    Shake(m, t) {
+        this.shakeMag = m;
+        this.shakeTime = t;
+        this.shaking = true;
+    }
+
     Tick(dT) {
         if (this.target && this.tracking) {
             let dx = 0;
@@ -1299,6 +1371,21 @@ class Camera {
                 this._Zoom(1+Math.sign(dZ)*this.maxSmoothZoomIncrement);
             } else {
                 this._Zoom(1+dZ);
+            }
+        }
+
+        if (this.shaking) {
+            let env = this.shakeTime * this.shakeMag;
+            let offX = env * (2*Math.random()-1);
+            let offY = env * (2*Math.random()-1);
+            this.x += offX;
+            this.y += offY;
+
+            if (this.shakeTime > 0) {
+                this.shakeTime -= dT/1000;
+                if (this.shakeTime <= 0) {
+                    this.shaking = false;
+                }
             }
         }
     }
@@ -1450,18 +1537,22 @@ class Testground extends GameStage {
         this.Add(new Player(0,0,this.localPlayerID,this),"player");
         this.localPlayerID = 0;
 
-        this.Add(new Triangle({x:-200,y:-120},{x:300,y:-100},{x:0,y:-300},"red",true,this),"terrain");
-        this.Add(new Triangle({x:-500,y:100},{x:500,y:200},{x:0,y:600},"red",true,this),"terrain");
-        this.Add(new Rectangle(200,-200,400,200,"red",this),"terrain");
+        this.Add(new Triangle({x:-200,y:-120},{x:300,y:-100},{x:0,y:-300},"#ec5b20",true,this),"terrain");
+        this.Add(new Triangle({x:-500,y:100},{x:500,y:200},{x:0,y:600},"#ec5b20",true,this),"terrain");
+        this.Add(new Rectangle(200,-200,400,200,"#ec5b20",this),"terrain");
 
-        this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"red",true,this),"terrain");
+        this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"#ec5b20",true,this),"terrain");
 
         // DEBUG
         this.Add(new AsteroidSpawner(-500,-500,3000,0.1,0.1,10,30,this),"debug");
+
+        // DEBUG
+        for (let i = 0; i < 100; i++) {
+            this.Add(new Star((Math.random()-0.5)*WIDTH*20,(Math.random()-0.5)*HEIGHT*20,Math.random()*1.2+0.2,"white",this),"");
+        }
         
         this.bgmusic = new Audio("audio/bgmusic.mp3");
         this.bgmusic.volume = 0.4;
-        this.bgmusic.volume = 0; // DEBUG
         this.bgmusic.loop = true;
         this.bgmusic.play();
 
