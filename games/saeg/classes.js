@@ -252,10 +252,10 @@ class LevelsUI extends GameObject {
             }});
         // Stages
         this.buttons.push({obj:new MenuButton(380,200,240,100,
-                "TODO","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
+                "Intro","white","40px Monospace",{drawn:true,color:"gray",colorFill:"black"}),
             func: function() {
-                //this.targetLevel = "Asteroids";
-                //this.fading = true;
+                this.targetLevel = "IntroLevel";
+                this.fading = true;
             }});
     }
 
@@ -292,6 +292,8 @@ class LevelsUI extends GameObject {
             } else {
                 if (this.targetLevel === "Testground") {
                     gameStage = new Testground();
+                } else if (this.targetLevel === "IntroLevel") {
+                    gameStage = new IntroLevel();
                 } else {
                     console.log(this.targetLevel);
                 }
@@ -337,6 +339,9 @@ class LoadUI extends GameObject {
         c.fillRect(WIDTH/4,HEIGHT*3/4,WIDTH/2*this.loadPercent,20);
         c.strokeStyle = "gray";
         c.strokeRect(WIDTH/4,HEIGHT*3/4,WIDTH/2,20);
+
+        c.fillStyle = "black";
+        c.fillRect(WIDTH/2-30,HEIGHT*3/4-110,60,60);
 
         let ang = this.elapsed/200;
         c.beginPath();
@@ -589,7 +594,7 @@ class Player extends GameObject {
         this.lives = this.maxLives;
 
         this.iframeTimer = 0;
-        this.iframeTimerMax = 1200;
+        this.iframeTimerMax = 2400;
         this.iframeBlinkTimer = 0;
         this.iframeBlinkTimerMax = 200;
         this.iframeBlinkOn = false;
@@ -686,9 +691,6 @@ class Player extends GameObject {
                 this.debugUI.visible = !this.debugUI.visible;
             }
         } else if (t.type === "mouseMove") {
-            if (this.mouse.downR && this.gameStage.camera.target == null) {
-                this.gameStage.camera.Move(this.mouse.x-t.x,this.mouse.y-t.y);
-            }
             this.mouse.x = t.x;
             this.mouse.y = t.y;
         } else if (t.type === "mouseButton") {
@@ -1424,8 +1426,7 @@ class Camera {
             let env = this.shakeTime * this.shakeMag;
             let offX = env * (2*Math.random()-1);
             let offY = env * (2*Math.random()-1);
-            this.x += offX;
-            this.y += offY;
+            this.Move(offX,offY);
 
             if (this.shakeTime > 0) {
                 this.shakeTime -= dT/1000;
@@ -1448,6 +1449,7 @@ class GameStage {
         this.localPlayerID = -1;
         this.zoomable = true;
         this.zoomFactor = 1.1;
+        this.mouse = {x:0,y:0,downL:false,downR:false};
     }
 
     Destroy() {
@@ -1539,6 +1541,7 @@ class GameStage {
     }
 
     UserInput(t) {
+        // Scroll wheel zooming.
         if (this.zoomable && t.type === "mouseWheel") {
             if (t.dY < 0) {
                 this.camera.Zoom(this.zoomFactor);
@@ -1546,6 +1549,18 @@ class GameStage {
                 this.camera.Zoom(1/this.zoomFactor);
             }
         }
+
+        if (t.type === "mouseButton") {
+            if (t.btn === 0) {
+                this.mouse.downL = t.down;
+            } else if (t.btn === 2) {
+                this.mouse.downR = t.down;
+            }
+        } else if (t.type === "mouseMove") {
+            this.mouse.x = t.x;
+            this.mouse.y = t.y;
+        }
+
         if (this.localPlayerID === -1 || this.world.length === 0) { return; }
 
         // Apply user input to the local player.
@@ -1574,45 +1589,34 @@ class GameStage {
     }
 }
 
-class Testground extends GameStage {
-    constructor() {
+class ActionStage extends GameStage {
+    constructor(n="ActionStage",bgmn="AUDIO_bgmusic") {
         super();
+        this.stageName = n;
         this.loading = true;
-        LoadAudio("Testground");
+        LoadAudio(this.stageName);
 
         this.Add(new Player(0,0,this.localPlayerID,this),"player");
         this.localPlayerID = 0;
-
-        this.Add(new Triangle({x:-200,y:-120},{x:300,y:-100},{x:0,y:-300},"#ec5b20",true,this),"terrain");
-        this.Add(new Triangle({x:-500,y:100},{x:500,y:200},{x:0,y:600},"#ec5b20",true,this),"terrain");
-        this.Add(new Rectangle(200,-200,400,200,"#ec5b20",this),"terrain");
-
-        this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"#ec5b20",true,this),"terrain");
-
-        // DEBUG
-        this.Add(new AsteroidSpawner(-500,-500,3000,0.1,0.1,10,30,this),"debug");
-
-        // DEBUG
-        for (let i = 0; i < 100; i++) {
-            this.Add(new Star((Math.random()-0.5)*WIDTH*20,(Math.random()-0.5)*HEIGHT*20,Math.random()*1.2+0.2,"white",this),"");
-        }
         
         this.menu = new GameUI(this);
         this.Add(this.menu,"debug");
         this.loadUI = new LoadUI(this);
         this.Add(this.loadUI,"debug");
         
-        this.bgmusic = AUDIO_bgmusic;
-        this.bgmusic.volume = 0.4;
-        this.bgmusic.loop = true;
-    }
+        if (bgmn === "AUDIO_bgmusic") {
+            this.bgmusic = AUDIO_bgmusic;
+        }
 
+        this.mouseMovable = true;
+    }
+    
     Destroy() {
         super.Destroy();
 
         this.bgmusic.pause();
     }
-
+    
     ToggleMusic() {
         if (this.bgmusic.paused) {
             this.bgmusic.play();
@@ -1620,7 +1624,7 @@ class Testground extends GameStage {
             this.bgmusic.pause();
         }
     }
-
+    
     ToggleSound() {
         for (let i = 0; i < this.players.length; i++) {
             this.world[this.players[i]].ToggleSound();
@@ -1630,19 +1634,25 @@ class Testground extends GameStage {
     UserInput(t) {
         if (this.loading) { return; }
 
+        if (this.mouseMovable && t.type === "mouseMove" && this.mouse.downR && 
+                this.camera.target === null) {
+            this.camera.Move(this.mouse.x-t.x,this.mouse.y-t.y);
+        }
+
         if (!this.menu.UserInput(t)) {
             if (!this.menu.pauseUI.active) {
                 super.UserInput(t);
             }
         }
     }
-
+    
     CheckIfLoaded() {
         let pl = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
         let sl = 0;
 
         // Check readystate of bgmusic audio object. Once it is 4, we are done.
-        if (this.bgmusic.readyState === 1) {
+        if (this.bgmusic === null) {
+        } else if (this.bgmusic.readyState === 1) {
             sl = 0.2;
         } else if (this.bgmusic.readyState === 2) {
             sl = 0.4;
@@ -1659,6 +1669,8 @@ class Testground extends GameStage {
         // Once lp reaches 100%, loading is over. We can play bg music and start running game.
         // I also destory the loadUI here.
         if (lp >= 1) {
+            this.bgmusic.volume = 0.4;
+            this.bgmusic.loop = true;
             this.bgmusic.play();
             this.loadUI = null;
             this.loading = false;
@@ -1679,6 +1691,7 @@ class Testground extends GameStage {
 
         super.Tick(dT);
 
+        // Respawn player.
         if (this.world[this.players[this.localPlayerID]] && 
                 this.world[this.players[this.localPlayerID]].lives <= 0) {
             this.world[this.players[this.localPlayerID]].Die();
@@ -1687,6 +1700,43 @@ class Testground extends GameStage {
             this.localPlayerID = this.players.length;
             this.Add(new Player(0,0,this.localPlayerID,this),"player");
         }
+    }
+
+    Draw(c) {
+        if (this.loading) {
+            this.loadUI.Draw(c);
+            return;
+        }
+
+        super.Draw(c);
+    }
+}
+
+class Testground extends ActionStage {
+    constructor() {
+        super("Testground","AUDIO_bgmusic");
+
+        this.Add(new Triangle({x:-200,y:-120},{x:300,y:-100},{x:0,y:-300},"#ec5b20",true,this),"terrain");
+        this.Add(new Triangle({x:-500,y:100},{x:500,y:200},{x:0,y:600},"#ec5b20",true,this),"terrain");
+        this.Add(new Rectangle(200,-200,400,200,"#ec5b20",this),"terrain");
+
+        this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"#ec5b20",true,this),"terrain");
+
+        // DEBUG
+        this.Add(new AsteroidSpawner(-500,-500,3000,0.1,0.1,10,30,this),"debug");
+
+        // DEBUG
+        for (let i = 0; i < 100; i++) {
+            this.Add(new Star((Math.random()-0.5)*WIDTH*20,(Math.random()-0.5)*HEIGHT*20,Math.random()*1.2+0.2,"white",this),"");
+        }
+    }
+}
+
+class IntroLevel extends ActionStage {
+    constructor() {
+        super("IntroLevel","AUDIO_bgmusic");
+
+        this.mouseMovable = false;
     }
 }
 

@@ -18,7 +18,7 @@ var AUDIO_boom = null;
 // Load audio files depending on stage.
 // All loading will occur asynchonously. Other classes must check for completion.
 function LoadAudio(s) {
-    if (s === "Testground") {
+    if (s === "Testground" || s === "IntroLevel") {
         if (AUDIO_shoot === null) {
             AUDIO_shoot = new Audio("audio/shoot.wav");
         }
