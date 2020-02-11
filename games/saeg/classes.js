@@ -207,7 +207,7 @@ class MainMenuUI extends GameObject {
             if (this.fadingTime > 0) {
                 this.fadingTime -= dT;
             } else {
-                gameStage = new Testground();
+                gameStage = new IntroLevel();
             }
         }
     }
@@ -508,6 +508,34 @@ class GameUI extends GameObject {
     }
 }
 
+class IntroUI extends GameObject {
+    constructor(gs) {
+        super(0,0,100,"white");
+        this.gameStage = gs;
+
+        this.timeRemaining = 160000;
+        this.resourcesCollected = 0;
+        this.resourcesCollectedMax = 1000;
+    }
+
+    Tick(dT) {
+        this.timeRemaining -= dT;
+    }
+
+    Draw(c) {
+        c.fillStyle = "white";
+        c.font = "50px Monospace";
+        let t = ""+Math.round(this.timeRemaining/1000);
+        let tw = c.measureText(t).width;
+        c.fillText(t,WIDTH-tw-5,45);
+
+        c.font = "30px Monospace";
+        t = ""+this.resourcesCollected+"/"+this.resourcesCollectedMax;
+        tw = c.measureText(t).width;
+        c.fillText(t,WIDTH-tw-5,75);
+    }
+}
+
 class PlayerUI extends GameObject {
     constructor(p) {
         super(0,0,100,"black");
@@ -680,16 +708,6 @@ class Player extends GameObject {
 
         if (t.type === "key") {
             this.keys[t.key] = t.down;
-
-            if (t.key === "c" && t.down) {
-                if (this.gameStage.camera.target == null) {
-                    this.gameStage.camera.SetTarget(this);
-                } else {
-                    this.gameStage.camera.target = null;
-                }
-            } else if (t.key === "x" && t.down) {
-                this.debugUI.visible = !this.debugUI.visible;
-            }
         } else if (t.type === "mouseMove") {
             this.mouse.x = t.x;
             this.mouse.y = t.y;
@@ -1071,16 +1089,18 @@ class Asteroid extends GameObject{
 }
 
 class AsteroidSpawner extends GameObject {
-    constructor(x,y,r,mvx,mvy,minS,maxS,gs) {
+    constructor(x,y,r,vxMin,vxMax,vyMin,vyMax,minS,maxS,gs) {
         super(x,y,0,"gray");
-        this.mvx = mvx;
-        this.mvy = mvy;
+        this.vxMin = vxMin;
+        this.vxMax = vxMax;
+        this.vyMin = vyMin;
+        this.vyMax = vyMax;
         this.minSize = minS;
         this.maxSize = maxS;
         this.gameStage = gs;
 
         this.spawnTimerMax = r;
-        this.spawnTimer = this.spawnTimerMax;
+        this.spawnTimer = this.spawnTimerMax*Math.random();
     }
 
     Tick(dT) {
@@ -1088,7 +1108,9 @@ class AsteroidSpawner extends GameObject {
         if (this.spawnTimer < 0) {
             this.spawnTimer = this.spawnTimerMax;
             let s = (this.maxSize - this.minSize)*Math.random() + this.minSize;
-            this.gameStage.Add(new Asteroid(this.x,this.y,(Math.random()-0.5)*this.mvx,(Math.random()-0.5)*this.mvy,s,this.color,this.gameStage),"terrain");
+            let vx = Math.random()*(this.vxMax - this.vxMin) + this.vxMin;
+            let vy = Math.random()*(this.vyMax - this.vyMin) + this.vyMin;
+            this.gameStage.Add(new Asteroid(this.x,this.y,vx,vy,s,this.color,this.gameStage),"terrain");
         }
     }
 
@@ -1609,6 +1631,11 @@ class ActionStage extends GameStage {
         }
 
         this.mouseMovable = true;
+        this.cameraLockable = true;
+    }
+
+    Player() {
+        return this.world[this.players[this.localPlayerID]];
     }
     
     Destroy() {
@@ -1618,6 +1645,7 @@ class ActionStage extends GameStage {
     }
     
     ToggleMusic() {
+        // TODO: should the music be paused or silenced?
         if (this.bgmusic.paused) {
             this.bgmusic.play();
         } else {
@@ -1634,9 +1662,27 @@ class ActionStage extends GameStage {
     UserInput(t) {
         if (this.loading) { return; }
 
-        if (this.mouseMovable && t.type === "mouseMove" && this.mouse.downR && 
-                this.camera.target === null) {
-            this.camera.Move(this.mouse.x-t.x,this.mouse.y-t.y);
+        if (t.type === "key") {
+            if (t.key === "c") {
+                if (this.cameraLockable) {
+                    if (t.down) {
+                        if (this.camera.target == null) {
+                            this.camera.SetTarget(this.Player());
+                        } else {
+                            this.camera.target = null;
+                        }
+                    }
+                }
+            } else if (t.key === "x") {
+                if (t.down) {
+                    // TODO: remove this eventually...
+                    this.Player().debugUI.visible = !this.Player().debugUI.visible;
+                }
+            }
+        } else if (t.type === "mouseMove") {
+            if (this.mouseMovable && this.mouse.downR && this.camera.target === null) {
+                this.camera.Move(this.mouse.x-t.x,this.mouse.y-t.y);
+            }
         }
 
         if (!this.menu.UserInput(t)) {
@@ -1644,6 +1690,14 @@ class ActionStage extends GameStage {
                 super.UserInput(t);
             }
         }
+    }
+
+    LoadingComplete() {
+        this.bgmusic.volume = 0.4;
+        this.bgmusic.loop = true;
+        this.bgmusic.play();
+        this.loadUI = null;
+        this.loading = false;
     }
     
     CheckIfLoaded() {
@@ -1669,11 +1723,7 @@ class ActionStage extends GameStage {
         // Once lp reaches 100%, loading is over. We can play bg music and start running game.
         // I also destory the loadUI here.
         if (lp >= 1) {
-            this.bgmusic.volume = 0.4;
-            this.bgmusic.loop = true;
-            this.bgmusic.play();
-            this.loadUI = null;
-            this.loading = false;
+            this.LoadingComplete();
         }
     }
 
@@ -1723,7 +1773,7 @@ class Testground extends ActionStage {
         this.Add(new Triangle({x:-300,y:200},{x:-800,y:-100},{x:-900,y:400},"#ec5b20",true,this),"terrain");
 
         // DEBUG
-        this.Add(new AsteroidSpawner(-500,-500,3000,0.1,0.1,10,30,this),"debug");
+        this.Add(new AsteroidSpawner(-500,-500,3000,-0.1,0.1,-0.1,0.1,10,30,this),"debug");
 
         // DEBUG
         for (let i = 0; i < 100; i++) {
@@ -1737,6 +1787,115 @@ class IntroLevel extends ActionStage {
         super("IntroLevel","AUDIO_bgmusic");
 
         this.mouseMovable = false;
+        this.cameraLockable = false;
+        this.zoomable = false;
+
+        this.Player().debugUI.visible = false;
+        this.camera.ZoomTo(0.7);
+        
+        this.Add(new AsteroidSpawner(-500,-500,25000,0,0.1,0,0.1,10,30,this),"debug");
+        this.Add(new AsteroidSpawner(500,-500,34000,-0.1,0,0,0.1,10,30,this),"debug");
+        this.Add(new AsteroidSpawner(-500,500,22000,0,0.1,-0.1,0,10,30,this),"debug");
+        this.Add(new AsteroidSpawner(500,500,28000,-0.1,0,-0.1,0,10,30,this),"debug");
+        
+        // DEBUG
+        for (let i = 0; i < 100; i++) {
+            this.Add(new Star((Math.random()-0.5)*WIDTH*16+WIDTH/0.15,(Math.random()-0.5)*HEIGHT*16+HEIGHT/0.15,Math.random()*1.2+0.2,"white",this),"");
+        }
+
+        this.introUI = new IntroUI();
+        this.Add(this.introUI,"debug");
+
+        this.introrobotAudioWait = 5000;
+        this.introrobotAudio = AUDIO_introrobot;
+        this.introrobotAudioDone = false;
+
+        this.introrobotAudio2Wait = 65000;
+        this.introrobotAudio2 = AUDIO_introrobot2;
+        this.introrobotAudio2Done = false;
+
+        this.resourcesCollected = 0;
+    }
+    
+    CheckIfLoaded() {
+        let pl = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
+        let sl = 0;
+        let rsl = 0;
+        let tsl = 0;
+
+        // Check readystate of bgmusic audio object. Once it is 4, we are done.
+        if (this.bgmusic === null) {
+        } else if (this.bgmusic.readyState === 1) {
+            sl = 0.2;
+        } else if (this.bgmusic.readyState === 2) {
+            sl = 0.4;
+        } else if (this.bgmusic.readyState === 3) {
+            sl = 0.6;
+        } else if (this.bgmusic.readyState === 4) {
+            sl = 1;
+        }
+        
+        if (this.introrobotAudio.readyState === 3) {
+            rsl = 0.5;
+        } else if (this.introrobotAudio.readyState === 4) {
+            rsl = 1;
+        }
+        if (this.introrobotAudio2.readyState === 3) {
+            tsl = 0.5;
+        } else if (this.introrobotAudio2.readyState === 4) {
+            tsl = 1;
+        }
+        
+        let lp = pl/4 + sl/4 + rsl/4 + tsl/4;
+
+        // Reflect load percentage in the loadUI.
+        this.loadUI.loadPercent = lp;
+
+        // Once lp reaches 100%, loading is over. We can play bg music and start running game.
+        // I also destory the loadUI here.
+        if (lp >= 1) {
+            this.LoadingComplete();
+        }
+    }
+
+    Remove(i) {
+        for (let j = 0; j < this.terrain.length; j++) {
+            if (this.terrain[j] === i) {
+                if (this.world[i].type === "Asteroid") {
+                    this.resourcesCollected += Math.round(this.world[i].size);
+                    this.introUI.resourcesCollected = this.resourcesCollected;
+                }
+            }
+        }
+        super.Remove(i);
+    }
+
+    Tick(dT) {
+        super.Tick(dT);
+
+        if (!this.introrobotAudioDone) {
+            if (!this.loading && this.introrobotAudioWait > 0) {
+                this.introrobotAudioWait -= dT;
+                if (this.introrobotAudioWait <= 0) {
+                    this.bgmusic.volume = 0.1;
+                    this.introrobotAudio.play();
+                }
+            } else if (this.introrobotAudio.currentTime >= this.introrobotAudio.duration) {
+                this.introrobotAudioDone = true;
+                this.bgmusic.volume = 0.4;
+            }
+        } else if (!this.introrobotAudio2Done) {
+            if (!this.loading && this.introrobotAudio2Wait > 0) {
+                this.introrobotAudio2Wait -= dT;
+                if (this.introrobotAudio2Wait <= 0 ) {
+                    this.bgmusic.volume = 0.1;
+                    this.introrobotAudio2.play();
+                }
+            } else if (this.introrobotAudio2.currentTime >= this.introrobotAudio2.duration) {
+                this.introrobotAudio2Done = true;
+                this.bgmusic.volume = 0.4;
+            }
+        }
     }
 }
 
