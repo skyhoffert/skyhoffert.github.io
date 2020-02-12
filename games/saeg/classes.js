@@ -510,16 +510,19 @@ class GameUI extends GameObject {
 
 class IntroUI extends GameObject {
     constructor(gs) {
-        super(0,0,100,"white");
+        super(0,0,90,"white");
         this.gameStage = gs;
 
         this.timeRemaining = 160000;
         this.resourcesCollected = 0;
-        this.resourcesCollectedMax = 1000;
+        this.resourcesCollectedMax = 1564; // Galileo's birth year.
     }
 
     Tick(dT) {
         this.timeRemaining -= dT;
+        if (this.timeRemaining < 0) {
+            this.active = false;
+        }
     }
 
     Draw(c) {
@@ -650,6 +653,7 @@ class Player extends GameObject {
         this.exhaustCooldownMax = 50;
 
         this.brakeIncrement = 0.0002;
+        this.brakeAllowed = false; // DEBUG
 
         this.trailPts = [];
         this.trailPtsMax = 10;
@@ -691,6 +695,13 @@ class Player extends GameObject {
 
         this.accelAudio.pause();
         this.pelletAudio.pause();
+    }
+
+    ClearTrail() {
+        this.trailPts = [];
+        for (let i = 0; i < this.trailPtsMax; i++) {
+            this.trailPts.push({x:this.x,y:this.y});
+        }
     }
 
     Hit() {
@@ -764,7 +775,7 @@ class Player extends GameObject {
                     1,"#406040",this.gameStage),"pellet");
                 this.exhaustCooldown = this.exhaustCooldownMax;
             }
-        } else if (this.keys["s"]) {
+        } else if (this.keys["s"] && this.brakeAllowed) {
             let vm = Distance(0,0,this.vx,this.vy);
             let ang = Math.atan2(this.vy,this.vx);
             if (vm > this.brakeIncrement * dT) {
@@ -776,7 +787,9 @@ class Player extends GameObject {
                 this.vy = 0;
             }
         } else {
-            this.accelAudio.pause();
+            if (!this.accelAudio.paused) {
+                this.accelAudio.pause();
+            }
         }
 
         // Strafing.
@@ -1460,6 +1473,99 @@ class Camera {
     }
 }
 
+class InGameDialogue extends GameObject {
+    constructor(x,y,w,t,f,lt,afn="") {
+        super(x,y,90,"#101060");
+        this.width = w;
+        this.text = t;
+        this.font = f;
+
+        this.lifetime = lt;
+
+        // Calculate sizing for stuff here.
+        this.paddingLR = 10;
+        this.textSpaceLR = this.width-this.paddingLR*2;
+        this.paddingTB = 10;
+        this.textSpaceTB = this.height-this.textSpaceTB*2;
+        this.fontSize = parseInt(this.font);
+        this.textLines = [""];
+        this.textWords = this.text.split(" ");
+        this.lettersToWriteMax = this.text.length;
+        this.lettersToWrite = 0;
+        this.nextLetterTimeMax = 30;
+        this.nextLetterTime = this.nextLetterTimeMax;
+        let curLine = 0;
+        context.font = this.font;
+        for (let i = 0; i < this.textWords.length; i++) {
+            if (context.measureText(this.textLines[curLine] + this.textWords[i]).width > this.textSpaceLR) {
+                curLine++;
+                this.textLines.push("");
+            }
+            this.textLines[curLine] += this.textWords[i];
+            this.textLines[curLine] += " ";
+        }
+        this.height = this.paddingTB*2 + this.textLines.length*this.fontSize;
+
+        if (afn === "AUDIO_introrobot") {
+            AUDIO_introrobot.play();
+        } else if (afn === "AUDIO_introrobot2") {
+            AUDIO_introrobot2.play();
+        }
+    }
+
+    Tick(dT) {
+        this.lifetime -= dT;
+        if (this.lifetime <= 0) {
+            this.active = false;
+        }
+        if (this.lettersToWrite < this.lettersToWriteMax && this.nextLetterTime > 0) {
+            this.nextLetterTime -= dT;
+            if (this.nextLetterTime <= 0) {
+                this.lettersToWrite++;
+                this.nextLetterTime = this.nextLetterTimeMax;
+            }
+        }
+    }
+
+    Draw(c) {
+        // Rectangle that text is drawn on.
+        c.beginPath();
+        c.moveTo(this.x-this.width/2,this.y-this.height/2+this.paddingTB);
+        c.lineTo(this.x-this.width/2+this.paddingLR,this.y-this.height/2);
+        c.lineTo(this.x+this.width/2,this.y-this.height/2);
+        c.lineTo(this.x+this.width/2,this.y+this.height/2-this.paddingTB);
+        c.lineTo(this.x+this.width/2-this.paddingLR,this.y+this.height/2);
+        c.lineTo(this.x-this.width/2,this.y+this.height/2);
+        c.closePath();
+        c.fillStyle = this.color;
+        c.globalAlpha = 0.3;
+        c.fill();
+        c.lineWidth = 4;
+        c.strokeStyle = "#4040a0";
+        c.globalAlpha = 0.6;
+        c.stroke();
+
+        // Text itself.
+        c.globalAlpha = 0.8;
+        c.fillStyle = "white";
+        c.font = this.font;
+        let idx = 0;
+        for (let i = 0; i < this.textLines.length; i++) {
+            if (idx > this.lettersToWrite) {
+                break;
+            }
+            for (let j = 0; j < this.textLines[i].length; j++) {
+                c.fillText(this.textLines[i][j], this.x-this.width/2+this.paddingLR+this.fontSize*9/16*j,this.y-this.height/2+this.paddingTB+this.fontSize*(i+0.75));
+                idx++;
+                if (idx > this.lettersToWrite) {
+                    break;
+                }
+            }
+        }
+        c.globalAlpha = 1.0;
+    }
+}
+
 class GameStage {
     constructor() {
         this.world = [];
@@ -1632,10 +1738,10 @@ class ActionStage extends GameStage {
 
         this.mouseMovable = true;
         this.cameraLockable = true;
-    }
 
-    Player() {
-        return this.world[this.players[this.localPlayerID]];
+        this.requiredAudio = [];
+
+        this.player = this.world[this.players[this.localPlayerID]];
     }
     
     Destroy() {
@@ -1667,7 +1773,7 @@ class ActionStage extends GameStage {
                 if (this.cameraLockable) {
                     if (t.down) {
                         if (this.camera.target == null) {
-                            this.camera.SetTarget(this.Player());
+                            this.camera.SetTarget(this.player);
                         } else {
                             this.camera.target = null;
                         }
@@ -1676,7 +1782,7 @@ class ActionStage extends GameStage {
             } else if (t.key === "x") {
                 if (t.down) {
                     // TODO: remove this eventually...
-                    this.Player().debugUI.visible = !this.Player().debugUI.visible;
+                    this.player.debugUI.visible = !this.player.debugUI.visible;
                 }
             }
         } else if (t.type === "mouseMove") {
@@ -1694,7 +1800,7 @@ class ActionStage extends GameStage {
 
     LoadingComplete() {
         this.bgmusic.volume = 0.4;
-        this.bgmusic.loop = true;
+        //this.bgmusic.loop = true;
         this.bgmusic.play();
         this.loadUI = null;
         this.loading = false;
@@ -1702,20 +1808,17 @@ class ActionStage extends GameStage {
     
     CheckIfLoaded() {
         let pl = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
-        let sl = 0;
-
-        // Check readystate of bgmusic audio object. Once it is 4, we are done.
-        if (this.bgmusic === null) {
-        } else if (this.bgmusic.readyState === 1) {
-            sl = 0.2;
-        } else if (this.bgmusic.readyState === 2) {
-            sl = 0.4;
-        } else if (this.bgmusic.readyState === 3) {
-            sl = 0.6;
-        } else if (this.bgmusic.readyState === 4) {
-            sl = 1;
+        let tl = 0;
+        
+        for (let i = 0; i < this.requiredAudio.length; i++) {
+            if (this.requiredAudio[i].readyState === 3) {
+                tl += 0.5/this.requiredAudio.length;
+            } else if (this.requiredAudio[i].readyState === 4) {
+                tl += 1/this.requiredAudio.length;
+            }
         }
-        let lp = pl/2 + sl/2;
+        
+        let lp = pl/2 + tl/2;
 
         // Reflect load percentage in the loadUI.
         this.loadUI.loadPercent = lp;
@@ -1790,22 +1893,20 @@ class IntroLevel extends ActionStage {
         this.cameraLockable = false;
         this.zoomable = false;
 
-        this.Player().debugUI.visible = false;
+        this.player.debugUI.visible = false;
         this.camera.ZoomTo(0.7);
         
-        this.Add(new AsteroidSpawner(-500,-500,25000,0,0.1,0,0.1,10,30,this),"debug");
-        this.Add(new AsteroidSpawner(500,-500,34000,-0.1,0,0,0.1,10,30,this),"debug");
-        this.Add(new AsteroidSpawner(-500,500,22000,0,0.1,-0.1,0,10,30,this),"debug");
-        this.Add(new AsteroidSpawner(500,500,28000,-0.1,0,-0.1,0,10,30,this),"debug");
-        
-        // DEBUG
+        // DEBUG: bg stars
         for (let i = 0; i < 100; i++) {
             this.Add(new Star((Math.random()-0.5)*WIDTH*16+WIDTH/0.15,(Math.random()-0.5)*HEIGHT*16+HEIGHT/0.15,Math.random()*1.2+0.2,"white",this),"");
         }
 
         this.introUI = new IntroUI();
         this.Add(this.introUI,"debug");
+        
+        this.requiredAudio = [AUDIO_bgmusic,AUDIO_introrobot,AUDIO_introrobot2];
 
+        // TODO: these variables are gross... do it better
         this.introrobotAudioWait = 5000;
         this.introrobotAudio = AUDIO_introrobot;
         this.introrobotAudioDone = false;
@@ -1815,47 +1916,6 @@ class IntroLevel extends ActionStage {
         this.introrobotAudio2Done = false;
 
         this.resourcesCollected = 0;
-    }
-    
-    CheckIfLoaded() {
-        let pl = this.world[this.players[this.localPlayerID]].AudioLoadPercent();
-        let sl = 0;
-        let rsl = 0;
-        let tsl = 0;
-
-        // Check readystate of bgmusic audio object. Once it is 4, we are done.
-        if (this.bgmusic === null) {
-        } else if (this.bgmusic.readyState === 1) {
-            sl = 0.2;
-        } else if (this.bgmusic.readyState === 2) {
-            sl = 0.4;
-        } else if (this.bgmusic.readyState === 3) {
-            sl = 0.6;
-        } else if (this.bgmusic.readyState === 4) {
-            sl = 1;
-        }
-        
-        if (this.introrobotAudio.readyState === 3) {
-            rsl = 0.5;
-        } else if (this.introrobotAudio.readyState === 4) {
-            rsl = 1;
-        }
-        if (this.introrobotAudio2.readyState === 3) {
-            tsl = 0.5;
-        } else if (this.introrobotAudio2.readyState === 4) {
-            tsl = 1;
-        }
-        
-        let lp = pl/4 + sl/4 + rsl/4 + tsl/4;
-
-        // Reflect load percentage in the loadUI.
-        this.loadUI.loadPercent = lp;
-
-        // Once lp reaches 100%, loading is over. We can play bg music and start running game.
-        // I also destory the loadUI here.
-        if (lp >= 1) {
-            this.LoadingComplete();
-        }
     }
 
     Remove(i) {
@@ -1873,12 +1933,19 @@ class IntroLevel extends ActionStage {
     Tick(dT) {
         super.Tick(dT);
 
+        // TODO: all of this code is distgusting... do it better.
         if (!this.introrobotAudioDone) {
             if (!this.loading && this.introrobotAudioWait > 0) {
                 this.introrobotAudioWait -= dT;
                 if (this.introrobotAudioWait <= 0) {
                     this.bgmusic.volume = 0.1;
-                    this.introrobotAudio.play();
+                    this.Add(new InGameDialogue(WIDTH/2,HEIGHT-100,WIDTH*7/8,
+                        "Miner 4D6179, you have two minutes to meet your minimum resource quota. \
+Please collect required resources.", "30px Monospace",8000,"AUDIO_introrobot"),"debug");                
+                    this.Add(new AsteroidSpawner(-500,-500,25000,0.02,0.12,0.02,0.12,10,30,this),"debug");
+                    this.Add(new AsteroidSpawner(500,-500,34000,-0.12,-0.02,0.02,0.12,10,30,this),"debug");
+                    this.Add(new AsteroidSpawner(-500,500,22000,0.02,0.12,-0.12,-0.02,10,30,this),"debug");
+                    this.Add(new AsteroidSpawner(500,500,28000,-0.12,-0.02,-0.12,-0.02,10,30,this),"debug");
                 }
             } else if (this.introrobotAudio.currentTime >= this.introrobotAudio.duration) {
                 this.introrobotAudioDone = true;
@@ -1889,12 +1956,30 @@ class IntroLevel extends ActionStage {
                 this.introrobotAudio2Wait -= dT;
                 if (this.introrobotAudio2Wait <= 0 ) {
                     this.bgmusic.volume = 0.1;
-                    this.introrobotAudio2.play();
+                    this.Add(new InGameDialogue(WIDTH/2,HEIGHT-120,WIDTH*7/8,
+                        "Once again I must remind you that you do not have much time remaining. \
+Consequences are in order if required resources are not met.",
+"30px Monospace",7500,"AUDIO_introrobot2"),"debug");
                 }
             } else if (this.introrobotAudio2.currentTime >= this.introrobotAudio2.duration) {
                 this.introrobotAudio2Done = true;
                 this.bgmusic.volume = 0.4;
             }
+        }
+
+        // Keep player on the screen.
+        if (this.player.x > this.camera.bounds.right+this.player.size*2) {
+            this.player.x = this.camera.bounds.left-this.player.size;
+            this.player.ClearTrail();
+        } else if (this.player.x < this.camera.bounds.left-this.player.size*2) {
+            this.player.x = this.camera.bounds.right+this.player.size;
+            this.player.ClearTrail();
+        } else if (this.player.y < this.camera.bounds.top-this.player.size*2) {
+            this.player.y = this.camera.bounds.bottom+this.player.size;
+            this.player.ClearTrail();
+        } else if (this.player.y > this.camera.bounds.bottom+this.player.size*2) {
+            this.player.y = this.camera.bounds.top-this.player.size;
+            this.player.ClearTrail();
         }
     }
 }
