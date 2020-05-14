@@ -1,16 +1,13 @@
 // Sky Hoffert
 // hvh: hundred vs. hundred
 
-var canvas = document.getElementById("canvas");
-var width = window.innerWidth;
-var height = window.innerHeight;
-canvas.width = width;
-canvas.height = height;
-var context = canvas.getContext("2d");
+// Create PIXI rendering application.
+const app = new PIXI.Application(window.innerWidth-4, window.innerHeight-4);
+document.body.appendChild(app.view);
 
 var mainQueue = [];
 
-var currentScene = new MainMenu(mainQueue);
+var currentScene = new MainMenu(mainQueue, app);
 
 function Now() {
     return Date.now();
@@ -18,7 +15,7 @@ function Now() {
 
 var prevTime = Now();
 
-var serverConn = new Connection("127.0.0.1", 6600);
+var serverConn = new Connection("127.0.0.1", 6600, mainQueue);
 
 function Update() {
     let now = Now();
@@ -30,16 +27,18 @@ function Update() {
     Tick(dT);
     
     serverConn.Tick(dT);
-
-    Draw(context);
 }
 
 function HandleQueue(mq) {
     if (mq.length > 0) {
-        if (mq[0].type == "change scene") {
-            if (mq[0].scene = "TEMP_test") {
-                currentScene = new TEMP_test(mq);
+        q = mq[0];
+        if (q.type == "change scene") {
+            if (q.scene = "TEMP_test") {
+                currentScene = new TEMP_test(mq, app);
             }
+        }
+        else if (q.type == "server connection update") {
+            currentScene.AddServerStatus(q.connected);
         }
         mq.splice(0,1);
     }
@@ -47,13 +46,6 @@ function HandleQueue(mq) {
 
 function Tick(dT) {
     currentScene.Tick(dT);
-}
-
-function Draw(c) {
-    c.fillStyle = "black";
-    c.fillRect(0,0,width,height);
-
-    currentScene.Draw(c);
 }
 
 setInterval(Update, 1000/24);

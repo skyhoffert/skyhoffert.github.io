@@ -2,10 +2,12 @@
 // Classes for maintaining a socket connection.
 
 class Connection {
-    constructor(ip,port) {
+    constructor(ip, port, mq) {
         this._ip = ip;
         this._port = port;
         this._addr = ""+this._ip+":"+this._port;
+
+        this._mq = mq;
 
         this._hasInited = false;
         this._connected = false;
@@ -19,7 +21,7 @@ class Connection {
         let self = this;
         this._sock = new WebSocket("ws://"+this._ip+":"+this._port);
         this._sock.onopen = function open() {
-            self._CheckConn();
+            self._Open();
         }
         this._sock.onmessage = function rx(msg) {
             self._Recv(msg.data);
@@ -31,6 +33,7 @@ class Connection {
 
     _ConnError(e) {
         console.log("in err: ip=%s", this._ip);
+        this._mq.push({type:"server connection update", connected:false});
     }
 
     _Recv(msg) {
@@ -38,8 +41,9 @@ class Connection {
         console.log("got %s", msg);
     }
 
-    _CheckConn() {
-        console.log("in checkconn: ip=%s", this._ip);
+    _Open() {
+        console.log("in open: ip=%s", this._ip);
+        this._mq.push({type:"server connection update", connected:true});
     }
 
     _RunTimerExpiry(t, p) {
