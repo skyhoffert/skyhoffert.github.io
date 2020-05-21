@@ -8,7 +8,7 @@ const checkPasscode = function(guess){
     
     xhr.onload = function(){
         if (xhr.status >= 400){
-            document.querySelector("#someError p").innerHTML = "Error with passcode check";
+            document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
             someError.style.display = "block";
             console.log(xhr.response);
             //location.reload(true);
@@ -24,7 +24,7 @@ const checkPasscode = function(guess){
     };
 
     xhr.onerror = function(){
-        document.querySelector("#someError p").innerHTML = "Error with passcode check";
+        document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
         someError.style.display = "block";
         console.log(xhr.response)
         //location.reload(true);
