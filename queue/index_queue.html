@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Queue It Up!</h1>
+    <h3>What would you like added to the queue?</h3>
+    <input type="text" id="myText" placeholder="Some song some artist">
+
+    <button onclick="getSearch()">Search</button>
+
+    <br><br>
+
+    <div id="confirmSong" style="display:none">
+        <p>"orginalText"</p>
+        <button onclick="performRequest()">Let's Jam!</button>
+    </div>
+
+    <div id="successGiph" style="display:none">
+        <p>"originalText"</p>
+        <br><br>
+        <iframe src="https://giphy.com/embed/tqfS3mgQU28ko" width="480" height="360" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/headphones-spongebob-squarepants-tqfS3mgQU28ko"></a></p>
+    </div>
+
+    <div id="successGiph2" style="display:none">
+        <p>"originalText"</p>
+        <br><br>
+        <iframe src="https://giphy.com/embed/tqfS3mgQU28ko" width="480" height="360" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/headphones-spongebob-squarepants-tqfS3mgQU28ko"></a></p>
+    </div>
+
+    <!--<iframe src="https://giphy.com/embed/4oMoIbIQrvCjm" width="480" height="369" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/the-simpsons-bart-simpson-4oMoIbIQrvCjm">via GIPHY</a></p>
+    -->
+    <div id="someError" style="display:none">
+        <p>"Some error occurred"</p>
+        <br><br>
+    </div>
+
+    <script src="main.js">
+    </script>
+</body>
+</html>
