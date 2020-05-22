@@ -1,6 +1,12 @@
 var access_token
 var track = new Object;
 
+const giflinks = ["https://media.giphy.com/media/4oMoIbIQrvCjm/source.gif", 
+"https://media.giphy.com/media/tqfS3mgQU28ko/source.gif",
+"https://media.giphy.com/media/tbapfDZ4mZJn2/source.gif",
+"https://media.giphy.com/media/blSTtZehjAZ8I/source.gif",
+"https://media.giphy.com/media/pa37AAGzKXoek/source.gif"];
+
 const checkPasscode = function(guess){
     const xhr = new XMLHttpRequest();
     xhr.open('GET', 'http://100.16.230.232:5007/check_passcode');
@@ -11,11 +17,11 @@ const checkPasscode = function(guess){
             document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
             someError.style.display = "block";
             console.log(xhr.response);
-            //location.reload(true);
+            location.reload(true);
         } else{
             var json = JSON.parse(xhr.response)
             if(json.success === 'false'){
-                //location.reload(true);
+                location.reload(true);
                 console.log(xhr.response)
             };
             access_token = json.access_token;
@@ -27,7 +33,7 @@ const checkPasscode = function(guess){
         document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
         someError.style.display = "block";
         console.log(xhr.response)
-        //location.reload(true);
+        location.reload(true);
     };
 
     xhr.send();
@@ -78,8 +84,8 @@ const performRequest = function(){
             
         } else{
             document.querySelector("#successGiph p").innerHTML = "Success! '" +track.name+ "' has been added to the queue.";
+            document.querySelector("#successGiph img").src = giflinks[Math.floor(Math.random() * giflinks.length)];
             successGiph.style.display = "block";
-            
         }
     };
 
@@ -95,6 +101,7 @@ const performRequest = function(){
 function getSearch() {
     confirmSong.style.display = "none";
     someError.style.display = "none";
+    successGiph.style.display = "none";
 
     var input = document.getElementById("myText").value;
     var inputData = encodeURIComponent(input);
