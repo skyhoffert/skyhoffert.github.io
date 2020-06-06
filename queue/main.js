@@ -14,6 +14,7 @@ const SHOULD_RELOAD = false;
 const checkPasscode = function(guess){
     const xhr = new XMLHttpRequest();
 	const pass_addr = "http://"+IP+":"+PORT+"/check_passcode";
+	console.log("using "+pass_addr);
     xhr.open("GET", pass_addr);
     xhr.setRequestHeader('guess', guess);
     
