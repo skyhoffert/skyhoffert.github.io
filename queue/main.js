@@ -13,7 +13,7 @@ const PORT = "5007";
 const checkPasscode = function(guess){
     const xhr = new XMLHttpRequest();
 	const pass_addr = "http://"+IP+":"+PORT+"/check_passcode";
-    xhr.open(pass_addr);
+    xhr.open("GET", pass_addr);
     xhr.setRequestHeader('guess', guess);
     
     xhr.onload = function(){
