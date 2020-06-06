@@ -22,11 +22,15 @@ const checkPasscode = function(guess){
             document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
             someError.style.display = "block";
             console.log(xhr.response);
-            location.reload(SHOULD_RELOAD);
+		if (SHOULD_RELOAD) {
+            		location.reload();
+		}
         } else{
             var json = JSON.parse(xhr.response)
             if(json.success === 'false'){
-                location.reload(SHOULD_RELOAD);
+		    if (SHOULD_RELOAD) {
+                	location.reload();
+		    }
                 console.log(xhr.response)
             };
             access_token = json.access_token;
@@ -37,8 +41,10 @@ const checkPasscode = function(guess){
     xhr.onerror = function(){
         document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
         someError.style.display = "block";
-        console.log(xhr.response)
-        location.reload(SHOULD_RELOAD);
+        console.log(xhr.response);
+	    if (SHOULD_RELOAD) {
+        	location.reload();
+	    }
     };
 
     xhr.send();
