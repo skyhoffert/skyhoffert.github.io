@@ -9,6 +9,7 @@ const giflinks = ["https://media.giphy.com/media/4oMoIbIQrvCjm/source.gif",
 
 const IP = "72.28.244.27";
 const PORT = "5007";
+const SHOULD_RELOAD = false;
 
 const checkPasscode = function(guess){
     const xhr = new XMLHttpRequest();
@@ -21,11 +22,11 @@ const checkPasscode = function(guess){
             document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
             someError.style.display = "block";
             console.log(xhr.response);
-            location.reload(true);
+            location.reload(SHOULD_RELOAD);
         } else{
             var json = JSON.parse(xhr.response)
             if(json.success === 'false'){
-                location.reload(true);
+                location.reload(SHOULD_RELOAD);
                 console.log(xhr.response)
             };
             access_token = json.access_token;
@@ -37,7 +38,7 @@ const checkPasscode = function(guess){
         document.querySelector("#someError p").innerHTML = "Error with passcode check "+xhr.responseText;
         someError.style.display = "block";
         console.log(xhr.response)
-        location.reload(true);
+        location.reload(SHOULD_RELOAD);
     };
 
     xhr.send();
