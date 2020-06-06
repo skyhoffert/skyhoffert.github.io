@@ -7,9 +7,12 @@ const giflinks = ["https://media.giphy.com/media/4oMoIbIQrvCjm/source.gif",
 "https://media.giphy.com/media/blSTtZehjAZ8I/source.gif",
 "https://media.giphy.com/media/pa37AAGzKXoek/source.gif"];
 
+const IP = "72.28.244.27";
+const PORT = "5007";
+
 const checkPasscode = function(guess){
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://100.16.230.232:5007/check_passcode');
+    xhr.open('GET', 'http://'+IP+':'+PORT+/check_passcode');
     xhr.setRequestHeader('guess', guess);
     
     xhr.onload = function(){
