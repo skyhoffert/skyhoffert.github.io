@@ -12,6 +12,12 @@ class Entity {
         this._UpdateBounds();
 
         this.active = true;
+		
+		this._sprite = viewport.addChild(new PIXI.Sprite(PIXI.Texture.WHITE));
+		this._sprite.width = this._width;
+		this._sprite.height = this._height;
+		this._sprite.anchor.set(0.5);
+		this._sprite.position.set(this._x, this._y);
     }
 
     _UpdateBounds() {
@@ -32,13 +38,8 @@ class Entity {
 
     Tick(dT) {
         if (!this.active) { return; }
-    }
-
-    Draw(g) {
-        if (!this.active) { return; }
-
-        g.lineStyle(2, this._color);
-        g.drawRect(this._left, this._top, this._width, this._height);
+		
+		this._sprite.position.set(this._x, this._y);
     }
 }
 
@@ -63,10 +64,12 @@ class KEntity extends Entity {
     }
 
     Tick(dT) {
-        this._x += this._vx;
-        this._y += this._vy;
+        this._x += this._vx * dT;
+        this._y += this._vy * dT;
 
         this._UpdateBounds();
+		
+		super.Tick(dT);
     }
 }
 
@@ -78,6 +81,10 @@ class Player extends KEntity {
         this._coll_feet = false;
 
         this._jumping = false;
+		
+		this._gravity = 200;
+		this._speed = 200;
+		this._jumpspeed = -300;
     }
 
     _Collision() {
@@ -116,14 +123,14 @@ class Player extends KEntity {
     }
 
     Tick(dT) {
-        this._vy += 7 * dT;
+        this._vy += this._gravity * dT;
 
         if (keys["d"]) {
-            this._vx = 10;
+            this._vx = this._speed;
         }
 
         if (keys["a"]) {
-            this._vx = -10;
+            this._vx = -this._speed;
         }
 
         if (!keys["a"] && !keys["d"]) {
@@ -132,7 +139,7 @@ class Player extends KEntity {
 
         if (keys[" "]) {
             if (!this._jumping) {
-                this._vy = -10;
+                this._vy = this._jumpspeed;
                 this._jumping = true;
             }
         }
@@ -162,12 +169,6 @@ class Stage {
     Tick(dT) {
         for (let i = 0; i < this._entities.length; i++) {
             this._entities[i].Tick(dT);
-        }
-    }
-
-    Draw(g) {
-        for (let i = 0; i < this._entities.length; i++) {
-            this._entities[i].Draw(g);
         }
     }
 }

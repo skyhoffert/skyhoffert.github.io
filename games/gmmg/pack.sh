@@ -4,6 +4,13 @@ echo "// main.min.js" > all.js
 cat classes.js >> all.js
 cat main.js >> all.js
 
-minify all.js > main.min.js
+echo "Checking minify."
+command -v minify
+
+if [ -z $? ] ; then
+	minify all.js > main.min.js
+else
+	echo "minify not installed"
+fi
 
 #rm all.js

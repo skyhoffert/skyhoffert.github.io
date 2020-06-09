@@ -1,17 +1,34 @@
 // Sky Hoffert
 // gmmg demonstration.
 
-let app = new PIXI.Application({width:1200, height:800});
+const SCALE = 0.8;
+const WIDTH = 1200 * SCALE;
+const HEIGHT = 800 * SCALE;
+
+let app = new PIXI.Application({width:WIDTH, height:HEIGHT});
 document.body.appendChild(app.view);
 
-let graphics = new PIXI.Graphics();
+const viewport = new Viewport.Viewport({
+	screenWidth: window.innerWidth,
+	screenHeight: window.innerHeight,
+	worldWidth: WIDTH,
+	worldHeight: HEIGHT,
+	interaction: app.renderer.plugins.interaction
+});
+app.stage.addChild(viewport);
+viewport
+	.drag()
+	.pinch()
+	.wheel()
+	.decelerate();
+
+const FPS = 44;
 
 let keys = {w:false,a:false,s:false,d:false," ":false};
 
 PIXI.loader.load(Setup);
 
 function Setup() {
-    app.stage.addChild(graphics);
 }
 
 let stage = new Testground();
@@ -23,14 +40,10 @@ function Tick() {
     let dT = (now - prevTime) / 1000;
     prevTime = now;
 
-    graphics.clear();
-
     stage.Tick(dT);
-
-    stage.Draw(graphics);
 }
 
-setInterval(Tick,1000/24);
+setInterval(Tick, 1000/FPS);
 
 document.addEventListener("keydown", function (ev) {
     keys[ev.key] = true;
