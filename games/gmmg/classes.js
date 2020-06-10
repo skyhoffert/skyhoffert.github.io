@@ -12,8 +12,13 @@ class Entity {
         this._UpdateBounds();
 
         this.active = true;
-		
-		this._sprite = viewport.addChild(new PIXI.Sprite(PIXI.Texture.WHITE));
+
+        this._LoadSprite(viewport.addChild(new PIXI.Sprite(PIXI.Texture.WHITE)));
+        this._sprite.tint = 0xff0000;
+    }
+    
+    _LoadSprite(s) {
+		this._sprite = s;
 		this._sprite.width = this._width;
 		this._sprite.height = this._height;
 		this._sprite.anchor.set(0.5);
@@ -83,34 +88,59 @@ class Player extends KEntity {
         this._jumping = false;
 		
 		this._gravity = 300;
-		this._speed = 200;
-		this._jumpspeed = -300;
+		this._speed = 400;
+        this._jumpspeed = -300;
+
+        this._maxfallspeed = 300;
+        this._maxrunspeed = 300;
+        
+        viewport.removeChild(this._sprite);
+		this._LoadSprite(viewport.addChild(new PIXI.Sprite.from("images/capsule_white.png")));
     }
 
     _Collision() {
-        this._coll_feet = false;
-
-        let feet_x = this._x;
-        let feet_y = this._y + this._height/2;
-        let coll_dist = -1;
-
-        let all_e = stage._entities;
-        for (let i = 0; i < all_e.length; i++) {
-            if (this._coll_feet) { break; }
-
-            if (all_e[i].id === "wall") {
-                for (let i = 0; i < 10; i++) {
+        if (this._coll_feet) {
+            let feet_x = this._x;
+            let feet_y = this._y + this._height/2 + 2;
+            let hit_something = false;
+            
+            let all_e = stage._entities;
+            for (let i = 0; i < all_e.length; i++) {
+                if (all_e[i].id === "wall") {
                     if (all_e[i].Contains(feet_x, feet_y)) {
-                        this._coll_feet = true;
-                        coll_dist = i;
+                        hit_something = true;
                         break;
                     }
                 }
             }
-        }
 
-        if (coll_dist >= 0) {
-            this._y -= coll_dist+0.2;
+            if (!hit_something) {
+                this._coll_feet = false;
+            }
+        } else if (this._vy > 0) {
+            let feet_x = this._x;
+            let feet_y = this._y + this._height/4;
+            let dist = this._height/4 + 1;
+            let coll_dist = -1;
+
+            let all_e = stage._entities;
+            for (let i = 0; i < all_e.length; i++) {
+                if (this._coll_feet) { break; }
+
+                if (all_e[i].id === "wall") {
+                    for (let j = 0; j < dist; j++) {
+                        if (all_e[i].Contains(feet_x, feet_y+j)) {
+                            this._coll_feet = true;
+                            coll_dist = j;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (coll_dist >= 0) {
+                this._y -= dist-coll_dist;
+            }
         }
     }
 
@@ -125,22 +155,34 @@ class Player extends KEntity {
     Tick(dT) {
         this._vy += this._gravity * dT;
 
+        let running = false;
         if (keys["d"]) {
-            this._vx = this._speed;
+            this._vx += this._speed * dT;
+            running = true;
         }
 
         if (keys["a"]) {
-            this._vx = -this._speed;
+            this._vx -= this._speed * dT;
+            running = true;
         }
 
-        if (!keys["a"] && !keys["d"]) {
-            this._vx = 0;
+        if (running) {
+            if (Math.abs(this._vx) > this._maxrunspeed) {
+                this._vx = Math.sign(this._vx) * this._maxrunspeed;
+            }
+        } else {
+            if (Math.abs(this._vx) > 0.01) {
+                this._vx -= Math.sign(this._vx) * this._speed/2 * dT;
+            } else {
+                this._vx = 0;
+            }
         }
 
         if (keys[" "]) {
-            if (!this._jumping) {
+            if (!this._jumping && this._coll_feet) {
                 this._vy = this._jumpspeed;
                 this._jumping = true;
+                this._coll_feet = false;
             }
         }
 
@@ -150,6 +192,14 @@ class Player extends KEntity {
 
         if (this._coll_feet) {
             this._vy = 0;
+        } else {
+            if (this._vy > 0) {
+                if (this._vy < this._maxfallspeed) {
+                    this._vy *= 1.05;
+                } else {
+                    this._vy = this._maxfallspeed;
+                }
+            }
         }
 
         super.Tick(dT);
