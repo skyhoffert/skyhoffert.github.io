@@ -82,7 +82,7 @@ class Player extends KEntity {
 
         this._jumping = false;
 		
-		this._gravity = 200;
+		this._gravity = 300;
 		this._speed = 200;
 		this._jumpspeed = -300;
     }
