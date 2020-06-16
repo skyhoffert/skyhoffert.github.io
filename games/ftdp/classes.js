@@ -701,6 +701,7 @@ class Player {
             this.isDrawn = false;
             this.currentHits = 0;
             this.messageQueue.push({type:"playerHit",id:this.playerID,x:this.x,y:this.y,dead:true});
+            this.active = false;
         }
 
         if (this.iframeTime > 0) {
@@ -1142,6 +1143,97 @@ class Sulper {
         c.strokeStyle = this.color;
         c.beginPath();
         c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y)/cam.zoom,xrad,yrad,ang,0,pi*2);
+        c.fill();
+        c.stroke();
+    }
+}
+
+class Dulper {
+    constructor(lb,rb,tb,bb,vx,tm,ts,msgq) {
+        this.x = lb;
+        this.y = tb;
+        this.movementBounds = {left:lb,right:rb,top:tb,bottom:bb};
+        this.timeMove = tm;
+        this.timeSwoop = ts;
+        this.vxMax = vx;
+        this.vx = this.vxMax;
+        this.vy = 0;
+        this.elapsed = 0;
+        this.size = 14;
+        this.color = "red";
+        this.colorFill = "#100404";
+        this.colorWing = "orange";
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+        this.collisionsObjs = {left:null,right:null,top:null,bottom:null};
+        this.sensors = {left:-1, right:-1};
+        this.messageQueue = msgq;
+        this.particleTimerMax = 0.05;
+        this.particleTimer = 0;
+
+        this.xMoveState = 1; // 1 or -1 for right or left
+        this.yMoveState = 0; // TODO
+    }
+
+    Collision(t,p) {
+        this.collisions = {left:-1,right:-1,top:-1,bottom:-1};
+
+        HandleCollisions(this, t);
+
+        this.sensors = {left:MeasureDistance(this.x-this.size/2,this.y+this.size/2,-pi/2,this.size,t),
+            right:MeasureDistance(this.x+this.size/2,this.y+this.size/2,-pi/2,this.size,t)};
+
+        if (Distance(this.x,this.y,p.x,p.y) < this.size+p.size) {
+            p.Hit();
+        }
+    }
+
+    Tick(dT) {
+        this.elapsed += dT/this.moveFreq;
+        this.elapsed = this.elapsed > 100 ? this.elapsed-100 : this.elapsed;
+        this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
+
+        if (this.xMoveState === 1 && this.x > this.movementBounds.right) {
+            this.xMoveState = -1;
+        } else if (this.xMoveState === -1 && this.x < this.movementBounds.left) {
+            this.xMoveState = 1;
+        }
+
+        this.y += this.vy * dT;
+
+        this.vx = this.vxMax * this.xMoveState;
+
+        // A trail of particles below.
+        if (this.particleTimer > 0) {
+            this.particleTimer -= dT/1000;
+        } else {
+            this.particleTimer = this.particleTimerMax;
+            this.messageQueue.push({type:"enemyParticle",x:this.x-Math.sign(this.vx)*this.size*3/4,
+                y:this.y,n:1,xvar:0,yvar:0});
+        }
+
+        this.x += this.vx * dT;
+    }
+
+    Draw(c,cam) {
+        if (!InCam(cam,this)){ return; }
+
+        let xrad = (this.size/cam.zoom+(Math.abs(this.vx)+Math.abs(this.vy)/2));
+        let yrad = this.size/cam.zoom - Math.abs(this.size/cam.zoom - xrad);
+        let ang = Math.atan2(this.vy,this.vx);
+
+        
+        c.fillStyle = this.colorFill;
+        c.strokeStyle = this.color;
+        c.beginPath();
+        c.ellipse((-cam.x + cam.width/2 + this.x)/cam.zoom, (-cam.y + cam.height/2 + this.y + (this.size-yrad))/cam.zoom,xrad,yrad,ang,0,pi*2);
+        c.fill();
+        c.stroke();
+
+        c.fillStyle = this.colorFill;
+        c.strokeStyle = this.colorWing;
+        c.beginPath();
+        c.ellipse((-cam.x + cam.width/2 + this.x-this.size*2/3*this.xMoveState)/cam.zoom, (-cam.y + cam.height/2 + this.y - this.size/3)/cam.zoom,xrad*2/3,yrad*2/3,ang,0,pi*2);
         c.fill();
         c.stroke();
     }

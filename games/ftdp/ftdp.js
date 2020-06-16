@@ -48,7 +48,7 @@ var camera = null;
 var lurkers = [];
 
 Init();
-LoadLevel("level0");
+LoadLevel("testground");
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
@@ -154,6 +154,8 @@ function LoadLevel(l) {
             enemies.push(new Julper(e[1],e[2],e[3],e[4],messages));
         } else if (e[0] === "s") {
             enemies.push(new Sulper(e[1],e[2],e[3],messages));
+        } else if (e[0] === "d") {
+            enemies.push(new Dulper(e[1],e[2],e[3],e[4],e[5],e[6],e[7],messages));
         }
     }
     
