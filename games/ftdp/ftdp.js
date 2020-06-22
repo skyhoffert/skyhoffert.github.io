@@ -48,7 +48,7 @@ var camera = null;
 var lurkers = [];
 
 Init();
-LoadLevel("testground");
+LoadLevel("level2");
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
@@ -107,11 +107,11 @@ function LoadLevel(l) {
         if (t[0] === "r") { // Rectangle
             terrain.push(new Rectangle(t[1],t[2],t[3],t[4],t[5]));
         } else if (t[0] === "rr") { // RotatedRectangle
-            terrain.push(new RotatedRectangle(t[1],t[2],t[3],t[4],t[5],t[6]));
+            terrain.push(new RotatedRectangle(t[1],t[2],t[3],t[4],t[5],t[6],t[7]));
         } else if (t[0] === "bb") { // Block Blade
             terrain.push(new BlockBlade(t[1],t[2],t[3],t[4],t[5],t[6],t[7]));
         } else if (t[0] === "kd") { // Key Door
-            terrain.push(new KeyDoor(t[1],t[2],t[3],t[4],t[5]));
+            terrain.push(new KeyDoor(t[1],t[2],t[3],t[4],t[5],t[6]));
         } else if (t[0] === "otb") { // One-Touch Block
             terrain.push(new OneTouchBlock(t[1],t[2],t[3],t[4],t[5],t[6]));
         } else if (t[0] === "bgr") {

@@ -313,21 +313,21 @@ class Key {
 }
 
 class KeyDoor extends Terrain {
-    constructor(x,y,w,h,kp) {
+    constructor(x,y,w,h,kp,ss=false) {
         super(x,y,w,h,false);
-        this.unlocked = false; // DEBUG
+        this.unlocked = ss; // DEBUG
+        this.startingState = ss;
         this.key = new Key(kp.x,kp.y);
         this.color = "#ff00ff";
         this.colorFill = "#1a001a";
     }
 
     Contains(x,y,p=false) {
-        if (this.unlocked) { return false; }
-
-        if (this.key.Contains(x,y,p)) {
-            this.unlocked = true;
-            return false;
+        if (this.unlocked === this.startingState && this.key.Contains(x,y,p)) {
+            this.unlocked = !this.unlocked;
         }
+
+        if (this.unlocked) { return false; }
 
         return x > this.bounds.left && x < this.bounds.right &&
             y > this.bounds.top && y < this.bounds.bottom;
@@ -338,7 +338,7 @@ class KeyDoor extends Terrain {
     }
 
     Draw(c,cam) {
-        if (!this.unlocked) {
+        if (this.unlocked === this.startingState) {
             this.key.Draw(c,cam);
         }
 
@@ -1153,6 +1153,7 @@ class Dulper {
         this.x = lb;
         this.y = tb;
         this.movementBounds = {left:lb,right:rb,top:tb,bottom:bb};
+        this.movementBoundsYLen = bb-tb;
         this.timeMove = tm;
         this.timeSwoop = ts;
         this.vxMax = vx;
@@ -1172,7 +1173,8 @@ class Dulper {
         this.particleTimer = 0;
 
         this.xMoveState = 1; // 1 or -1 for right or left
-        this.yMoveState = 0; // TODO
+        this.yMoveState = 0; // 0 moving, 1 swoop down, 2 swoop up
+        this.yMoveTimer = this.timeMove;
     }
 
     Collision(t,p) {
@@ -1189,7 +1191,7 @@ class Dulper {
     }
 
     Tick(dT) {
-        this.elapsed += dT/this.moveFreq;
+        this.elapsed += dT/1000;
         this.elapsed = this.elapsed > 100 ? this.elapsed-100 : this.elapsed;
         this.bounds = {left:this.x-this.size,right:this.x+this.size,top:this.y-this.size,bottom:this.y+this.size};
 
@@ -1199,7 +1201,32 @@ class Dulper {
             this.xMoveState = 1;
         }
 
+        if (this.yMoveTimer > 0) {
+            this.yMoveTimer -= dT;
+        } else {
+            if (this.yMoveState === 0) {
+                this.yMoveState = 1;
+                this.yMoveTimer = this.timeSwoop/2;
+                this.vy = this.movementBoundsYLen / (this.timeSwoop/2);
+            } else if (this.yMoveState === 1) {
+                this.yMoveState = 2;
+                this.yMoveTimer = this.timeSwoop/2;
+                this.vy = -this.vy;
+            } else if (this.yMoveState === 2) {
+                this.yMoveState = 0;
+                this.yMoveTimer = this.timeMove;
+                this.vy = 0;
+            }
+        }
+
         this.y += this.vy * dT;
+        this.y += Math.cos(10*this.elapsed);
+
+        if (this.y < this.movementBounds.top) {
+            this.y = this.movementBounds.top;
+        } else if (this.y > this.movementBounds.bottom) {
+            this.y = this.movementBounds.bottom;
+        }
 
         this.vx = this.vxMax * this.xMoveState;
 
