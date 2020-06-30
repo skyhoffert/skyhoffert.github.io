@@ -48,7 +48,7 @@ var camera = null;
 var lurkers = [];
 
 Init();
-LoadLevel("level2");
+LoadLevel("level0");
 
 document.addEventListener("keydown", function (evt) {
     player.keyUpdates.push({key:evt.key,down:true});
