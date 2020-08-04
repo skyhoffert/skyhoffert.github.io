@@ -27,6 +27,8 @@ var mouse = {x:0,y:0};
 var prev_tile = -1;
 var hover_tile = -1;
 
+splitRightElem.addEventListener('contextmenu', event => event.preventDefault());
+
 // Global /////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Environment ////////////////////////////////////////////////////////////////////////////////////
@@ -39,23 +41,37 @@ const enviro_app = new PIXI.Application({
     view: enviro_canvas,
 });
 
+const viewport = new Viewport.Viewport({
+    screenWidth: WIDTH_ENVIRO,
+    screenHeight: HEIGHT_ENVIRO,
+    worldWidth: WIDTH_ENVIRO,
+    worldHeight: HEIGHT_ENVIRO,
+    interaction: enviro_app.renderer.plugins.interation,
+});
+
+enviro_app.stage.addChild(viewport);
+
+viewport
+    .drag({mouseButtons: "right"})
+    .pinch()
+    .wheel()
+    .decelerate();
+
 // Create a new texture
 const texture = PIXI.Texture.from("tilesets/terrain_tiles24.png");
 
-const tiles = new PIXI.Sprite(texture);
+var tile_texture = new PIXI.Texture(texture, new PIXI.Rectangle(0,0,31,31));
+const tiles = new PIXI.Sprite(tile_texture);
 tiles.anchor.set(0.5);
-tiles.x = WIDTH_ENVIRO/2;
-tiles.y = HEIGHT_ENVIRO/2;
-enviro_app.stage.addChild(tiles);
+tiles.position.set(WIDTH_ENVIRO/2, HEIGHT_ENVIRO/2);
+viewport.addChild(tiles);
 
 const mouse_text = new PIXI.Text("0,0",{ fontFamily: "monospace", fontSize: 24, fill: 0xffffff, align: "center"});
-mouse_text.x = 10;
-mouse_text.y = 10;
+mouse_text.position.set(10, 10);
 enviro_app.stage.addChild(mouse_text);
 
 const tile_text = new PIXI.Text("tile 0",{ fontFamily: "monospace", fontSize: 24, fill: 0xffffff, align: "center"});
-tile_text.x = 10;
-tile_text.y = 44;
+tile_text.position.set(10, 44);
 enviro_app.stage.addChild(tile_text);
 
 // Listen for animate update
@@ -63,6 +79,14 @@ enviro_app.ticker.add((delta) => {
     mouse_text.text = "" + mouse.x + "," + mouse.y;
     tile_text.text = "tile " + prev_tile;
 });
+
+splitRightElem.addEventListener("mousedown", function (evt) {
+    const x = (prev_tile%8)*32;
+    const y = Math.floor(prev_tile/8)*32;
+    tile_texture = new PIXI.Texture(texture, new PIXI.Rectangle(x, y, 31, 31));
+    tiles.texture = tile_texture;
+    tiles.texture.update();
+}, false);
 
 // Environment ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,44 +103,59 @@ const selector_app = new PIXI.Application({
 
 const selectbox_texture = PIXI.Texture.from("images/selectbox.png");
 const selectbox = new PIXI.Sprite(selectbox_texture);
-selectbox.x = -100;
-selectbox.y = -100;
+selectbox.position.set(-100, -100);
 
 const selectbox_hover = new PIXI.Sprite(selectbox_texture);
-selectbox_hover.x = -100;
-selectbox_hover.y = -100;
+selectbox_hover.position.set(-100, -100);
 selectbox_hover.alpha = 0.5;
 
 // Add new tileset, move to position
 const tiles2 = new PIXI.Sprite(texture);
 tiles2.anchor.set(0.5);
-tiles2.x = WIDTH_SELECTOR/2;
-tiles2.y = HEIGHT_SELECTOR/3;
+tiles2.position.set(WIDTH_SELECTOR/2, HEIGHT_SELECTOR/3);
 
-// Rescale
-tmp = tiles2.height / tiles2.width;
-tmp2 = tiles2.width;
-tiles2.width = WIDTH_SELECTOR*0.9;
-tiles2.height = tiles2.width * tmp;
-tmp2 = tiles2.width / tmp2;
-var scaled_tile_size = TILE_SIZE * tmp2;
-selectbox.width *= tmp2;
-selectbox.height *= tmp2;
-selectbox_hover.width *= tmp2;
-selectbox_hover.height *= tmp2;
+var scaled_tile_size = 1;
 
 selector_app.stage.addChild(tiles2);
 selector_app.stage.addChild(selectbox_hover);
 selector_app.stage.addChild(selectbox);
 
-const TILES_T = tiles2.y - tiles2.height/2;
-const TILES_L = tiles2.x - tiles2.width/2;
-const TILES_B = tiles2.y + tiles2.height/2;
-const TILES_R = tiles2.x + tiles2.width/2;
+var TILES_T = tiles2.y - tiles2.height/2;
+var TILES_L = tiles2.x - tiles2.width/2;
+var TILES_B = tiles2.y + tiles2.height/2;
+var TILES_R = tiles2.x + tiles2.width/2;
+
+var hasDoneLoadProcedure = false;
+
+function LoadProcedure() {
+    // Rescale
+    const newwidth = Math.pow(2, Math.floor(Math.log2(WIDTH_SELECTOR*0.9)));
+    tmp = tiles2.height / tiles2.width;
+    tmp2 = newwidth / tiles2.width;
+    tiles2.width = newwidth;
+    tiles2.height = tiles2.width * tmp;
+    selectbox.width *= tmp2;
+    selectbox.height *= tmp2;
+    selectbox_hover.width *= tmp2;
+    selectbox_hover.height *= tmp2;
+    
+    scaled_tile_size = Math.floor(TILE_SIZE * tmp2);
+    console.log(""+scaled_tile_size);
+    
+    TILES_T = tiles2.y - tiles2.height/2;
+    TILES_L = tiles2.x - tiles2.width/2;
+    TILES_B = tiles2.y + tiles2.height/2;
+    TILES_R = tiles2.x + tiles2.width/2;
+}
 
 // Listen for animate update
 selector_app.ticker.add((delta) => {
-    selectbox_hover.updateTransform();
+    if (hasDoneLoadProcedure === false) {
+        if (texture.baseTexture.valid) {
+            hasDoneLoadProcedure = true;
+            LoadProcedure();
+        }
+    }
 });
 
 splitLeftElem.addEventListener("mousemove", function (evt) {
