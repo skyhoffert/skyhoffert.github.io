@@ -19,6 +19,8 @@ const TILE_SIZE = 32; // px
 const N_TILES_ROW = 8;
 const N_TILES_COL = 8;
 
+const MAX_ZOOM_AMT = 50;
+
 var tmp = 0;
 var tmp2 = 0;
 
@@ -61,6 +63,7 @@ document.addEventListener("keydown", function (evt) {
         if (enviro_tile_key in enviro_tiles) {
             viewport.removeChild(enviro_tiles[enviro_tile_key].sprite);
             delete enviro_tiles[enviro_tile_key];
+            delete enviro_tiles_export.tiles[enviro_tile_key];
         }
     }
 }, false);
@@ -224,7 +227,7 @@ document.addEventListener("mousemove", function (evt) {
         tmp = viewport.toWorld(mouse_enviro.x - tmp2, mouse_enviro.y);
 
         // TODO: this doesn't work correctly. Not sure why.
-        tmp.x += TILE_SIZE;
+        tmp.x += TILE_SIZE/2;
         tmp.y += TILE_SIZE/2;
 
         tmp.x = Math.floor(tmp.x / 32);
@@ -306,7 +309,9 @@ document.addEventListener("mousedown", function (evt) {
 // Manually zoom, fixed a buggy viepower.wheel() function.
 document.addEventListener("wheel", function (evt) {
     if (mouse_in_enviro) {
-        viewport.zoom(evt.deltaY*2, false);
+        const wheelAmt = evt.deltaY*2;
+        const amt = Math.min(Math.max(wheelAmt, -MAX_ZOOM_AMT), MAX_ZOOM_AMT);
+        viewport.zoom(amt, false);
     }
 }, false);
 
