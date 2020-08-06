@@ -37,7 +37,14 @@ var enviro_tile_key = "0,0";
 
 var enviro_tiles = {};
 // This dict is used to export contents of the world.
-var enviro_tiles_export = {"type":"tiled-world","version":"0.0.1","tile-size":"32x32","tiles":{}};
+var enviro_tiles_export = {
+    "type": "tiled-world",
+    "version": "0.1",
+    "tile-size": "32",
+    "tile-file": "tilesets/terrain_tiles24.png",
+    "num-tiles": 0,
+    "tiles": {}
+};
 
 // Prevent right-click from bringing up window, as it is used to navigate the environment.
 splitRightElem.addEventListener("contextmenu", function (e) { e.preventDefault(); });
@@ -64,6 +71,7 @@ document.addEventListener("keydown", function (evt) {
             viewport.removeChild(enviro_tiles[enviro_tile_key].sprite);
             delete enviro_tiles[enviro_tile_key];
             delete enviro_tiles_export.tiles[enviro_tile_key];
+            enviro_tiles_export["num-tiles"] = enviro_tiles_export["num-tiles"] - 1;
         }
     }
 }, false);
@@ -286,12 +294,16 @@ document.addEventListener("mousedown", function (evt) {
 
             // Add the selectbox as a child (removing old parent) to keep it on top.
             viewport.addChild(selectbox_hover_env);
+            
+            // Increment number of tiles.
+            enviro_tiles_export["num-tiles"] = enviro_tiles_export["num-tiles"] + 1;
         }
 
         enviro_tiles[enviro_tile_key].sprite.position.set(enviro_tile_pos.x, enviro_tile_pos.y);
         enviro_tiles[enviro_tile_key].sprite.texture = new PIXI.Texture(texture, new PIXI.Rectangle(x, y, 32, 32));
         enviro_tiles[enviro_tile_key].sprite.texture.update();
 
+        // Save to export json.
         enviro_tiles_export.tiles[enviro_tile_key] = prev_tile;
 
         return;

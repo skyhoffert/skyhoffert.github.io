@@ -12,7 +12,19 @@ const loader_canvas = document.getElementById("loader-canvas");
 const loader_input = document.getElementById("loader-input");
 const loader_textarea = document.getElementById("loader-textarea");
 
+PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+
+// Disable right click menu.
+loader_canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+var enviro_tiles = {};
 var enviro_string = "";
+
+var enviro_tilenums = {};
+
+var texture = null;
+
+var TILE_SIZE = 0;
 
 loader_textarea.addEventListener("keydown", function (evt) {
     if (evt.key === "Enter") {
@@ -33,6 +45,8 @@ const loader_app = new PIXI.Application({
     view: loader_canvas,
 });
 
+const renderer = PIXI.autoDetectRenderer();
+
 const viewport = new Viewport.Viewport({
     screenWidth: WIDTH_LOADER,
     screenHeight: HEIGHT_LOADER,
@@ -41,12 +55,16 @@ const viewport = new Viewport.Viewport({
     interaction: loader_app.renderer.plugins.interation,
 });
 
+const texture_container = new PIXI.ParticleContainer();
+viewport.addChild(texture_container);
+
 loader_app.stage.addChild(viewport);
 
 viewport
     .drag({mouseButtons: "right"})
     .pinch()
-    .decelerate();
+    .decelerate()
+    .wheel();
 
 viewport.moveCenter(0,0);
 
@@ -82,13 +100,63 @@ selectbox_hover_env.anchor.set(0.5);
 selectbox_hover_env.position.set(0, 0);
 selectbox_hover_env.alpha = 0.8;
 viewport.addChild(selectbox_hover_env);
-
-// Listen for animate update
-enviro_app.ticker.add((delta) => {
-    mouse_text.text = "" + enviro_tile_idx.x + "," + enviro_tile_idx.y;
-    tile_text.text = "tile " + prev_tile;
-});
 */
+
+function LoadEnviro() {
+    const enviro_json = JSON.parse(enviro_string);
+
+    // DEBUG
+    console.log("type: " + enviro_json["type"]);
+    console.log("version: " + enviro_json["version"]);
+
+    TILE_SIZE = parseInt(enviro_json["tile-size"]);
+
+    console.log("tile-size: " + TILE_SIZE);
+
+    texture = PIXI.Texture.from(enviro_json["tile-file"]);
+
+    const enviro_tile_dict = enviro_json["tiles"];
+    const enviro_tile_dict_keys = Object.keys(enviro_tile_dict);
+    for (let i = 0; i < enviro_tile_dict_keys.length; i++) {
+        enviro_tile_key = enviro_tile_dict_keys[i];
+        tilenum = enviro_tile_dict[enviro_tile_key];
+
+        enviro_tiles[enviro_tile_key] = {"tilenum":tilenum, "sprite":null};
+        enviro_tiles[enviro_tile_key].sprite = new PIXI.Sprite();
+        enviro_tiles[enviro_tile_key].sprite.anchor.set(0.5);
+        enviro_tiles[enviro_tile_key].sprite.width = TILE_SIZE;
+        enviro_tiles[enviro_tile_key].sprite.height = TILE_SIZE;
+
+        const x = parseInt(enviro_tile_key.split(",")[0]) * 32;
+        const y = parseInt(enviro_tile_key.split(",")[1]) * 32;
+        const xTex = (tilenum % 8) * TILE_SIZE;
+        const yTex = Math.floor(tilenum / 8) * TILE_SIZE;
+        console.log("xtex:" + xTex + ",ytex:" + yTex);
+
+        enviro_tiles[enviro_tile_key].sprite.position.set(x, y);
+        enviro_tiles[enviro_tile_key].sprite.texture = new PIXI.Texture(texture,
+            new PIXI.Rectangle(xTex, yTex, TILE_SIZE, TILE_SIZE));
+        enviro_tiles[enviro_tile_key].sprite.texture.update();
+
+        texture_container.addChild(enviro_tiles[enviro_tile_key].sprite);
+        
+        enviro_tilenums[enviro_tile_key] = {"tilenum":tilenum, "sprite":null};
+        enviro_tilenums[enviro_tile_key].sprite = new PIXI.Text(""+tilenum,{ fontFamily: "monospace", fontSize: 12, fill: 0xffffff, align: "center"});
+        enviro_tilenums[enviro_tile_key].sprite.position.set(x-TILE_SIZE/2, y-TILE_SIZE/2);
+        texture_container.addChild(enviro_tilenums[enviro_tile_key].sprite);
+    }
+
+    return true;
+}
+
+var has_loaded_enviro = false;
+
+// Listen for animate update.
+loader_app.ticker.add((delta) => {
+    if (!has_loaded_enviro && enviro_string !== "") {
+        has_loaded_enviro = LoadEnviro();
+    }
+});
 
 // Environment ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
