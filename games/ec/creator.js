@@ -21,23 +21,23 @@ const N_TILES_COL = 8;
 
 const MAX_ZOOM_AMT = 50;
 
-var tmp = 0;
-var tmp2 = 0;
+let tmp = 0;
+let tmp2 = 0;
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
-var mouse_selector = {x:0,y:0};
-var mouse_enviro = {x:0,y:0};
-var mouse_in_enviro = false;
-var prev_tile = 0;
-var hover_tile = -1;
-var enviro_tile_idx = {x:0,y:0};
-var enviro_tile_pos = {x:0,y:0};
-var enviro_tile_key = "0,0";
+let mouse_selector = {x:0,y:0};
+let mouse_enviro = {x:0,y:0};
+let mouse_in_enviro = false;
+let prev_tile = 0;
+let hover_tile = -1;
+let enviro_tile_idx = {x:0,y:0};
+let enviro_tile_pos = {x:0,y:0};
+let enviro_tile_key = "0,0";
 
-var enviro_tiles = {};
+let enviro_tiles = {};
 // This dict is used to export contents of the world.
-var enviro_tiles_export = {
+let enviro_tiles_export = {
     "type": "tiled-world",
     "version": "0.1",
     "tile-size": "32",
@@ -171,19 +171,19 @@ tiles2.anchor.set(0.5);
 tiles2.position.set(WIDTH_SELECTOR/2, HEIGHT_SELECTOR/3);
 
 // Will be used later to scale things.
-var scaled_tile_size = 1;
+let scaled_tile_size = 1;
 
 selector_app.stage.addChild(tiles2);
 selector_app.stage.addChild(selectbox_hover);
 selector_app.stage.addChild(selectbox);
 
 // Bounding box for main tiles image.
-var TILES_T = tiles2.y - tiles2.height/2;
-var TILES_L = tiles2.x - tiles2.width/2;
-var TILES_B = tiles2.y + tiles2.height/2;
-var TILES_R = tiles2.x + tiles2.width/2;
+let TILES_T = tiles2.y - tiles2.height/2;
+let TILES_L = tiles2.x - tiles2.width/2;
+let TILES_B = tiles2.y + tiles2.height/2;
+let TILES_R = tiles2.x + tiles2.width/2;
 
-var hasDoneLoadProcedure = false;
+let hasDoneLoadProcedure = false;
 
 // LoadProcedure happens later in the code when the texture has been surely loaded.
 function LoadProcedure() {

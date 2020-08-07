@@ -17,14 +17,14 @@ PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 // Disable right click menu.
 loader_canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
-var enviro_tiles = {};
-var enviro_string = "";
+let enviro_tiles = {};
+let enviro_string = "";
 
-var enviro_tilenums = {};
+let enviro_tilenums = {};
 
-var texture = null;
+let texture = null;
 
-var TILE_SIZE = 0;
+let TILE_SIZE = 0;
 
 loader_textarea.addEventListener("keydown", function (evt) {
     if (evt.key === "Enter") {
@@ -44,8 +44,6 @@ const loader_app = new PIXI.Application({
     resolution: window.devicePixelRatio || 1,
     view: loader_canvas,
 });
-
-const renderer = PIXI.autoDetectRenderer();
 
 const viewport = new Viewport.Viewport({
     screenWidth: WIDTH_LOADER,
@@ -69,30 +67,10 @@ viewport
 viewport.moveCenter(0,0);
 
 /*
-// Create a new texture of the spritesheet itself.
-// TODO: include filename in the export data.
-// TODO: bad naming.
-const texture = PIXI.Texture.from("tilesets/terrain_tiles24.png");
-
-// Display which tile position in enviro will be edited.
-const mouse_text = new PIXI.Text("0,0",{ fontFamily: "monospace", fontSize: 24, fill: 0xffffff, align: "center"});
-mouse_text.position.set(10, 10);
-enviro_app.stage.addChild(mouse_text);
-
 // Display which tile in selector is chosen.
 const tile_text = new PIXI.Text("tile 0",{ fontFamily: "monospace", fontSize: 24, fill: 0xffffff, align: "center"});
 tile_text.position.set(10, 44);
 enviro_app.stage.addChild(tile_text);
-
-// Display a little tooltop.
-const tooltip_text = [
-    new PIXI.Text("s: save to clipboard",{ fontFamily: "monospace", fontSize: 12, fill: 0xffffff, align: "center"}),
-    new PIXI.Text("d: delete tile",{ fontFamily: "monospace", fontSize: 12, fill: 0xffffff, align: "center"}),
-];
-for (let i = 0; i < tooltip_text.length; i++) {
-    tooltip_text[i].position.set(10, splitRightElem.offsetHeight - (12*(i+1) + 10));
-    enviro_app.stage.addChild(tooltip_text[i]);
-}
 
 // Hover selectbox for placing tile in enviro.
 const selectbox_hover_env = new PIXI.Sprite(selectbox_texture);
@@ -146,10 +124,26 @@ function LoadEnviro() {
         texture_container.addChild(enviro_tilenums[enviro_tile_key].sprite);
     }
 
+    // DEBUG
+    let anim_textures = [];
+    for (let i = 0; i < 8; i++) {
+        anim_textures.push(new PIXI.Texture(texture, new PIXI.Rectangle(i*32, 0, TILE_SIZE, TILE_SIZE)));
+    }
+    let animatedSprite = new PIXI.AnimatedSprite(anim_textures);
+    animatedSprite.position.set(-20,-20);
+    animatedSprite.width = 32;
+    animatedSprite.height = 32;
+    animatedSprite.anchor.set(0.5);
+    animatedSprite.animationSpeed = 0.1;
+    viewport.addChild(animatedSprite);
+    console.log("val: " + animatedSprite.currentFrame);
+    animatedSprite.play();
+    console.log("val: " + animatedSprite.currentFrame);
+
     return true;
 }
 
-var has_loaded_enviro = false;
+let has_loaded_enviro = false;
 
 // Listen for animate update.
 loader_app.ticker.add((delta) => {
@@ -160,3 +154,10 @@ loader_app.ticker.add((delta) => {
 
 // Environment ////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+// Classes ////////////////////////////////////////////////////////////////////////////////////////
+
+class Environment {
+    constructor() {
+        this.tiles = {};
+    }
+}
