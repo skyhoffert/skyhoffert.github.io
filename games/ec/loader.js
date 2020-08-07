@@ -24,12 +24,24 @@ let enviro_tilenums = {};
 
 let texture = null;
 
+let ui_buttons = [];
+
 let TILE_SIZE = 0;
 
 loader_textarea.addEventListener("keydown", function (evt) {
     if (evt.key === "Enter") {
         loader_input.style.display = "none";
         enviro_string = loader_textarea.value;
+    }
+}, false);
+
+loader_canvas.addEventListener("mousedown", function (evt) {
+    for (let i = 0; i < ui_buttons.length; i++) {
+        if (ui_buttons[i].Contains(evt.x, evt.y)) {
+            console.log("hit it.");
+        } else {
+            console.log("missed");
+        }
     }
 }, false);
 
@@ -120,8 +132,9 @@ function LoadEnviro() {
         
         enviro_tilenums[enviro_tile_key] = {"tilenum":tilenum, "sprite":null};
         enviro_tilenums[enviro_tile_key].sprite = new PIXI.Text(""+tilenum,{ fontFamily: "monospace", fontSize: 12, fill: 0xffffff, align: "center"});
-        enviro_tilenums[enviro_tile_key].sprite.position.set(x-TILE_SIZE/2, y-TILE_SIZE/2);
-        texture_container.addChild(enviro_tilenums[enviro_tile_key].sprite);
+        enviro_tilenums[enviro_tile_key].sprite.position.set(x, y);
+        enviro_tilenums[enviro_tile_key].sprite.anchor.set(0.5);
+        viewport.addChild(enviro_tilenums[enviro_tile_key].sprite);
     }
 
     // DEBUG
@@ -140,6 +153,8 @@ function LoadEnviro() {
     animatedSprite.play();
     console.log("val: " + animatedSprite.currentFrame);
 
+    ui_buttons.push(new Button("Show/Hide Walls", 300, 30));
+
     return true;
 }
 
@@ -156,8 +171,29 @@ loader_app.ticker.add((delta) => {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Classes ////////////////////////////////////////////////////////////////////////////////////////
 
+class Button {
+    constructor(str,x,y) {
+        this._bg = PIXI.Sprite.from(PIXI.Texture.WHITE);
+        this._bg.tint = 0x101010;
+        this._bg.anchor.set(0.5);
+        this._bg.position.set(x, y);
+        loader_app.stage.addChild(this._bg);
+
+        this._text = new PIXI.Text(str, {fontFamily:"monospace", fontSize:24, fill:0xffffff, align:"center"});
+        this._bg.width = this._text.width + 20;
+        this._bg.height = this._text.height + 20;
+        this._text.position.set(x, y);
+        this._text.anchor.set(0.5);
+        loader_app.stage.addChild(this._text);
+    }
+
+    Contains(x, y) {
+        return this._bg.containsPoint({x:x, y:y});
+    }
+}
+
 class Environment {
     constructor() {
-        this.tiles = {};
+        this._tiles = {};
     }
 }
