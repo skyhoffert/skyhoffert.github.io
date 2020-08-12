@@ -118,9 +118,9 @@ class Ground {
         }
     }
 
-    Bomb(x, y) {
+    Bomb(x, y, r) {
         for (let i = 0; i < this._elems.length; i++) {
-            if (this._elems[i].DistTo(x, y) < 50) {
+            if (this._elems[i].DistTo(x, y) < r) {
                 this._elems[i].Destroy();
                 this._elems.splice(i, 1);
                 i--;
@@ -222,7 +222,7 @@ class Bomb {
 
         this._lifetime = t;
 
-        this._explosion_radius = this._radius * 6;
+        this._explosion_radius = this._radius * 5;
 
         this.active = true;
         
