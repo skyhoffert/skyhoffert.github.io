@@ -24,11 +24,23 @@ function Tick(dT) {
     stage_graphics.clear();
 
     // Ticking.
+    bomb_spawner.Tick(dT);
     player.Tick(dT);
+    for (let i = 0; i < stage_fx.length; i++) {
+        stage_fx[i].Tick(dT);
+        if (stage_fx[i].active === false) {
+            stage_fx.splice(i, 1);
+            i--;
+        }
+    }
 
     // Drawing.
+    bomb_spawner.Draw();
     ground.Draw();
     player.Draw();
+    for (let i = 0; i < stage_fx.length; i++) {
+        stage_fx[i].Draw();
+    }
 }
 
 const app = new PIXI.Application({
@@ -77,7 +89,7 @@ ui.addChild(ui_graphics);
 let Engine = Matter.Engine;
 let World = Matter.World;
 let Bodies = Matter.Bodies;
-var engine = Engine.create();
+let engine = Engine.create();
 
 // TODO: adjust gravity for proper feeling.
 engine.world.gravity.y = 0.2;
@@ -88,12 +100,14 @@ Engine.run(engine);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Stage //////////////////////////////////////////////////////////////////////////////////////////
 
+/*
 const sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
 sprite.width = 100;
 sprite.height = 100;
 sprite.anchor.set(0.5);
 sprite.position.set(0,0);
 stage.addChild(sprite);
+*/
 
 ui_graphics.beginFill(0x3e494b);
 ui_graphics.lineStyle(4, 0x0, .3);
@@ -101,8 +115,9 @@ ui_graphics.drawRoundedRect(10, 10, 100, 100, 30);
 ui_graphics.endFill();
 
 const ground = new Ground();
-
-let player = new UserBall(100, 0, ground);
+const player = new UserBall(100, 0, ground);
+const bomb_spawner = new BombSpawner(100, -20, 200);
+let stage_fx = [];
 
 loaded = true;
 
