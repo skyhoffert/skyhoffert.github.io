@@ -12,6 +12,18 @@ document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 
+const COS_45_FACTOR = fmath.cos(Math.PI/4);
+
+var loaded = false;
+
+function Tick() {
+    if (!loaded) { return; }
+
+    stage_graphics.clear();
+
+    ground.Draw();
+}
+
 const app = new PIXI.Application({
     width: WIDTH,
     height: HEIGHT,
@@ -19,6 +31,8 @@ const app = new PIXI.Application({
     resolution: window.devicePixelRatio || 1,
     antialias: true,
 });
+
+app.ticker.add(Tick);
 
 document.body.appendChild(app.view);
 
@@ -83,6 +97,10 @@ stage_graphics.beginFill(0xff0000);
 stage_graphics.drawPolygon(poly);
 stage_graphics.endFill();
 
+const ground = new Ground();
+
+loaded = true;
+
 // Stage //////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Global /////////////////////////////////////////////////////////////////////////////////////////
@@ -94,6 +112,8 @@ document.addEventListener("mousedown", function (evt) {
     console.log("click x:" + pt.x + ",y:" + pt.y);
     console.log("type: " + poly.type);
     console.log(": " + poly.contains(pt.x, pt.y));
+
+    ground.Bomb(pt.x, pt.y);
 }, false);
 
 // Global /////////////////////////////////////////////////////////////////////////////////////////
