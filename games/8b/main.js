@@ -14,14 +14,21 @@ const HEIGHT = window.innerHeight;
 
 const COS_45_FACTOR = fmath.cos(Math.PI/4);
 
-var loaded = false;
+let loaded = false;
 
-function Tick() {
+let keys = {w:false,a:false,s:false,d:false};
+
+function Tick(dT) {
     if (!loaded) { return; }
 
     stage_graphics.clear();
 
+    // Ticking.
+    player.Tick(dT);
+
+    // Drawing.
     ground.Draw();
+    player.Draw();
 }
 
 const app = new PIXI.Application({
@@ -67,6 +74,16 @@ stage.addChild(stage_graphics);
 const ui_graphics = new PIXI.Graphics();
 ui.addChild(ui_graphics);
 
+let Engine = Matter.Engine;
+let World = Matter.World;
+let Bodies = Matter.Bodies;
+var engine = Engine.create();
+
+// TODO: adjust gravity for proper feeling.
+engine.world.gravity.y = 0.2;
+
+Engine.run(engine);
+
 // Global /////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Stage //////////////////////////////////////////////////////////////////////////////////////////
@@ -78,26 +95,14 @@ sprite.anchor.set(0.5);
 sprite.position.set(0,0);
 stage.addChild(sprite);
 
-stage_graphics.beginFill(0x3e494b);
-stage_graphics.lineStyle(4, 0x0, .3);
-stage_graphics.drawRoundedRect(300, 300, 100, 100, 30);
-stage_graphics.endFill();
-
-ui_graphics.beginFill(0x428923);
-ui_graphics.drawRect(10, 10, 20, 40);
+ui_graphics.beginFill(0x3e494b);
+ui_graphics.lineStyle(4, 0x0, .3);
+ui_graphics.drawRoundedRect(10, 10, 100, 100, 30);
 ui_graphics.endFill();
 
-const poly = new PIXI.Polygon(
-    -200, -200,
-    -160, -160,
-    -240, -160,
-);
-stage_graphics.lineStyle(4, 0x00ff00, 1);
-stage_graphics.beginFill(0xff0000);
-stage_graphics.drawPolygon(poly);
-stage_graphics.endFill();
-
 const ground = new Ground();
+
+let player = new UserBall(100, 0, ground);
 
 loaded = true;
 
@@ -109,11 +114,18 @@ document.addEventListener("mousedown", function (evt) {
     if (evt.button !== 0) { return; }
     
     const pt = viewport.toWorld(evt.x, evt.y);
+    pt.x = Math.round(pt.x*2)/2;
+    pt.y = Math.round(pt.y*2)/2;
     console.log("click x:" + pt.x + ",y:" + pt.y);
-    console.log("type: " + poly.type);
-    console.log(": " + poly.contains(pt.x, pt.y));
 
     ground.Bomb(pt.x, pt.y);
+}, false);
+
+document.addEventListener("keydown", function (evt) {
+    keys[evt.key] = true;
+}, false);
+document.addEventListener("keyup", function (evt) {
+    keys[evt.key] = false;
 }, false);
 
 // Global /////////////////////////////////////////////////////////////////////////////////////////
