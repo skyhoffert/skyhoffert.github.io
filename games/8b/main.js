@@ -4,6 +4,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Global /////////////////////////////////////////////////////////////////////////////////////////
 
+const fmath = new FMath();
+
 // Disable right click menu.
 document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
@@ -38,26 +40,61 @@ viewport
 
 viewport.moveCenter(0,0);
 
-const fmath = new FMath();
+// UI elements go in the UI - ui_graphics is a child.
+const ui = new PIXI.Container();
+app.stage.addChild(ui);
+
+// Stage elements go in stage - stage_graphics is a child.
+const stage = new PIXI.Container();
+viewport.addChild(stage);
+
+const stage_graphics = new PIXI.Graphics();
+stage.addChild(stage_graphics);
+const ui_graphics = new PIXI.Graphics();
+ui.addChild(ui_graphics);
 
 // Global /////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+// Stage //////////////////////////////////////////////////////////////////////////////////////////
 
 const sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
 sprite.width = 100;
 sprite.height = 100;
 sprite.anchor.set(0.5);
 sprite.position.set(0,0);
-viewport.addChild(sprite);
+stage.addChild(sprite);
 
-const graphics = new PIXI.Graphics();
+stage_graphics.beginFill(0x3e494b);
+stage_graphics.lineStyle(4, 0x0, .3);
+stage_graphics.drawRoundedRect(300, 300, 100, 100, 30);
+stage_graphics.endFill();
 
-graphics.beginFill(0x3e494b);
-graphics.lineStyle(4, 0x0, .3);
-graphics.drawRoundedRect(300, 300, 100, 100, 30);
-graphics.endFill();
+ui_graphics.beginFill(0x428923);
+ui_graphics.drawRect(10, 10, 20, 40);
+ui_graphics.endFill();
 
-graphics.beginFill(0x428923);
-graphics.endFill();
+const poly = new PIXI.Polygon(
+    -200, -200,
+    -160, -160,
+    -240, -160,
+);
+stage_graphics.lineStyle(4, 0x00ff00, 1);
+stage_graphics.beginFill(0xff0000);
+stage_graphics.drawPolygon(poly);
+stage_graphics.endFill();
 
-viewport.addChild(graphics);
+// Stage //////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Global /////////////////////////////////////////////////////////////////////////////////////////
+
+document.addEventListener("mousedown", function (evt) {
+    if (evt.button !== 0) { return; }
+    
+    const pt = viewport.toWorld(evt.x, evt.y);
+    console.log("click x:" + pt.x + ",y:" + pt.y);
+    console.log("type: " + poly.type);
+    console.log(": " + poly.contains(pt.x, pt.y));
+}, false);
+
+// Global /////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
