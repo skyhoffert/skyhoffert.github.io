@@ -80,11 +80,11 @@ class Ground {
     constructor() {
         this._walls = [];
         this._elems = [];
-        this._ge_rad = 10;
+        this._ge_rad = 7;
         
         // Add elements.
-        for (let j = 0; j < 13; j++) {
-            for (let i = 0; i < 10; i++) {
+        for (let j = 0; j < 20; j++) {
+            for (let i = 0; i < 20; i++) {
                 this._elems.push(new GroundElement(2*i*this._ge_rad, 200 + 3/2*j*this._ge_rad,
                     this._ge_rad, false));
                 this._elems.push(new GroundElement((2*i+1)*this._ge_rad, 200 + (3/2*j)*this._ge_rad + this._ge_rad/2,
@@ -92,6 +92,7 @@ class Ground {
             }
         }
 
+        /* DEBUG
         // Add walls.
         this._walls.push(new GroundWall({
             type:"lrtb",
@@ -107,6 +108,7 @@ class Ground {
             top:200-this._ge_rad*2,
             bottom:200 + this._ge_rad*20,
         }));
+        */
     }
 
     Collides(b) {
@@ -158,7 +160,6 @@ class UserBall {
         const str = Math.min(r - hyp / 1000000, 0.0001);
 
         if (hyp < r) {
-            console.log("hi");
             Matter.Body.applyForce(this._body, {x:this._x, y:this._x}, 
                 {x: (this._x - x)*str, y: (this._y - y)*str});
         }

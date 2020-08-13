@@ -4,6 +4,10 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Global /////////////////////////////////////////////////////////////////////////////////////////
 
+let stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
+
 const fmath = new FMath();
 
 // Disable right click menu.
@@ -19,6 +23,8 @@ let loaded = false;
 let keys = {w:false,a:false,s:false,d:false};
 
 function Tick(dT) {
+    stats.begin();
+    
     if (!loaded) { return; }
 
     stage_graphics.clear();
@@ -35,12 +41,14 @@ function Tick(dT) {
     }
 
     // Drawing.
-    bomb_spawner.Draw();
     ground.Draw();
+    bomb_spawner.Draw();
     player.Draw();
     for (let i = 0; i < stage_fx.length; i++) {
         stage_fx[i].Draw();
     }
+
+	stats.end();
 }
 
 const app = new PIXI.Application({
