@@ -43,22 +43,30 @@ class GroundElement {
 }
 
 class GroundElement_Rect {
-    constructor(x, y, w, h) {
-        this._x = x;
-        this._y = y;
+    constructor(l, t, w, h) {
+        this._x = l + w/2;
+        this._y = t + h/2;
         this._width = w;
         this._height = h;
         
-        this._left = this._x - this._width/2;
-        this._right = this._x + this._width/2;
-        this._top = this._y - this._height/2;
-        this._bottom = this._y + this._height/2;
+        this._left = l;
+        this._right = l + w;
+        this._top = t;
+        this._bottom = t + h;
 
         this._body = Bodies.rectangle(this._x, this._y, this._width, this._height, {isStatic:true});
         this._poly = new PIXI.Rectangle(this._left, this._top, this._width, this._height);
 
         World.add(engine.world, [this._body]);
     }
+
+    Left() { return this._left; }
+    Right() { return this._right; }
+    Top() { return this._top; }
+    Bottom() { return this._bottom; }
+    Width() { return this._width; }
+    Height() { return this._height; }
+    WithinXBounds(x) { return x > this._left && x < this._right; }
 
     Destroy() {
         World.remove(engine.world, [this._body]);
@@ -116,8 +124,9 @@ class Ground {
         this._elems = [];
         this._ge_rad = 7;
         
+        this._ge_wid = 2;
         for (let i = 0; i < 100; i++) {
-            this._elems.push(new GroundElement_Rect(-200 + 4*i, 200, 4, 100));
+            this._elems.push(new GroundElement_Rect(0 + this._ge_wid*i, 100, this._ge_wid, 200));
         }
 
         // Add elements.
@@ -160,7 +169,7 @@ class Ground {
         }
     }
 
-    Bomb(x, y, r) {
+    Bomb(x, y, r=30) {
         /* for triangles
         for (let i = 0; i < this._elems.length; i++) {
             if (this._elems[i].DistTo(x, y) < r) {
@@ -170,7 +179,44 @@ class Ground {
             }
         }*/
 
-        for (let i = 0; i < this._elems.length; i++) {
+        for (let xp = x - r + 1; xp < x + r - 1; xp++) {
+            const yd = fmath.sin(Math.acos((x - xp) / r)) * r;
+            const yb = y + yd;
+            const yt = y - yd;
+            for (let i = 0; i < this._elems.length; i++) {
+                if (this._elems[i].WithinXBounds(xp)) {
+                    // If bomb explosion bottom reaches past top of elem.
+                    if (this._elems[i].Top() < yb) {
+                        let gotone = false;
+                        // Add lower element.
+                        if (yb < this._elems[i].Bottom()) {
+                            this._elems.push(new GroundElement_Rect(this._elems[i].Left(), yb + 1, this._elems[i].Width(), this._elems[i].Bottom() - (yb + 1)));
+                            gotone = true;
+                        }
+
+                        // Check if upper element should be added.
+                        if (this._elems[i].Top() < yt && yt < this._elems[i].Bottom()) {
+                            const ht = (yt - this._elems[i].Top()) - 1;
+                            if (ht > 2) {
+                                this._elems.push(new GroundElement_Rect(this._elems[i].Left(), this._elems[i].Top(), this._elems[i].Width(), ht));
+                            }
+                            gotone = true;
+                        }
+
+                        // finally, check if the entire element is within the blast.
+                        if (this._elems[i].Top() > yt && this._elems[i].Bottom() < yb) {
+                            gotone = true;
+                        }
+
+                        // Remove old element.
+                        if (gotone) {
+                            this._elems[i].Destroy();
+                            this._elems.splice(i, 1);
+                            i--;
+                        }
+                    }
+                }
+            }
         }
     }
 
