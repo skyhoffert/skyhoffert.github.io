@@ -53,6 +53,26 @@ class GroundElement_Rect {
         this._right = this._x + this._width/2;
         this._top = this._y - this._height/2;
         this._bottom = this._y + this._height/2;
+
+        this._body = Bodies.rectangle(this._x, this._y, this._width, this._height, {isStatic:true});
+        this._poly = new PIXI.Rectangle(this._left, this._top, this._width, this._height);
+
+        World.add(engine.world, [this._body]);
+    }
+
+    Destroy() {
+        World.remove(engine.world, [this._body]);
+    }
+
+    Contains(x, y) {
+        return this._poly.contains(x, y);
+    }
+
+    Draw() {
+        stage_graphics.lineStyle(0);
+        stage_graphics.beginFill(0x0000ff);
+        stage_graphics.drawRect(this._left, this._top, this._width, this._height);
+        stage_graphics.endFill();
     }
 }
 
@@ -96,7 +116,12 @@ class Ground {
         this._elems = [];
         this._ge_rad = 7;
         
+        for (let i = 0; i < 100; i++) {
+            this._elems.push(new GroundElement_Rect(-200 + 4*i, 200, 4, 100));
+        }
+
         // Add elements.
+        /*
         for (let j = 0; j < 20; j++) {
             for (let i = 0; i < 20; i++) {
                 this._elems.push(new GroundElement(2*i*this._ge_rad, 200 + 3/2*j*this._ge_rad,
@@ -105,6 +130,7 @@ class Ground {
                     this._ge_rad, true));
             }
         }
+        */
 
         /* DEBUG
         // Add walls.
@@ -135,12 +161,16 @@ class Ground {
     }
 
     Bomb(x, y, r) {
+        /* for triangles
         for (let i = 0; i < this._elems.length; i++) {
             if (this._elems[i].DistTo(x, y) < r) {
                 this._elems[i].Destroy();
                 this._elems.splice(i, 1);
                 i--;
             }
+        }*/
+
+        for (let i = 0; i < this._elems.length; i++) {
         }
     }
 
