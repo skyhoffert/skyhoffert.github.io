@@ -42,6 +42,20 @@ class GroundElement {
     }
 }
 
+class GroundElement_Rect {
+    constructor(x, y, w, h) {
+        this._x = x;
+        this._y = y;
+        this._width = w;
+        this._height = h;
+        
+        this._left = this._x - this._width/2;
+        this._right = this._x + this._width/2;
+        this._top = this._y - this._height/2;
+        this._bottom = this._y + this._height/2;
+    }
+}
+
 class GroundWall {
     constructor(opt) {
         if (opt.type === "lrtb") {
