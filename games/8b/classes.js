@@ -124,8 +124,9 @@ class Ground {
         this._elems = [];
         this._ge_rad = 7;
         
-        this._ge_wid = 2;
-        for (let i = 0; i < 100; i++) {
+        this._ge_wid = 1;
+        this._ground_wid = 200 / this._ge_wid;
+        for (let i = 0; i < this._ground_wid; i++) {
             this._elems.push(new GroundElement_Rect(0 + this._ge_wid*i, 100, this._ge_wid, 200));
         }
 
@@ -179,7 +180,7 @@ class Ground {
             }
         }*/
 
-        for (let xp = x - r + 1; xp < x + r - 1; xp++) {
+        for (let xp = x - r + 1; xp < x + r - 1; xp += this._ge_wid/2) {
             const yd = fmath.sin(Math.acos((x - xp) / r)) * r;
             const yb = y + yd;
             const yt = y - yd;
