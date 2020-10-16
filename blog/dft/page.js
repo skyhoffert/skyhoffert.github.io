@@ -71,7 +71,7 @@ class Plot {
         // graphics.moveTo(this.x, this.y-this.height/2);
         // graphics.lineTo(this.x, this.y+this.height/2);
         const xfac = WIDTH / (this.xaxislim[1] - this.xaxislim[0]);
-        const yfac = HEIGHT / (this.yaxislim[1] - this.yaxislim[0]);
+        const yfac = -HEIGHT / (this.yaxislim[1] - this.yaxislim[0]);
         graphics.moveTo(this.left + this.xdata[0] * xfac, this.y + yfac * this.ydata[0]);
         for (let i = 1; i < this.ydata.length-1; i++) {
             let x = this.left + this.xdata[i] * xfac;
@@ -89,13 +89,18 @@ class Complex {
         this.imag = i;
     }
 
+    Add(r,i) {
+        this.real += r;
+        this.imag += i;
+    }
+
     Set(r,i) {
         this.real = r;
         this.imag = i;
     }
 
     Magnitude() {
-        return Math.hypot(this.real, this.image);
+        return Math.hypot(this.real, this.imag);
     }
 
     Angle() {
@@ -118,6 +123,9 @@ function Max(ar) {
 function Min(ar) {
     return Math.min.apply(Math, ar);
 }
+function AWGN(u=0,s2=1) {
+    return Math.tan((Math.random() - 0.5) * Math.PI);
+}
 
 function Init() {
     let p = new Plot(WIDTH/2, HEIGHT/2, WIDTH, HEIGHT);
@@ -126,22 +134,36 @@ function Init() {
     const A = 1;
     const f = 5;
     const q = 0;
-    let s = [];
-    let t = Linspace(0,2,0.001);
+    let s = []; // s will be purely real
+    let t = Linspace(0,2,0.01);
 
     for (let i = 0; i < t.length; i++) {
-        const val = A * Math.cos(2*Math.PI*f*t[i] + q);
+        let val = A * Math.cos(2*Math.PI*f*t[i] + q);
+        val += 0.02 * AWGN();
         s.push(val);
     }
 
     p.setXData(t);
     p.setYData(s);
 
-    // TODO
-
-    // DEBUG
-    let ar = [1, 2, -3, 4, -5];
-    console.log(Math.abs.apply(Math, ar));
+    const N = s.length;
+    let W = [];
+    const R = Math.floor(Math.random()*N);
+    for (let k = 0; k < N; k++) {
+        let sum = new Complex(0,0);
+        for (let i = 0; i < N; i++) {
+            const re = s[i] * Math.cos(2*Math.PI*k*i/N);
+            const im = s[i] * -Math.sin(2*Math.PI*k*i/N);
+            if (i === R) {
+                //console.log(""+re+" + i*"+im);
+            }
+            sum.Add(re,im);
+        }
+        const m = sum.Magnitude();
+        //console.log(m);
+        W.push(m);
+    }
+    p.setYData(W);
 }
 
 Init();
