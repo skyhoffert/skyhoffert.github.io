@@ -83,6 +83,26 @@ class Plot {
     }
 }
 
+class Complex {
+    constructor(r,i) {
+        this.real = r;
+        this.imag = i;
+    }
+
+    Set(r,i) {
+        this.real = r;
+        this.imag = i;
+    }
+
+    Magnitude() {
+        return Math.hypot(this.real, this.image);
+    }
+
+    Angle() {
+        return Math.atan2(this.imag, this.real);
+    }
+}
+
 function Linspace(a,b,d,incl=true) {
     let t = [];
     const end = incl ? b : b-d;
@@ -116,6 +136,12 @@ function Init() {
 
     p.setXData(t);
     p.setYData(s);
+
+    // TODO
+
+    // DEBUG
+    let ar = [1, 2, -3, 4, -5];
+    console.log(Math.abs.apply(Math, ar));
 }
 
 Init();
