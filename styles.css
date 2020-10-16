@@ -70,6 +70,12 @@ button:hover img {
     height: 256px;
 }
 
+.centerCanvas {
+    padding: 0;
+    margin: auto;
+    display: block;
+}
+
 .tags {
     display: flex;
     flex-wrap: wrap;
