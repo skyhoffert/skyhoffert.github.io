@@ -38,7 +38,26 @@
     <div class="spacer-20"></div>
 
     <p>
-    TODO
+    Time, why you punish me?
+    <br><br>
+    Viewing information in time domain is something that is present in many fields of science and technology. It is not so clear that there are
+    other domains through which we can gain insight on information. One such "hidden" domain is; frequency domain.
+    <br><br>
+    In order to analyze a signal in frequency domain, it must undergo what is known as a <i>transformation</i> which converts its values into another
+    form. In the case of this blog post, the transformation we will be looking at is called the Fourier Transform. In this case, we are using a computer
+    which is by nature a discrete device - the discrete transform must be used.
+    <br><br>
+    The whole essence of the fourier transform is asking of a signal, what frequencies exist? What periodic oscillations exist in the given signal?
+    Specifically, what sinusoids (at some given frequency) are present?
+    <br><br>
+    Without bothering with the math too much, we can do this by multiplying by different sinusoids and comparing them. This can then be visualized
+    as "magnitude" plotted over "frequency", where "magnitude" means the <i>strength</i> of a sinusoid at a specific frequency.
+    <br><br>
+    In the example below, there is a sinusoid at a given frequency that lasts for 2 seconds. If you switch to frequency domain, you can see there are
+    two peaks, one in the positive side (real) and one on the negative side (imaginary). It turns out that negative frequencies are important for the
+    mathematics, but not present in real life.
+    <br><br>
+    NOTE that this signal has noise added to it and is finite in length. This creates spread out peaks and a noisy floor.
     <br><br>
     <canvas id="canv1" class="centerCanvas" style="max-width:50vw;"></canvas>
     <br><br>
