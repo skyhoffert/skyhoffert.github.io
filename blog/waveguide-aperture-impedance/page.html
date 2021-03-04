@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Waveguide Aperture Impedance Calculator</title>
+    <link rel="stylesheet" href="../../styles.css"></style>
+
+    <script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+    <script src="https://pixijs.download/v5.3.3/pixi.min.js"></script>
+    <script defer src="page.js"></script>
+
+    <style>
+        button {
+            font-size: 14px;
+            background-color: darkslategray;
+            border-radius: 8px;
+            width: 200px;
+            text-align: center;
+            padding: 10px;
+        }
+        button:hover {
+            font-size: 14px;
+        }
+        select {
+            color: black;
+        }
+        option {
+            color: black;
+        }
+        input {
+            color: black;
+            width: 60px;
+        }
+    </style>
+</head>
+<body>
+    <p><a href="../../blog.html">Back</a></p>
+    
+    <div class="spacer-40"></div>
+    
+    <h1>Waveguide Aperture Impedance Calculator</h1>
+    <hr>
+
+    <p>
+    Waveguide Dimensions: a=
+    <input type="text" id="dim-a" value="22.86">
+    mm, b=
+    <input type="text" id="dim-b" value="10.16">
+    mm
+    <br><br>
+    Frequency = 
+    <input type="text" id="dim-freq" value="10">
+    GHz
+    <br><br>
+    Iris type:
+    <select id="aperture-type">
+        <option value="symmetric-inductive-iris">Symmetric Inductive Iris</option>
+        <option value="asymmetric-inductive-iris">Asymmetric Inductive Iris</option>
+        <option value="circular-inductive-aperture">Circular Inductive Aperture</option>
+        <option value="symmetric-capacitive-iris">Symmetric Capacitive Iris</option>
+        <option value="asymmetric-capacitive-iris">Asymmetric Capacitive Iris</option>
+    </select>
+    <br><br>
+    d=
+    <input type="text" id="dim-d" value="0">
+    mm *NOTE: For Circular Inductive Aperture, d = 2&middot;r<sub>0</sub>
+    <br><br>
+    <sup>B<sub>i</sub></sup>&frasl;<sub>Y<sub>TE</sub></sub> = <span id="output-value">0</span>
+    <br><br>
+    <canvas id="canvas" class="centerCanvas" style="max-width:50vw;"></canvas>
+    <br><br>
+    </p>
+    
+    <div class="spacer-120"></div>
+    <!-- Ideally ads would go here -->
+    <div class="spacer-40"></div>
+    
+    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+    <input type="hidden" name="cmd" value="_donations" />
+    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
+    <input type="hidden" name="currency_code" value="USD" />
+    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
+
+    <div class="spacer-120"></div>
+    
+    <p>&copy; 2021 Sky Hoffert</p>
+
+</body>
+</html>
