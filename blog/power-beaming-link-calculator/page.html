@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Power Beaming Link Budget Calculator</title>
+    <link rel="stylesheet" href="../../styles.css"></style>
+
+    <script data-ad-client="ca-pub-4496939647071346" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+    <script src="https://pixijs.download/v5.3.3/pixi.min.js"></script>
+    <script src="https://pagecdn.io/lib/mathjs/7.1.0/math.min.js"></script>
+    <script defer src="page.js"></script>
+
+    <style>
+        button {
+            font-size: 14px;
+            background-color: darkslategray;
+            border-radius: 8px;
+            width: 200px;
+            text-align: center;
+            padding: 10px;
+        }
+        button:hover {
+            font-size: 14px;
+        }
+        select {
+            color: black;
+        }
+        option {
+            color: black;
+        }
+        input {
+            color: black;
+            width: 80px;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <p><a href="../../blog.html">Back</a></p>
+    
+    <div class="spacer-40"></div>
+    
+    <h1>Power Beaming Link Budget Calculator</h1>
+    <hr>
+
+    <br>
+    <canvas id="canvas" class="centerCanvas"></canvas>
+    <p>
+    f (Frequency) = 
+    <input type="text" id="dim-f" value="2412">
+    MHz
+    <br><br>
+    A<sub>t</sub> (Transmitter Antenna Area) = 
+    <input type="text" id="dim-A_t" value="1">
+    m<sup>2</sup>
+    <br><br>
+    P<sub>t,peak</sub> (Transmitter Power Peak) = 
+    <input type="text" id="dim-P_t_peak" value="1">
+    <select id="dim-P_t_peak_select">
+        <option value="W">W</option>
+        <option value="dBW">dBW</option>
+        <option value="dBm">dBm</option>
+    </select>
+    <br><br>
+    P<sub>t,avg</sub> (Transmitter Power Average) = 
+    <input type="text" id="dim-P_t_avg" value="1">
+    <select id="dim-P_t_avg_select">
+        <option value="W">W</option>
+        <option value="dBW">dBW</option>
+        <option value="dBm">dBm</option>
+    </select>
+    <br><br><br><br><br><br><br><br><br><br>
+    d (Distance to Ground) =
+    <input type="text" id="dim-d" value="420">
+    km
+    <br><br><br><br><br><br><br><br><br><br>
+    L<sub>atm</sub> (Atmospheric Loss) =
+    <input type="text" id="dim-L_atm" value="0">
+    dB
+    <br><br><br><br><br><br><br><br><br><br>
+    A<sub>r</sub> (Receiver Antenna Area) =
+    <input type="text" id="dim-A_r" value="1">
+    m<sup>2</sup>
+    <br><br><br><br><br><br><br><br><br><br>
+    P<sub>r,peak</sub> (Receiver Power Peak) = 
+    <input type="text" id="out-P_r_peak" value="0" readonly>
+    W =
+    <input type="text" id="out-P_r_peak_dB" value="0" readonly>
+    dBm
+    <br><br>
+    P<sub>r,avg</sub> (Receiver Power Average) = 
+    <input type="text" id="out-P_r_avg" value="0" readonly>
+    W =
+    <input type="text" id="out-P_r_avg_dB" value="0" readonly>
+    dBm
+    <br><br>
+    &tau; = 
+    <input type="text" id="out-tau" value="0" readonly>
+    <br><br>
+    &eta; = 
+    <input type="text" id="out-eta" value="0" readonly>
+    <br><br>
+    <!--
+    Iris type:
+    <select id="aperture-type">
+        <option value="symmetric-inductive-iris">Symmetric Inductive Iris</option>
+        <option value="asymmetric-inductive-iris">Asymmetric Inductive Iris</option>
+        <option value="circular-inductive-aperture">Circular Inductive Aperture</option>
+        <option value="symmetric-capacitive-iris">Symmetric Capacitive Iris</option>
+        <option value="asymmetric-capacitive-iris">Asymmetric Capacitive Iris</option>
+    </select>
+    <br><br>
+    -->
+    <br><br>
+    </p>
+    
+    <div class="spacer-120"></div>
+    <!-- Ideally ads would go here -->
+    <div class="spacer-40"></div>
+    
+    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+    <input type="hidden" name="cmd" value="_donations" />
+    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
+    <input type="hidden" name="currency_code" value="USD" />
+    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
+
+    <div class="spacer-120"></div>
+    
+    <p>&copy; 2021 Sky Hoffert</p>
+
+</body>
+</html>
