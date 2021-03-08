@@ -90,13 +90,17 @@
     P<sub>r,peak</sub> (Receiver Power Peak) = 
     <input type="text" id="out-P_r_peak" value="0" readonly>
     W =
-    <input type="text" id="out-P_r_peak_dB" value="0" readonly>
+    <input type="text" id="out-P_r_peak_dBW" value="0" readonly>
+    dBW = 
+    <input type="text" id="out-P_r_peak_dBm" value="0" readonly>
     dBm
     <br><br>
     P<sub>r,avg</sub> (Receiver Power Average) = 
     <input type="text" id="out-P_r_avg" value="0" readonly>
     W =
-    <input type="text" id="out-P_r_avg_dB" value="0" readonly>
+    <input type="text" id="out-P_r_avg_dBW" value="0" readonly>
+    dBW = 
+    <input type="text" id="out-P_r_avg_dBm" value="0" readonly>
     dBm
     <br><br>
     &tau; = 
@@ -117,6 +121,12 @@
     <br><br>
     -->
     <br><br>
+    </p>
+    <h2>Notes:</h2>
+    <p>
+    Numbers can be entered in engineering notation. For example, if you want your power level to be 1000 W, you can enter 1e3 W.
+    <br><br>
+    Atmospheric losses does not consider wavelength, you will have to enter an accurate value for atmospheric loss, depending on frequency.
     </p>
     
     <div class="spacer-120"></div>

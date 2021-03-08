@@ -3,6 +3,8 @@
 const WIDTH = 600;
 const HEIGHT = 800;
 
+const PI = 3.1415926;
+
 const canvas = document.getElementById("canvas");
 const app = new PIXI.Application({
     width: WIDTH, height: HEIGHT,
@@ -46,11 +48,14 @@ class Display {
         this.imgs.sun.height = 140;
         content.addChild(this.imgs.sun);
 
+        this.sat_min_size = 50;
+        this.sat_max_size = 250;
         this.imgs.sat = new PIXI.Sprite(PIXI.Texture.from("images/sat.png"));
         this.imgs.sat.anchor.set(0.5);
-        this.imgs.sat.position.set(100,120);
-        this.imgs.sat.width = 200;
-        this.imgs.sat.height = 200;
+        this.imgs.sat.position.set(112,120);
+        this.imgs.sat.width = this.sat_max_size;
+        this.imgs.sat.height = this.sat_max_size;
+        this.imgs.sat.rotation = -0.6;
         content.addChild(this.imgs.sat);
 
         this.imgs.earth = new PIXI.Sprite(PIXI.Texture.from("images/earth.png"));
@@ -60,14 +65,30 @@ class Display {
         this.imgs.earth.height = 100;
         content.addChild(this.imgs.earth);
 
-        // TODO: add receiver img.
-        // TODO: add lines for transmission waveform:
-        //         -> Increasing frequency brings lines closer together.
-        //         -> Increasing power makes lines darker/larger.
-        // TODO: how is "d" reflected in the imagery?
-        // TODO: how is "L_atm" reflected in the imagery?
-
-        // TODO: make sizes of transmitter and receiver scale with A_t and A_r, respectively.
+        this.rec_min_size = 50;
+        this.rec_max_size = 200;
+        this.imgs.rec = new PIXI.Sprite(PIXI.Texture.from("images/rec.png"));
+        this.imgs.rec.anchor.set(0.5,1);
+        this.imgs.rec.position.set(WIDTH*3/4,HEIGHT-50);
+        this.imgs.rec.width = this.rec_max_size;
+        this.imgs.rec.height = this.rec_max_size;
+        content.addChild(this.imgs.rec);
+        
+        this.imgs.cloud = new PIXI.Sprite(PIXI.Texture.from("images/cloud.png"));
+        this.imgs.cloud.anchor.set(0.5);
+        this.imgs.cloud.position.set(WIDTH*3/4-50,HEIGHT-280);
+        this.imgs.cloud.width = 300;
+        this.imgs.cloud.height = 150;
+        this.imgs.cloud.alpha = 1;
+        content.addChild(this.imgs.cloud);
+        
+        this.imgs.cloud2 = new PIXI.Sprite(PIXI.Texture.from("images/cloud.png"));
+        this.imgs.cloud2.anchor.set(0.5);
+        this.imgs.cloud2.position.set(150,HEIGHT-140);
+        this.imgs.cloud2.width = 200;
+        this.imgs.cloud2.height = 100;
+        this.imgs.cloud2.alpha = 1;
+        content.addChild(this.imgs.cloud2);
         
         // this.texts.a = new PIXI.Text("a", {
         //     fontFamily: "Verdana", fontSize: 36, fill: 0xffffff, align: "center",
@@ -108,19 +129,42 @@ class Display {
 
         this.lambda = this.c / this.f;
 
-        let tmp = this.A_t * this.A_r / (Sqr(this.lambda) * Sqr(this.d));
+        let tmp = Pow(10, (10*Log10(this.A_t * this.A_r / (Sqr(this.lambda) * Sqr(this.d))) - this.L_atm)/10);
         let tau = Sqrt(tmp);
         let P_r_peak = this.P_t_peak * tmp;
-        let P_r_peak_dB = 10*Log10(P_r_peak);
+        let P_r_peak_dBW = 10*Log10(P_r_peak);
         let P_r_avg = this.P_t_avg * tmp;
-        let P_r_avg_dB = 10*Log10(P_r_avg);
+        let P_r_avg_dBW = 10*Log10(P_r_avg);
         
         out_P_r_peak.value = math.format(P_r_peak, {precision:3});
-        out_P_r_peak_dB.value = math.format(P_r_peak_dB, {precision:3});
+        out_P_r_peak_dBW.value = math.format(P_r_peak_dBW, {precision:3});
+        out_P_r_peak_dBm.value = math.format(P_r_peak_dBW + 30, {precision:3});
         out_P_r_avg.value = math.format(P_r_avg, {precision:3});
-        out_P_r_avg_dB.value = math.format(P_r_avg_dB, {precision:3});
+        out_P_r_avg_dBW.value = math.format(P_r_avg_dBW, {precision:3});
+        out_P_r_avg_dBm.value = math.format(P_r_avg_dBW + 30, {precision:3});
         out_tau.value = math.format(tau, {precision:3});
         out_eta.value = math.format(1-Exp(-Sqr(tau)), {precision:3});
+
+        // Calculate factors for sizing objects.
+        let maxf = 10*Log10(35e9);
+        let minf = 10*Log10(1e6);
+        this.freq_factor = Clamp(1 - (10*Log10(this.f) - minf) / (maxf - minf), 0, 1);
+
+        let maxP = 10*Log10(1e9);
+        let minP = 10*Log10(10);
+        this.P_factor = Clamp((10*Log10(this.P_t_avg) - minP) / (maxP - minP), 0, 1);
+
+        let maxAt = 10*Log10(1e6);
+        let minAt = 10*Log10(1);
+        this.At_factor = Clamp((10*Log10(this.A_t) - minAt) / (maxAt - minAt), 0,  1);
+        
+        let maxAr = 10*Log10(1e7);
+        let minAr = 10*Log10(1);
+        this.Ar_factor = Clamp((10*Log10(this.A_r) - minAr) / (maxAr - minAr), 0,  1);
+
+        let maxL = 10;
+        let minL = 0;
+        this.L_factor = Clamp((this.L_atm - minL) / (maxL - minL), 0.01, 1);
     }
 
     Destroy() {
@@ -139,6 +183,35 @@ class Display {
         graphics.beginFill(0x000000);
         graphics.drawRect(0, 0, WIDTH, HEIGHT);
         graphics.endFill();
+
+        // Radiation lines.
+        let thicks = [14, 18, 30]; // These are MAX widths.
+        let rads = [20, 45, 80]; // These are MIN rads.
+        let thickfactor = this.P_factor;
+        let radfactor = 0.8 + 2 * this.freq_factor;
+        for (let i = 0; i < 3; i++) {
+            graphics.lineStyle({width:1 + thicks[i] * thickfactor, color:0x28dead, cap:"round"});
+            graphics.arc(170, 200, rads[i] * radfactor, 0.6, 1.4);
+            graphics.endFill();
+        }
+
+        graphics.lineStyle(2, 0x215bb8, 0.4);
+        graphics.beginFill(0x4287f5, 0.15);
+        graphics.arc(WIDTH/2, HEIGHT*1.8, HEIGHT*5/4, 0, 2*PI);
+        graphics.endFill();
+
+        // Resize existing images.
+        let tmp = this.sat_min_size + this.At_factor * (this.sat_max_size - this.sat_min_size)
+        this.imgs.sat.width = tmp;
+        this.imgs.sat.height = tmp;
+
+        tmp = this.rec_min_size + this.Ar_factor * (this.rec_max_size - this.rec_min_size);
+        this.imgs.rec.width = tmp;
+        this.imgs.rec.height = tmp;
+
+        // Adjust alpha of clouds
+        this.imgs.cloud.alpha = this.L_factor;
+        this.imgs.cloud2.alpha = this.L_factor;
     }
 }
 
@@ -173,6 +246,12 @@ function Fourth(v) { return Math.pow(v,4); }
 function Exp(v) { return Math.exp(v); }
 function Log10(v) { return Math.log10(v); }
 function Pow(b,e) { return Math.pow(b, e); }
+
+function Clamp(v, min, max) {
+    if (v < min) { return min; }
+    if (v > max) { return max; }
+    return v;
+}
 
 function ToWatts(v, s) {
     let tmp = parseFloat(v);
@@ -246,9 +325,11 @@ for (const dim of [dim_f, dim_A_t, dim_P_t_peak, dim_P_t_avg, dim_d, dim_L_atm, 
 
 // Register the output boxes.
 const out_P_r_peak = document.getElementById("out-P_r_peak");
-const out_P_r_peak_dB = document.getElementById("out-P_r_peak_dB");
+const out_P_r_peak_dBW = document.getElementById("out-P_r_peak_dBW");
+const out_P_r_peak_dBm = document.getElementById("out-P_r_peak_dBm");
 const out_P_r_avg = document.getElementById("out-P_r_avg");
-const out_P_r_avg_dB = document.getElementById("out-P_r_avg_dB");
+const out_P_r_avg_dBW = document.getElementById("out-P_r_avg_dBW");
+const out_P_r_avg_dBm = document.getElementById("out-P_r_avg_dBm");
 const out_tau = document.getElementById("out-tau");
 const out_eta = document.getElementById("out-eta");
 
