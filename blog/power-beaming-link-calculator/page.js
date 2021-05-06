@@ -5,6 +5,15 @@ const HEIGHT = 800;
 
 const PI = 3.1415926;
 
+const M_s_ratio = 10; // kg / m^2
+document.getElementById("out-M_ratio").innerHTML = M_s_ratio;
+
+const M_L_default = 5000; // kg
+document.getElementById("dim-M_L").value = M_L_default;
+
+const N_default = 12;
+document.getElementById("dim-N").value = N_default;
+
 const canvas = document.getElementById("canvas");
 const app = new PIXI.Application({
     width: WIDTH, height: HEIGHT,
@@ -98,7 +107,6 @@ class Display {
         // content.addChild(this.texts.a);
 
         this.c = 3e8;
-        this.pi = 3.1415926;
         
         this.f = 0; // Hz
         this.A_t = 0; // m^2
@@ -108,18 +116,33 @@ class Display {
         this.L_atm = 0; // dB
         this.A_r = 0; // m^2
 
+        this.M_s = 0;
+        this.M_L = 0;
+        this.N = 0;
+
+        // TODO(sky): set all initial values to 0
+
         this.lambda = 0; // m
     }
 
     Update() {
+        // Used to track if A_t changes this call.
+        let old_A_t = this.A_t;
+
         // Parse values.
-        this.f = parseFloat(dim_f.value) * 1e6; // MHz -> Hz
-        this.A_t = parseFloat(dim_A_t.value); // m^2
+        this.f = parseFloat(dim_f.value) * ToHertz(dim_f_select.value);; // Hz
+        this.A_t = ToArea(dim_A_t.value, dim_A_t_select.value); // m^2
         this.P_t_peak = ToWatts(dim_P_t_peak.value, dim_P_t_peak_select.value); // W
         this.P_t_avg = ToWatts(dim_P_t_avg.value, dim_P_t_avg_select.value); // W
         this.d = parseFloat(dim_d.value) * 1e3; // km -> m
         this.L_atm = parseFloat(dim_L_atm.value); // dB
-        this.A_r = parseFloat(dim_A_r.value); // m^2
+        this.A_r = ToArea(dim_A_r.value, dim_A_r_select.value); // m^2
+        this.M_s = parseFloat(dim_M_s.value); // kg
+        this.M_L = parseFloat(dim_M_L.value); // kg
+        this.N = parseFloat(dim_N.value); // launches per YEAR
+
+        // Detect if A_t was changed for M_s
+        let change_A_t = old_A_t != this.A_t;
 
         // Checks values for realistic/correctness.
         if (this.P_t_peak < this.P_t_avg) {
@@ -129,6 +152,7 @@ class Display {
 
         this.lambda = this.c / this.f;
 
+        // Calculate power stuff.
         let tmp = Pow(10, (10*Log10(this.A_t * this.A_r / (Sqr(this.lambda) * Sqr(this.d))) - this.L_atm)/10);
         let tau = Sqrt(tmp);
         let P_r_peak = this.P_t_peak * tmp;
@@ -142,8 +166,17 @@ class Display {
         out_P_r_avg.value = math.format(P_r_avg, {precision:3});
         out_P_r_avg_dBW.value = math.format(P_r_avg_dBW, {precision:3});
         out_P_r_avg_dBm.value = math.format(P_r_avg_dBW + 30, {precision:3});
+        out_P_dr_peak.value = math.format(P_r_peak / this.A_r, {precision:3});
+        out_P_dr_avg.value = math.format(P_r_avg / this.A_r, {precision:3});
         out_tau.value = math.format(tau, {precision:3});
         out_eta.value = math.format(1-Exp(-Sqr(tau)), {precision:3});
+
+        // Calculate dimensions stuff.
+        if (change_A_t == true) {
+            this.M_s = this.A_t * M_s_ratio;
+            dim_M_s.value = this.M_s;
+        }
+        out_t_d.value = this.M_s / (this.M_L * this.N);
 
         // Calculate factors for sizing objects.
         let maxf = 10*Log10(35e9);
@@ -253,15 +286,39 @@ function Clamp(v, min, max) {
     return v;
 }
 
+function ToHertz(v) {
+    if (v == "MHz") { return 1e6; }
+    if (v == "GHz") { return 1e9; }
+    if (v == "THz") { return 1e12; }
+    return 0;
+}
+
+function ToArea(v, s) {
+    let tmp = parseFloat(v);
+    if (s == "m^2") { return tmp; }
+    if (s == "rad") { return PI * tmp * tmp; } // pi * r^2
+    return 0;
+}
+
 function ToWatts(v, s) {
     let tmp = parseFloat(v);
-    if (s == "W") {
-        return tmp;
-    } else if (s == "dBW") {
-        return Pow(10, tmp/10);
-    } else if (s == "dBm") {
-        return Pow(10, (tmp-30)/10);
-    }
+    if (s == "W") { return tmp; }
+    if (s == "dBW") { return Pow(10, tmp/10); }
+    if (s == "dBm") { return Pow(10, (tmp-30)/10); }
+    return 0;
+}
+
+function ToMass(v, s) {
+    let tmp = parseFloat(v);
+    if (s == "kg") { return tmp; }
+    if (s == "mt") { return 1000*tmp; }
+    return 0;
+}
+
+function ToM_s(v, s) {
+    if (s == "kg") { return v; }
+    if (s == "mt") { return v / 1000; }
+    return 0;
 }
 
 let update = false;
@@ -309,15 +366,23 @@ canvas.addEventListener("mousemove", function (evt) {
 
 // Listen for changes on ANY of these ids.
 const dim_f = document.getElementById("dim-f");
+const dim_f_select = document.getElementById("dim-f_select");
 const dim_A_t = document.getElementById("dim-A_t");
+const dim_A_t_select = document.getElementById("dim-A_t_select");
 const dim_P_t_peak = document.getElementById("dim-P_t_peak");
 const dim_P_t_avg = document.getElementById("dim-P_t_avg");
 const dim_d = document.getElementById("dim-d");
 const dim_L_atm = document.getElementById("dim-L_atm");
 const dim_A_r = document.getElementById("dim-A_r");
+const dim_A_r_select = document.getElementById("dim-A_r_select");
 const dim_P_t_peak_select = document.getElementById("dim-P_t_peak_select");
 const dim_P_t_avg_select = document.getElementById("dim-P_t_avg_select");
-for (const dim of [dim_f, dim_A_t, dim_P_t_peak, dim_P_t_avg, dim_d, dim_L_atm, dim_A_r, dim_P_t_peak_select, dim_P_t_avg_select]) {
+const dim_M_s = document.getElementById("dim-M_s");
+const dim_M_L = document.getElementById("dim-M_L");
+const dim_N = document.getElementById("dim-N");
+for (const dim of [dim_f, dim_A_t, dim_P_t_peak, dim_P_t_avg, dim_d, dim_L_atm,
+        dim_A_r, dim_P_t_peak_select, dim_P_t_avg_select, dim_f_select,
+        dim_A_t_select, dim_A_r_select, dim_M_s, dim_M_L, dim_N]) {
     dim.addEventListener("change", function (evt) {
         Update();
     }, false);
@@ -330,7 +395,10 @@ const out_P_r_peak_dBm = document.getElementById("out-P_r_peak_dBm");
 const out_P_r_avg = document.getElementById("out-P_r_avg");
 const out_P_r_avg_dBW = document.getElementById("out-P_r_avg_dBW");
 const out_P_r_avg_dBm = document.getElementById("out-P_r_avg_dBm");
+const out_P_dr_peak = document.getElementById("out-P_dr_peak");
+const out_P_dr_avg = document.getElementById("out-P_dr_avg");
 const out_tau = document.getElementById("out-tau");
 const out_eta = document.getElementById("out-eta");
+const out_t_d = document.getElementById("out-t_d");
 
 Init();

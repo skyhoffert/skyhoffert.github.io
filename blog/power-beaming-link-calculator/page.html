@@ -53,11 +53,18 @@
     <p>
     f (Frequency) = 
     <input type="text" id="dim-f" value="2412">
-    MHz
+    <select id="dim-f_select">
+        <option value="MHz">MHz</option>
+        <option value="GHz">GHz</option>
+        <option value="THz">THz</option>
+    </select>
     <br><br>
     A<sub>t</sub> (Transmitter Antenna Area) = 
     <input type="text" id="dim-A_t" value="1">
-    m<sup>2</sup>
+    <select id="dim-A_t_select">
+        <option value="m^2">m&#x00B2;</option>
+        <option value="rad">m radius</option>
+    </select>
     <br><br>
     P<sub>t,peak</sub> (Transmitter Power Peak) = 
     <input type="text" id="dim-P_t_peak" value="1">
@@ -85,9 +92,12 @@
     <br><br><br><br><br><br><br><br><br><br>
     A<sub>r</sub> (Receiver Antenna Area) =
     <input type="text" id="dim-A_r" value="1">
-    m<sup>2</sup>
+    <select id="dim-A_r_select">
+        <option value="m^2">m&#x00B2;</option>
+        <option value="rad">m radius</option>
+    </select>
     <br><br><br><br><br><br><br><br><br><br>
-    P<sub>r,peak</sub> (Receiver Power Peak) = 
+    P<sub>r,peak</sub> (Receiver Peak Power) = 
     <input type="text" id="out-P_r_peak" value="0" readonly>
     W =
     <input type="text" id="out-P_r_peak_dBW" value="0" readonly>
@@ -95,7 +105,7 @@
     <input type="text" id="out-P_r_peak_dBm" value="0" readonly>
     dBm
     <br><br>
-    P<sub>r,avg</sub> (Receiver Power Average) = 
+    P<sub>r,avg</sub> (Receiver Average Power) = 
     <input type="text" id="out-P_r_avg" value="0" readonly>
     W =
     <input type="text" id="out-P_r_avg_dBW" value="0" readonly>
@@ -103,10 +113,18 @@
     <input type="text" id="out-P_r_avg_dBm" value="0" readonly>
     dBm
     <br><br>
-    &tau; = 
+    P<sub>dr,peak</sub> (Receiver Peak Power Density) = 
+    <input type="text" id="out-P_dr_peak" value="0" readonly>
+    W m<sup>-2</sup>
+    <br><br>
+    P<sub>dr,avg</sub> (Receiver Average Power Density) = 
+    <input type="text" id="out-P_dr_avg" value="0" readonly>
+    W m<sup>-2</sup>
+    <br><br>
+    &tau; (&eta; parameter) = 
     <input type="text" id="out-tau" value="0" readonly>
     <br><br>
-    &eta; = 
+    &eta; (efficiency) = 
     <input type="text" id="out-eta" value="0" readonly>
     <br><br>
     <!--
@@ -120,13 +138,40 @@
     </select>
     <br><br>
     -->
+    <br><br><br><br>
+    What about the power beaming spacecraft itself? How massive would it be and how long will it take to launch into space?
+    <br><br><br><br>
+    M<sub>s</sub> (spacecraft mass) = 
+    <input type="text" id="dim-M_s" value="0">
+    kg
+    <br><br>
+    M<sub>L</sub> (mass per launch) = 
+    <input type="text" id="dim-M_L" value="0">
+    kg per launch
+    <br><br>
+    N (launches per year) = 
+    <input type="text" id="dim-N" value="0">
+    launches per year
+    <br><br>
+    t<sub>d</sub> (time to deploy) = 
+    <input type="text" id="out-t_d" value="0" readonly>
+    years
     <br><br>
     </p>
     <h2>Notes:</h2>
     <p>
     Numbers can be entered in engineering notation. For example, if you want your power level to be 1000 W, you can enter 1e3 W.
     <br><br>
+    Receiver power density does not consider beamwidth or variable gain within the receiver aperture. It is average over the entire receiver area.
+    <br><br>
     Atmospheric losses does not consider wavelength, you will have to enter an accurate value for atmospheric loss, depending on frequency.
+    <br>
+    </p>
+    <p style="display:inline;">
+    M will change if A<sub>t</sub> is modified - this uses a somewhat arbitrary ratio of <p id="out-M_ratio" style="display:inline;">0</p> kg m<sup>-2</sup>.
+    </p>
+    <p>
+    M<sub>L</sub> is assumed to be rocket mass to final destination, not necessarily to LEO. This is important if the SPS is designed for GEO.
     </p>
     
     <div class="spacer-120"></div>
