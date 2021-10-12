@@ -18,11 +18,44 @@
     
     <div class="spacer-40"></div>
     
-    <h1>NN From Scratch</h1>
+    <h1 id="heading">NN From Scratch</h1>
     <hr>
 
     <br>
+    <i>Sky Hoffert<br>October 11, 2021</i>
+    <br><br>
+    <p>This blog post has a specific purpose: to teach me how to create a Neural Network from scratch.</p>
+    <p>By from scratch, I mean no libraries, no hardware acceleration, no 
+    optimization. Purely logical programming structure and all machine learning
+    functions customized. Often, Neural networks (NNs) are implemented with matrix
+    multiplications performed on the GPU - with libraries taking care of the
+    heavy lifting. Here is the result (more comments below):</p>
+    <br><br>
     <canvas id="canvas"></canvas>
+    <br><br>
+
+    <p>While this can be amazingly effective, it abstracts the "black box" idea
+    of a black box NN even further from the user. As a result, I have come up
+    with a class based NN implementation, where nodes are linked together and
+    all processing is done on the CPU in real time.</p>
+    <p>The NN needs an objective. As you can see, the arbitrary objective of
+    learning to play my version of the "Google chrome no-internet connectivity"
+    game.</p>
+    <p>For the time being, the leader of each generation survives and the rest
+    are mutated from the winner. You can see the offspring by the preservation
+    of their last name. The winner has a crown indicator in the top right of
+    their game screen. Sometimes, an offspring will be randomly generated into
+    a totally new NN, indicated by a unique last name.</p>
+    <p>This algorithm is NOT optimized. Frankly, it takes a very long time to
+    generate an individual who can score better than a 5 year old... Also,
+    occasionally an individual who seems to be "good at the game", i.e. they
+    only jump when a tree comes near or maybe hold duck most of the time, will
+    lose out to an individual who holds the jump button.</p>
+    <p>In summary, there is a lot of room for improvement. But this was an
+    excellent first step into the world of NNs for me. I encourage you to
+    peer into the code or provide suggestions on how to improve the
+    performance.</p>
+    <p>Be curious!</p>
     
     <div class="spacer-120"></div>
     <!-- Ideally ads would go here -->
