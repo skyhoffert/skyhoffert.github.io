@@ -23,6 +23,7 @@ const TREE_SIZE = 44;
 const BIRD_SIZE = 32;
 
 const BIRD_SPAWN_SCORE = 20;
+const BIRD_LOW_SPAWN_SCORE = 50;
 const ENTITY_SPAWN_POSITION = GAME_WIDTH*1.2;
 const ENTITY_LEFT_BOUND = -GAME_WIDTH*0.2;
 
@@ -68,36 +69,17 @@ function NNRandBias() {
     return (Math.random() * 0.4) - 0.2;
 }
 
-function NNMutate(e, wv=0.1, bv=0.1, nlcc=0.1, ldcc=0.1) {
+function NNMutate(e, wv=0.1, bv=0.1, rc=0.1) {
     // @param wv: weight variance.
     // @param bv: bias variance.
-    // @param nlcc: nLayers change chance.
-    // @param ldcc: layer depth change chance.
+    // @param rc: random chance.
 
-    // TODO: change number of layers or height, rather than just creating a new.
-    // Here, check if number of layers should change in this mutation.
-    // let nLayers = this.nLayers;
-    if (Math.random() < nlcc) {
+    // Here, check if a new, random NN should be generated.
+    if (Math.random() < rc) {
         return null;
-    //     if (Math.random() > 0.5) {
-    //         nLayers++;
-    //     } else {
-    //         nLayers--;
-    //     }
-    //     nLayers = Clamp(nLayers, 3, 5);
     }
 
-    // // Here, check if number of nodes at some layer should change.
-    // let newheight = 0;
-    if (Math.random() < ldcc) {
-        return null;
-    //     if (Math.random() > 0.5) {
-    //         nLayers++;
-    //     } else {
-    //         nLayers--;
-    //     }
-    //     nLayers = Clamp(nLayers, 3, 5);
-    }
+    // Otherwise, just change weights and bias.
  
     // Alter weights and bias with a normal distribution.
     for (let l = 0; l < N_LAYERS_MAX; l++) {
@@ -113,6 +95,12 @@ function NNMutate(e, wv=0.1, bv=0.1, nlcc=0.1, ldcc=0.1) {
     }
 
     return e;
+}
+function NNVarianceAtScore(s) {
+    return 1/(Math.pow(s,0.3)*3);
+}
+function NNMutationChanceAtScore(s) {
+    return 1/(Math.pow(s,0.3));
 }
 
 class NN_Node {
@@ -265,6 +253,7 @@ class NN {
         e.nLayers = this.nLayers;
         e.heights = this.heights;
         e.name = this.name;
+        e.score = 0;
 
         // Copy node information into e.
         for (let layer = 0; layer < this.nLayers; layer++) {
@@ -371,8 +360,6 @@ class Game {
         this.dino_spawn = this.x + 60;
         this.max_separation = this.x + ENTITY_SPAWN_POSITION - this.dino_spawn;
 
-        this.tree_speed = -8;
-
         this.score = 0;
         this.generation = 0;
 
@@ -396,11 +383,19 @@ class Game {
 
         this.imgs.bird = new PIXI.Sprite(PIXI.Texture.from("images/bird.png"));
         this.imgs.bird.anchor.set(0.5);
-        this.imgs.bird.position.set(this.bird_spawn, this.y + LINE_HEIGHT - 8);
+        this.imgs.bird.position.set(this.bird_spawn, this.y + LINE_HEIGHT - 50);
         this.imgs.bird.width = BIRD_SIZE;
         this.imgs.bird.height = BIRD_SIZE;
         this.imgs.bird.visible = false;
         content.addChild(this.imgs.bird);
+
+        this.imgs.bird_low = new PIXI.Sprite(PIXI.Texture.from("images/bird.png"));
+        this.imgs.bird_low.anchor.set(0.5);
+        this.imgs.bird_low.position.set(this.bird_spawn, this.y + LINE_HEIGHT - 8);
+        this.imgs.bird_low.width = BIRD_SIZE;
+        this.imgs.bird_low.height = BIRD_SIZE;
+        this.imgs.bird_low.visible = false;
+        content.addChild(this.imgs.bird_low);
 
         this.imgs.crown = new PIXI.Sprite(PIXI.Texture.from("images/crown.png"));
         this.imgs.crown.anchor.set(0.5);
@@ -462,9 +457,15 @@ class Game {
         this.dino_jump_time = 0;
         this.dino_jump_duration = 200;
 
+        this.tree_speed = -7;
+
         this.bird_active = false;
-        this.bird_avg_speed = -10;
-        this.bird_speed = -10;
+        this.bird_avg_speed = -9;
+        this.bird_speed = -9;
+
+        this.bird_low_active = false;
+        this.bird_low_avg_speed = -9;
+        this.bird_low_speed = -9;
     }
 
     SetWinner(b) {
@@ -478,13 +479,11 @@ class Game {
 
         this.imgs.tree.x = this.tree_spawn;
         this.imgs.bird.x = this.bird_spawn;
+        this.imgs.bird_low.x = this.bird_spawn;
         this.imgs.dino.y = this.y + LINE_HEIGHT;
 
         this.action_up = false;
         this.action_down = false;
-
-        this.score = 0;
-        this.generation++;
 
         this.tree_speed = -7;
 
@@ -492,15 +491,23 @@ class Game {
         this.bird_avg_speed = -9;
         this.bird_speed = -9;
 
+        this.bird_low_active = false;
+        this.bird_low_avg_speed = -9;
+        this.bird_low_speed = -9;
+
         // If this nn is not the leader, create new.
         if (leader.id != this.nnid) {
             objs[this.nnid].Destroy();
             // TODO: play around with the mutation rates here.
             objs[this.nnid] = new NN(this.x, this.y, this.nnid, this.name, 
-                NNMutate(leader, 0.5, 0.5, 0.2, 0.2));
+                NNMutate(leader, NNVarianceAtScore(leader.score), NNVarianceAtScore(leader.score),
+                NNMutationChanceAtScore(leader.score)));
         }
         objs[this.nnid].active = true;
         this.texts.name.text = objs[this.nnid].name;
+
+        this.score = 0;
+        this.generation++;
 
         this.active = true;
         this.imgs.crown.visible = leader.id == this.nnid;
@@ -535,6 +542,14 @@ class Game {
             this.bird_active = this.score > BIRD_SPAWN_SCORE;
         }
 
+        // Move bird_low (if active).
+        if (this.bird_low_active) {
+            this.imgs.bird_low.position.x += this.bird_low_speed * dT;
+            this.bird_low_avg_speed -= 0.001 * dT;
+        } else {
+            this.bird_low_active = this.score > BIRD_LOW_SPAWN_SCORE;
+        }
+
         // Handle bird level boundary.
         if (this.imgs.bird.x < this.x + ENTITY_LEFT_BOUND) {
             this.imgs.bird.x = this.x + ENTITY_SPAWN_POSITION;
@@ -542,6 +557,14 @@ class Game {
             this.bird_speed = this.bird_avg_speed * fac;
         } 
         this.imgs.bird.visible = this.imgs.bird.x < this.x + GAME_WIDTH && this.imgs.bird.x > this.x;
+
+        // Handle bird_low level boundary.
+        if (this.imgs.bird_low.x < this.x + ENTITY_LEFT_BOUND) {
+            this.imgs.bird_low.x = this.x + ENTITY_SPAWN_POSITION;
+            let fac = (Math.random()*0.2) + 0.9; // [0.9, 1.1]
+            this.bird_low_speed = this.bird_low_avg_speed * fac;
+        } 
+        this.imgs.bird_low.visible = this.imgs.bird_low.x < this.x + GAME_WIDTH && this.imgs.bird_low.x > this.x;
 
         // Move tree.
         this.imgs.tree.x += this.tree_speed * dT;
@@ -558,14 +581,13 @@ class Game {
         let dist = 0;
         // Input 0 = Tree distance.
         dist = this.imgs.tree.x - this.imgs.dino.x;
-        if (dist < 0) { dist = this.max_separation; }
-        inputs.push(Clamp(dist / this.max_separation, 0, 1));
+        inputs.push(Clamp(dist / this.max_separation, -1, 1));
         // Input 1 = Bird distance.
         dist = this.imgs.bird.x - this.imgs.dino.x;
-        if (dist < 0) { dist = this.max_separation; }
-        inputs.push(Clamp(dist / this.max_separation, 0, 1));
-        // Input 2 = Dino state.
-        inputs.push(this.DinoStateVal());
+        inputs.push(Clamp(dist / this.max_separation, -1, 1));
+        // Input 2 = Bird_low distance. Previously Dino State.
+        dist = this.imgs.bird_low.x - this.imgs.dino.x;
+        inputs.push(Clamp(dist / this.max_separation, -1, 1));
         // Input 3 = Tree speed.
         inputs.push(this.tree_speed/10);
         // Input 4 = Bird speed.
@@ -598,16 +620,30 @@ class Game {
         // Check collision with bird.
         let bird_bounds = {left:0, right:0, top:0, bottom:0};
         bird_bounds.left = this.imgs.bird.x - this.imgs.bird.width/2;
-        bird_bounds.right = this.imgs.bird.x + this.imgs.bird.width/2 + this.bird_speed*dT;
+        bird_bounds.right = this.imgs.bird.x + this.imgs.bird.width/2 - this.bird_speed*dT/2;
         bird_bounds.top = this.imgs.bird.y - this.imgs.bird.height/2;
         bird_bounds.bottom = this.imgs.bird.y + this.imgs.bird.height/2;
+
+        if (this.imgs.dino.x > bird_bounds.left && this.imgs.dino.x < bird_bounds.right &&
+                this.imgs.dino.y > bird_bounds.top && this.imgs.dino.y < bird_bounds.bottom) {
+            // Lose.
+            this.active = false;
+            return;
+        }
+
+        // Check collision with bird_low.
+        let bird_low_bounds = {left:0, right:0, top:0, bottom:0};
+        bird_low_bounds.left = this.imgs.bird_low.x - this.imgs.bird_low.width/2;
+        bird_low_bounds.right = this.imgs.bird_low.x + this.imgs.bird_low.width/2 + this.bird_low_speed*dT;
+        bird_low_bounds.top = this.imgs.bird_low.y - this.imgs.bird_low.height/2;
+        bird_low_bounds.bottom = this.imgs.bird_low.y + this.imgs.bird_low.height/2;
 
         let duck_offset = 0;
         if (this.dino_state == "ducking") { duck_offset = 10; }
 
-        if (this.imgs.dino.x > bird_bounds.left && this.imgs.dino.x < bird_bounds.right &&
-                this.imgs.dino.y + duck_offset > bird_bounds.top && 
-                this.imgs.dino.y + duck_offset < bird_bounds.bottom) {
+        if (this.imgs.dino.x > bird_low_bounds.left && this.imgs.dino.x < bird_low_bounds.right &&
+                this.imgs.dino.y + duck_offset > bird_low_bounds.top && 
+                this.imgs.dino.y + duck_offset < bird_low_bounds.bottom) {
             // Lose.
             this.active = false;
             return;
@@ -950,6 +986,7 @@ function CheckGenerations() {
             for (let i = 0; i < N_GAMES; i++) {
                 if (scores[i] >= max) {
                     leader = objs["nn"+i].Encode();
+                    leader.score = scores[i];
                     break;
                 }
             }
