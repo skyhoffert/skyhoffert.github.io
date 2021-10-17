@@ -73,6 +73,7 @@ function Exp(v) { return Math.exp(v); }
 function Log10(v) { return Math.log10(v); }
 function Pow(b,e) { return Math.pow(b, e); }
 function Abs(v) { return Math.abs(v); }
+function Round(v) { return Math.round(v); }
 
 // Returns value "v" limited by "min" and "max".
 function Clamp(v, min, max) {
@@ -83,13 +84,4 @@ function Clamp(v, min, max) {
 
 function FuzzyEquals(v1, v2, fuzz) {
     return Abs(v1 - v2) < fuzz;
-}
-
-function InitKeys() {
-    let keys = {};
-    for (let k = 32; k < 127; k++) {
-        let kc = String.fromCharCode(k);
-        keys[kc] = {down:false, down_time:0};
-    }
-    return keys;
 }

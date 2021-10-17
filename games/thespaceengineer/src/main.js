@@ -3,17 +3,37 @@
 const canvas = document.getElementById("canvas");
 const app = new PIXI.Application({
     width: WIDTH, height: HEIGHT,
-    backgroundColor: 0x194180,
+    backgroundColor: 0x000000,
     resolution: window.devicePixelRatio || 1,
     view: canvas,
 });
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
-const content = new PIXI.Container();
-const graphics = new PIXI.Graphics();
+let content = new PIXI.Container();
+let draw_layers = [];
+draw_layers.push(new PIXI.Container()); // 0: Background.
+draw_layers.push(new PIXI.Container()); // 1: Mid-Background.
+draw_layers.push(new PIXI.Container()); // 2: Main stage layer.
+draw_layers.push(new PIXI.Container()); // 3: Foreground.
+draw_layers.push(new PIXI.Container()); // 4: UI.
+let graphics = [];
+graphics.push(new PIXI.Graphics()); // 0: Background Graphics.
+graphics.push(new PIXI.Graphics()); // 1: Mid-Background Graphics.
+graphics.push(new PIXI.Graphics()); // 2: Main stage Graphics.
+graphics.push(new PIXI.Graphics()); // 3: Foreground Graphics.
+graphics.push(new PIXI.Graphics()); // 4: UI Graphics.
 app.stage.addChild(content);
-content.addChild(graphics);
+content.addChild(draw_layers[0]);
+draw_layers[0].addChild(graphics[0]);
+content.addChild(draw_layers[1]);
+draw_layers[1].addChild(graphics[1]);
+content.addChild(draw_layers[2]);
+draw_layers[2].addChild(graphics[2]);
+content.addChild(draw_layers[3]);
+draw_layers[3].addChild(graphics[3]);
+content.addChild(draw_layers[4]);
+draw_layers[4].addChild(graphics[4]);
 
 let global_objs = {};
 
@@ -36,11 +56,15 @@ app.ticker.add((dT) => {
     for (let k in global_objs) {
         global_objs[k].Update(dT);
     }
+    
+    // TODO: Track lurkers and lerpers for destroy-ing.
 
     if (needs_update == true) {
-        graphics.clear();
+        for (let i = 0; i < graphics.length; i++) {
+            graphics[i].clear();
+        }
         for (let k in global_objs) {
-            global_objs[k].Draw(graphics);
+            global_objs[k].Draw();
         }
         needs_update = false;
     }
