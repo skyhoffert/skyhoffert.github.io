@@ -1,6 +1,8 @@
-# The Space Engineer
+# The Space Engineer - Dev Notes
 
-Notes for The Space Engineer development.
+Global variables are prepended with the phrase "G_". So a global objects dict is named "G_objs".
+
+Constants are full capitals.
 
 # TODOs
 

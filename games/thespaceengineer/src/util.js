@@ -85,3 +85,15 @@ function Clamp(v, min, max) {
 function FuzzyEquals(v1, v2, fuzz) {
     return Abs(v1 - v2) < fuzz;
 }
+
+function GameToPIXIX(x) {
+    return GAME_LEFT + x * GAME_SCALE;
+}
+
+function GameToPIXIY(y) {
+    return GAME_TOP + y * GAME_SCALE;
+}
+
+function Contains(x, y, rx, ry, rw, rh) {
+    return x > rx - rw/2 && x < rx + rw/2 && y > ry - rh/2 && y < ry + rh/2;
+}

@@ -4,6 +4,15 @@
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 
+const GAME_WIDTH_FULL = 1000;
+const GAME_HEIGHT_FULL = 600;
+const GAME_SCALE = WIDTH/GAME_WIDTH_FULL < HEIGHT/GAME_HEIGHT_FULL ?
+    WIDTH/GAME_WIDTH_FULL : HEIGHT/GAME_HEIGHT_FULL;
+const GAME_WIDTH = GAME_WIDTH_FULL * GAME_SCALE;
+const GAME_HEIGHT = GAME_HEIGHT_FULL * GAME_SCALE;
+const GAME_LEFT = WIDTH/2 - GAME_WIDTH/2;
+const GAME_TOP = HEIGHT/2 - GAME_HEIGHT/2;
+
 const LOG_LEVELS = {"TRACE":5, "DEBUG":4, "INFO":3, "WARN":2, "ERROR":1, "FATAL":0};
 const LOG_LEVEL = 3;
 
@@ -40,7 +49,15 @@ const LEVELS = {
     height: 600,
     spawn_room: "00",
     rooms: {
-        00: {
+        "00": {
+            player: {
+                spawn: {
+                    x: 500, y: 300,
+                },
+                velocity: {
+                    x: 0, y: 1,
+                },
+            },
             floors: [
                 {x:500, y:550, width:800, height:50},
                 {x:500, y:50, width:800, height:50},
@@ -62,6 +79,14 @@ debug: {
     spawn_room: "00",
     rooms: {
         "00": {
+            player: {
+                spawn: {
+                    x: 500, y: 300,
+                },
+                velocity: {
+                    x: 0, y: 5,
+                },
+            },
             floors: [
                 {x:500, y:550, width:800, height:50},
                 {x:500, y:50, width:800, height:50},

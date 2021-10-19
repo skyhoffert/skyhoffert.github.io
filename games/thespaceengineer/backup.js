@@ -1,10 +1,19 @@
-// PACK.SH : Sun 17 Oct 2021 04:26:43 PM EDT
+// PACK.SH : Mon 18 Oct 2021 11:01:03 PM EDT
 ////////////////////////////////////////////////////////////////////////////////
 // const.js: Constant values.
 
 // const WIDTH = Math.floor(window.innerWidth*7/8);
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
+
+const GAME_WIDTH_FULL = 1000;
+const GAME_HEIGHT_FULL = 600;
+const GAME_SCALE = WIDTH/GAME_WIDTH_FULL < HEIGHT/GAME_HEIGHT_FULL ?
+    WIDTH/GAME_WIDTH_FULL : HEIGHT/GAME_HEIGHT_FULL;
+const GAME_WIDTH = GAME_WIDTH_FULL * GAME_SCALE;
+const GAME_HEIGHT = GAME_HEIGHT_FULL * GAME_SCALE;
+const GAME_LEFT = WIDTH/2 - GAME_WIDTH/2;
+const GAME_TOP = HEIGHT/2 - GAME_HEIGHT/2;
 
 const LOG_LEVELS = {"TRACE":5, "DEBUG":4, "INFO":3, "WARN":2, "ERROR":1, "FATAL":0};
 const LOG_LEVEL = 3;
@@ -42,7 +51,15 @@ const LEVELS = {
     height: 600,
     spawn_room: "00",
     rooms: {
-        00: {
+        "00": {
+            player: {
+                spawn: {
+                    x: 500, y: 300,
+                },
+                velocity: {
+                    x: 0, y: 1,
+                },
+            },
             floors: [
                 {x:500, y:550, width:800, height:50},
                 {x:500, y:50, width:800, height:50},
@@ -64,6 +81,14 @@ debug: {
     spawn_room: "00",
     rooms: {
         "00": {
+            player: {
+                spawn: {
+                    x: 500, y: 300,
+                },
+                velocity: {
+                    x: 0, y: 5,
+                },
+            },
             floors: [
                 {x:500, y:550, width:800, height:50},
                 {x:500, y:50, width:800, height:50},
@@ -167,6 +192,18 @@ function Clamp(v, min, max) {
 function FuzzyEquals(v1, v2, fuzz) {
     return Abs(v1 - v2) < fuzz;
 }
+
+function GameToPIXIX(x) {
+    return GAME_LEFT + x * GAME_SCALE;
+}
+
+function GameToPIXIY(y) {
+    return GAME_TOP + y * GAME_SCALE;
+}
+
+function Contains(x, y, rx, ry, rw, rh) {
+    return x > rx - rw/2 && x < rx + rw/2 && y > ry - rh/2 && y < ry + rh/2;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // main.js: Main program.
 
@@ -181,66 +218,69 @@ const app = new PIXI.Application({
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 let content = new PIXI.Container();
-let draw_layers = [];
-draw_layers.push(new PIXI.Container()); // 0: Background.
-draw_layers.push(new PIXI.Container()); // 1: Mid-Background.
-draw_layers.push(new PIXI.Container()); // 2: Main stage layer.
-draw_layers.push(new PIXI.Container()); // 3: Foreground.
-draw_layers.push(new PIXI.Container()); // 4: UI.
-let graphics = [];
-graphics.push(new PIXI.Graphics()); // 0: Background Graphics.
-graphics.push(new PIXI.Graphics()); // 1: Mid-Background Graphics.
-graphics.push(new PIXI.Graphics()); // 2: Main stage Graphics.
-graphics.push(new PIXI.Graphics()); // 3: Foreground Graphics.
-graphics.push(new PIXI.Graphics()); // 4: UI Graphics.
+let G_draw_layers = [];
+G_draw_layers.push(new PIXI.Container()); // 0: Background.
+G_draw_layers.push(new PIXI.Container()); // 1: Mid-Background.
+G_draw_layers.push(new PIXI.Container()); // 2: Main stage layer.
+G_draw_layers.push(new PIXI.Container()); // 3: Foreground.
+G_draw_layers.push(new PIXI.Container()); // 4: UI.
+let G_graphics = [];
+G_graphics.push(new PIXI.Graphics()); // 0: Background Graphics.
+G_graphics.push(new PIXI.Graphics()); // 1: Mid-Background Graphics.
+G_graphics.push(new PIXI.Graphics()); // 2: Main stage Graphics.
+G_graphics.push(new PIXI.Graphics()); // 3: Foreground Graphics.
+G_graphics.push(new PIXI.Graphics()); // 4: UI Graphics.
 app.stage.addChild(content);
-content.addChild(draw_layers[0]);
-draw_layers[0].addChild(graphics[0]);
-content.addChild(draw_layers[1]);
-draw_layers[1].addChild(graphics[1]);
-content.addChild(draw_layers[2]);
-draw_layers[2].addChild(graphics[2]);
-content.addChild(draw_layers[3]);
-draw_layers[3].addChild(graphics[3]);
-content.addChild(draw_layers[4]);
-draw_layers[4].addChild(graphics[4]);
+content.addChild(G_draw_layers[0]);
+G_draw_layers[0].addChild(G_graphics[0]);
+content.addChild(G_draw_layers[1]);
+G_draw_layers[1].addChild(G_graphics[1]);
+content.addChild(G_draw_layers[2]);
+G_draw_layers[2].addChild(G_graphics[2]);
+content.addChild(G_draw_layers[3]);
+G_draw_layers[3].addChild(G_graphics[3]);
+content.addChild(G_draw_layers[4]);
+G_draw_layers[4].addChild(G_graphics[4]);
 
-let global_objs = {};
+let G_objs = {};
 
-let pause = false;
-let needs_update = false;
-let loaded = false;
-let global_actions = [];
+let G_keys = KEYS_INIT;
+
+let G_pause = false;
+let G_needs_update = false;
+let G_loaded = false;
+let G_actions = [];
 
 function Init() {
     let stage = new MainMenu();
-    global_objs["stage"] = stage;
-    needs_update = true;
+    G_objs["stage"] = stage;
+    G_needs_update = true;
 }
 
 app.ticker.add((dT) => {
-    if (pause == true) { return; }
-    if (loaded == false) { Init(); loaded = true; }
-    if (global_objs.hasOwnProperty("stage") == false) { return; }
+    if (G_pause == true) { return; }
+    if (G_loaded == false) { Init(); G_loaded = true; }
+    if (G_objs.hasOwnProperty("stage") == false) { return; }
 
-    for (let k in global_objs) {
-        global_objs[k].Update(dT);
+    for (let k in G_objs) {
+        G_objs[k].Update(dT);
     }
     
     // TODO: Track lurkers and lerpers for destroy-ing.
 
-    if (needs_update == true) {
-        for (let i = 0; i < graphics.length; i++) {
-            graphics[i].clear();
+    // If some class set the global update value to true, redraw graphics.
+    if (G_needs_update == true) {
+        for (let i = 0; i < G_graphics.length; i++) {
+            G_graphics[i].clear();
         }
-        for (let k in global_objs) {
-            global_objs[k].Draw();
+        for (let k in G_objs) {
+            G_objs[k].Draw();
         }
-        needs_update = false;
+        G_needs_update = false;
     }
 
-    while (global_actions.length > 0) {
-        let act = global_actions[0];
+    while (G_actions.length > 0) {
+        let act = G_actions[0];
 
         if (LOG_LEVEL >= LOG_LEVELS.INFO) {
             console.log("INFO: Global action " + act);
@@ -249,13 +289,13 @@ app.ticker.add((dT) => {
         if (act == "load TestGame") {
             // Action: load TestGame.
 
-            global_objs["stage"].Destroy();
-            global_objs["stage"] = new TestGame();
-            needs_update = true;
+            G_objs["stage"].Destroy();
+            G_objs["stage"] = new TestGame();
+            G_needs_update = true;
 
         }
 
-        global_actions.splice(0, 1);
+        G_actions.splice(0, 1);
     }
 
 });
@@ -297,7 +337,7 @@ class Entity {
         this.sprites[id].width = w;
         this.sprites[id].height = h;
         this.sprites[id].draw_layer = dl;
-        draw_layers[dl].addChild(this.sprites[id]);
+        G_draw_layers[dl].addChild(this.sprites[id]);
     }
 
     AddText(a) {
@@ -327,7 +367,7 @@ class Entity {
         this.texts[id].anchor.set(anc.x, anc.y);
         this.texts[id].position.set(x, y);
         this.texts[id].draw_layer = dl;
-        draw_layers[dl].addChild(this.texts[id]);
+        G_draw_layers[dl].addChild(this.texts[id]);
     }
 
     Loaded() {
@@ -344,11 +384,11 @@ class Entity {
     Destroy() {
         this.active = false;
         for (let k in this.sprites) {
-            draw_layers[this.sprites[k].draw_layer].removeChild(this.sprites[k]);
+            G_draw_layers[this.sprites[k].draw_layer].removeChild(this.sprites[k]);
             delete this.sprites[k];
         }
         for (let k in this.texts) {
-            draw_layers[this.texts[k].draw_layer].removeChild(this.texts[k]);
+            G_draw_layers[this.texts[k].draw_layer].removeChild(this.texts[k]);
             delete this.texts[k];
         }
         for (let k in this.textures) {
@@ -426,24 +466,63 @@ class Lurker {
 }
 
 class Player extends Entity {
-    constructor(x,y) {
+    constructor(x, y, vx, vy) {
         super({id:"player", x:x, y:y});
         
-        this.vx = 0;
-        this.vy = 1;
+        // NOTE: x, y, width, and height are in absolute units (x:[0,1000], y:[0,600]).
+        // Player will be scaled for rendering with PIXI.
 
-        this.AddSprite({id:"player", x:x, y:y, width: 64, height: 64, filename: "still_1.png"});
+        this.width = 64;
+        this.height = 64;
+
+        this.vx = vx;
+        this.vy = vy;
+
+        this.speed_x = 4;
+        this.speed_y = 4;
+
+        this.grounded = false;
+
+        this.AddSprite({id:"player", x: this.x, y: this.y, width: this.width*GAME_SCALE, 
+            height: this.height*GAME_SCALE, filename: "still_1.png"});
     }
 
     SyncWithSprite() {
-        this.sprites.player.x = this.x;
-        this.sprites.player.y = this.y;
+        this.sprites.player.x = GameToPIXIX(this.x);
+        this.sprites.player.y = GameToPIXIY(this.y);
     }
 
     Update(dT) {
         if (this.active == false) { return; }
 
+        this.x += this.vx * dT;
         this.y += this.vy * dT;
+
+        let floors = G_objs["stage"].floors;
+        let coll_idx = -1;
+        for (let i = 0; i < floors.length; i++) {
+            let f = floors[i];
+            if (Contains(this.x, this.y + this.height/2 + 1, f.x, f.y, f.width, f.height)) {
+                coll_idx = i;
+                break;
+            }
+        }
+
+        if (coll_idx != -1) {
+            this.vx = 0;
+            this.vy = 0;
+            this.grounded = true;
+        }
+
+        if (this.grounded) {
+            if (G_keys.KeyD.down) {
+                this.vx = this.speed_x;
+            } else if (G_keys.KeyA.down) {
+                this.vx = -this.speed_x;
+            } else {
+                this.vx = 0;
+            }
+        }
 
         this.SyncWithSprite();
     }
@@ -456,21 +535,10 @@ class Stage extends Entity {
         super({"id":"stage", "x":0, "y":0});
         this.active = true;
 
-        this.keys = KEYS_INIT;
-
         content.visible = false;
     }
 
     Reset() {}
-
-    Key(k, d) {
-        if (this.keys.hasOwnProperty(k) == false) {
-            this.keys[k] = {down:false, time_down:0};
-        }
-
-        this.keys[k].down = d;
-        this.keys[k].time_down = Date.now();
-    }
 }
 
 class MainMenu extends Stage {
@@ -514,13 +582,13 @@ class MainMenu extends Stage {
             return;
         }
 
-        if (this.keys.KeyQ.down) {
+        if (G_keys.KeyQ.down) {
             // DEBUG KEY.
 
-            global_actions.push("load TestGame");
+            G_actions.push("load TestGame");
             this.active = false;
 
-        } else if (this.keys.KeyW.down || this.keys.ArrowUp.down) {
+        } else if (G_keys.KeyW.down || G_keys.ArrowUp.down) {
 
             if (this.pointer_moved == false &&
                     this.pointer.y > this.menu_line_y+1) {
@@ -528,7 +596,7 @@ class MainMenu extends Stage {
                 this.pointer.y -= this.menu_line_y_spacing;
             }
 
-        } else if (this.keys.KeyS.down || this.keys.ArrowDown.down) {
+        } else if (G_keys.KeyS.down || G_keys.ArrowDown.down) {
 
             if (this.pointer_moved == false &&
                     this.pointer.y < this.menu_line_y + 
@@ -537,12 +605,12 @@ class MainMenu extends Stage {
                 this.pointer.y += this.menu_line_y_spacing;
             }
         
-        } else if (this.keys.Enter.down) {
+        } else if (G_keys.Enter.down) {
 
             let item_number = Round((this.pointer.y - this.menu_line_y) / this.menu_line_y_spacing);
             if (item_number == 0) {
                 this.active = false;
-                global_actions.push("load TestGame");
+                G_actions.push("load TestGame");
             } else if (item_number == 1) {
                 // TODO: other buttons.
             }
@@ -566,23 +634,22 @@ class GameStage extends Stage {
         this.walls = this.level.rooms[this.current_room].walls;
         this.backdrops = this.level.rooms[this.current_room].backdrops;
 
-        let scale_x = WIDTH/1000;
-        let scale_y = HEIGHT/600;
-        this.scale = scale_y;
-        if (scale_x < scale_y) { this.scale = scale_x; }
-
         this.AddSprite({id:"bg", x:WIDTH/2, y:HEIGHT/2, 
-            width:1000*this.scale, height:600*this.scale,
+            width:GAME_WIDTH, height:GAME_HEIGHT,
             draw_layer:0, filename:"background.png"});
 
-        this.player = new Player(WIDTH/2, HEIGHT/2);
+        this.player = new Player(
+            this.level.rooms[this.current_room].player.spawn.x,
+            this.level.rooms[this.current_room].player.spawn.y,
+            this.level.rooms[this.current_room].player.velocity.x,
+            this.level.rooms[this.current_room].player.velocity.y);
     }
 
     Update(dT) {
         if (this.active == false) { return; }
 
         if (content.visible == false) {
-            content.visible = this.Loaded();
+            content.visible = this.Loaded() && this.player.Loaded();
             return;
         }
 
@@ -590,39 +657,40 @@ class GameStage extends Stage {
     }
 
     Draw() {
-        let left = WIDTH/2 - 500*this.scale;
-
         // Draw backdrops.
-        graphics[1].lineStyle(0, 0);
+        G_graphics[1].lineStyle(0, 0);
         for (let i=0; i < this.backdrops.length; i++) {
             let k = this.backdrops[i];
-            graphics[1].beginFill(0x222222);
-            graphics[1].drawRect(left + (k.x - k.width/2) * this.scale,
-                (k.y - k.height/2) * this.scale, k.width * this.scale,
-                k.height * this.scale);
-                graphics[1].endFill();
+            G_graphics[1].beginFill(0x222222);
+            G_graphics[1].drawRect(
+                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
+                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
+                k.width * GAME_SCALE, k.height * GAME_SCALE);
+                G_graphics[1].endFill();
         }
 
         // Draw Floors.
-        graphics[2].lineStyle(1, 0xff0000);
+        G_graphics[2].lineStyle(1, 0xff0000);
         for (let i=0; i < this.floors.length; i++) {
             let k = this.floors[i];
-            graphics[2].beginFill(0x660000);
-            graphics[2].drawRect(left + (k.x - k.width/2) * this.scale,
-                (k.y - k.height/2) * this.scale, k.width * this.scale,
-                k.height * this.scale);
-                graphics[2].endFill();
+            G_graphics[2].beginFill(0x660000);
+            G_graphics[2].drawRect(
+                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
+                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
+                k.width * GAME_SCALE, k.height * GAME_SCALE);
+                G_graphics[2].endFill();
         }
 
         // Draw Walls.
-        graphics[2].lineStyle(1, 0x0000ff);
+        G_graphics[2].lineStyle(1, 0x0000ff);
         for (let i=0; i < this.walls.length; i++) {
             let k = this.walls[i];
-            graphics[2].beginFill(0x000066);
-            graphics[2].drawRect(left + (k.x - k.width/2) * this.scale,
-                (k.y - k.height/2) * this.scale, k.width * this.scale,
-                k.height * this.scale);
-            graphics[2].endFill();
+            G_graphics[2].beginFill(0x000066);
+            G_graphics[2].drawRect(
+                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
+                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
+                k.width * GAME_SCALE, k.height * GAME_SCALE);
+            G_graphics[2].endFill();
         }
     }
 }
@@ -631,17 +699,24 @@ class TestGame extends GameStage {
     constructor() {
         super("debug");
 
-        this.AddText({id:"txt_basic", x:WIDTH/2, y:50*this.scale, text:"test text"});
+        this.AddText({id:"txt_basic", x:WIDTH/2, y:50*GAME_SCALE, text:"test text"});
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // listeners.js: Interaction listeners.
 
 document.addEventListener("keydown", function(evt) {
-    global_objs["stage"].Key(evt.code, true);
+    if (G_keys.hasOwnProperty(evt.key) == false) {
+        G_keys[evt.code] = {down: true, time_down:Date.now(), time_up:0};
+        return;
+    }
+
+    G_keys[evt.code].down = true;
+    G_keys[evt.code].time_down = Date.now();
 }, false);
 
 document.addEventListener("keyup", function(evt) {
-    global_objs["stage"].Key(evt.code, false);
+    G_keys[evt.code].down = false;
+    G_keys[evt.code].time_up = Date.now();
 }, false);
 ////////////////////////////////////////////////////////////////////////////////

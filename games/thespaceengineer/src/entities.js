@@ -35,7 +35,7 @@ class Entity {
         this.sprites[id].width = w;
         this.sprites[id].height = h;
         this.sprites[id].draw_layer = dl;
-        draw_layers[dl].addChild(this.sprites[id]);
+        G_draw_layers[dl].addChild(this.sprites[id]);
     }
 
     AddText(a) {
@@ -65,7 +65,7 @@ class Entity {
         this.texts[id].anchor.set(anc.x, anc.y);
         this.texts[id].position.set(x, y);
         this.texts[id].draw_layer = dl;
-        draw_layers[dl].addChild(this.texts[id]);
+        G_draw_layers[dl].addChild(this.texts[id]);
     }
 
     Loaded() {
@@ -82,11 +82,11 @@ class Entity {
     Destroy() {
         this.active = false;
         for (let k in this.sprites) {
-            draw_layers[this.sprites[k].draw_layer].removeChild(this.sprites[k]);
+            G_draw_layers[this.sprites[k].draw_layer].removeChild(this.sprites[k]);
             delete this.sprites[k];
         }
         for (let k in this.texts) {
-            draw_layers[this.texts[k].draw_layer].removeChild(this.texts[k]);
+            G_draw_layers[this.texts[k].draw_layer].removeChild(this.texts[k]);
             delete this.texts[k];
         }
         for (let k in this.textures) {
@@ -164,24 +164,63 @@ class Lurker {
 }
 
 class Player extends Entity {
-    constructor(x,y) {
+    constructor(x, y, vx, vy) {
         super({id:"player", x:x, y:y});
         
-        this.vx = 0;
-        this.vy = 1;
+        // NOTE: x, y, width, and height are in absolute units (x:[0,1000], y:[0,600]).
+        // Player will be scaled for rendering with PIXI.
 
-        this.AddSprite({id:"player", x:x, y:y, width: 64, height: 64, filename: "still_1.png"});
+        this.width = 64;
+        this.height = 64;
+
+        this.vx = vx;
+        this.vy = vy;
+
+        this.speed_x = 4;
+        this.speed_y = 4;
+
+        this.grounded = false;
+
+        this.AddSprite({id:"player", x: this.x, y: this.y, width: this.width*GAME_SCALE, 
+            height: this.height*GAME_SCALE, filename: "still_1.png"});
     }
 
     SyncWithSprite() {
-        this.sprites.player.x = this.x;
-        this.sprites.player.y = this.y;
+        this.sprites.player.x = GameToPIXIX(this.x);
+        this.sprites.player.y = GameToPIXIY(this.y);
     }
 
     Update(dT) {
         if (this.active == false) { return; }
 
+        this.x += this.vx * dT;
         this.y += this.vy * dT;
+
+        let floors = G_objs["stage"].floors;
+        let coll_idx = -1;
+        for (let i = 0; i < floors.length; i++) {
+            let f = floors[i];
+            if (Contains(this.x, this.y + this.height/2 + 1, f.x, f.y, f.width, f.height)) {
+                coll_idx = i;
+                break;
+            }
+        }
+
+        if (coll_idx != -1) {
+            this.vx = 0;
+            this.vy = 0;
+            this.grounded = true;
+        }
+
+        if (this.grounded) {
+            if (G_keys.KeyD.down) {
+                this.vx = this.speed_x;
+            } else if (G_keys.KeyA.down) {
+                this.vx = -this.speed_x;
+            } else {
+                this.vx = 0;
+            }
+        }
 
         this.SyncWithSprite();
     }
