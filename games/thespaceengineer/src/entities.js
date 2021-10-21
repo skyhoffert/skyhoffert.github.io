@@ -180,6 +180,8 @@ class Player extends Entity {
         this.speed_y = 4;
 
         this.grounded = false;
+        this.facing_right = true;
+        this.right_side_up = true;
 
         this.AddSprite({id:"player", x: this.x, y: this.y, width: this.width*GAME_SCALE, 
             height: this.height*GAME_SCALE, filename: "still_1.png"});
@@ -197,28 +199,91 @@ class Player extends Entity {
         this.y += this.vy * dT;
 
         let floors = G_objs["stage"].floors;
-        let coll_idx = -1;
+        let walls = G_objs["stage"].walls;
+        let coll_idxs = {left:-1, right:-1, bottom:-1, top:-1};
+        let coll_pts = {
+            bottom:{x: this.x, y: this.y + this.height/2 + 1},
+            left:  {x: this.x - this.width*0.26, y: this.y},
+            right: {x: this.x + this.width*0.26, y: this.y},
+            top:   {x: this.x, y: this.y - this.height/2 - 1},
+        };
         for (let i = 0; i < floors.length; i++) {
             let f = floors[i];
-            if (Contains(this.x, this.y + this.height/2 + 1, f.x, f.y, f.width, f.height)) {
-                coll_idx = i;
+            if (Contains(coll_pts.bottom.x, coll_pts.bottom.y, f.x, f.y, f.width, f.height)) {
+                coll_idxs.bottom = i;
+                break;
+            }
+            if (Contains(coll_pts.top.x, coll_pts.top.y, f.x, f.y, f.width, f.height)) {
+                coll_idxs.top = i;
+                break;
+            }
+        }
+        for (let i = 0; i < walls.length; i++) {
+            let w = walls[i];
+            if (Contains(coll_pts.left.x, coll_pts.left.y, w.x, w.y, w.width, w.height)) {
+                coll_idxs.left = i;
+                break;
+            }
+            if (Contains(coll_pts.right.x, coll_pts.right.y, w.x, w.y, w.width, w.height)) {
+                coll_idxs.right = i;
                 break;
             }
         }
 
-        if (coll_idx != -1) {
+        // Bottom collision.
+        if (coll_idxs.bottom != -1) {
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
+        } else if (coll_idxs.top != -1) {
+            this.vx = 0;
+            this.vy = 0;
+            this.grounded = true;
+        } else if (this.grounded) {
+            console.log("DBUG: Started floating?");
+            this.grounded = false;
         }
 
+        // Left/Right collision.
+        if (coll_idxs.left != -1) {
+            this.vx = 0;
+            this.x += 1;
+        } else if (coll_idxs.right != -1) {
+            this.vx = 0;
+            this.x -= 1;
+        }
+
+        // Keyboard input.
         if (this.grounded) {
-            if (G_keys.KeyD.down) {
-                this.vx = this.speed_x;
-            } else if (G_keys.KeyA.down) {
-                this.vx = -this.speed_x;
-            } else {
-                this.vx = 0;
+            if (coll_idxs.left == -1 && coll_idxs.right == -1) {
+                if (G_keys.KeyD.down) {
+                    this.vx = this.speed_x;
+                    if (this.facing_right == false) {
+                        this.sprites.player.scale.x = -this.sprites.player.scale.x;
+                        this.facing_right = true;
+                    }
+                } else if (G_keys.KeyA.down) {
+                    if (this.facing_right == true) {
+                        this.sprites.player.scale.x = -this.sprites.player.scale.x;
+                        this.facing_right = false;
+                    }
+                    this.vx = -this.speed_x;
+                } else {
+                    this.vx = 0;
+                }
+            }
+
+            if (G_keys.Space.down) {
+                this.grounded = false;
+                this.sprites.player.scale.y = -this.sprites.player.scale.y;
+                if (this.right_side_up) {
+                    this.vy = -this.speed_y;
+                    this.right_side_up = false;
+                } else {
+                    this.grounded = false;
+                    this.vy = this.speed_y;
+                    this.right_side_up = true;
+                }
             }
         }
 

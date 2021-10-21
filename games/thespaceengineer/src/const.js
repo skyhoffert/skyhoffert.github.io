@@ -24,6 +24,7 @@ const KEYS_INIT = {
     "ArrowLeft": {down:false, down_time:0},
     "ArrowRight": {down:false, down_time:0},
     "Enter": {down:false, down_time:0},
+    "Space": {down:false, down_time:0},
     "ControlLeft": {down:false, down_time:0},
     "ControlRight": {down:false, down_time:0},
     "ShiftLeft": {down:false, down_time:0},
@@ -90,13 +91,15 @@ debug: {
             floors: [
                 {x:500, y:550, width:800, height:50},
                 {x:500, y:50, width:800, height:50},
+                {x:300, y:300, width:100, height:100},
             ],
             walls: [
                 {x:75, y:300, width:50, height:550},
                 {x:925, y:300, width:50, height:550},
+                {x:300, y:300, width:100, height:100},
             ],
             backdrops: [
-                {x:500, y:300, width:800, height:550},
+                {x:500, y:300, width:900, height:550},
             ],
         },
     },

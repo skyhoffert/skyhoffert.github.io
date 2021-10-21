@@ -115,6 +115,10 @@ class GameStage extends Stage {
             this.level.rooms[this.current_room].player.velocity.y);
     }
 
+    Loaded() {
+        return super.Loaded() && this.player.Loaded();
+    }
+
     Update(dT) {
         if (this.active == false) { return; }
 
@@ -143,7 +147,7 @@ class GameStage extends Stage {
         G_graphics[2].lineStyle(1, 0xff0000);
         for (let i=0; i < this.floors.length; i++) {
             let k = this.floors[i];
-            G_graphics[2].beginFill(0x660000);
+            G_graphics[2].beginFill(0x660000, 0.5);
             G_graphics[2].drawRect(
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
@@ -155,7 +159,7 @@ class GameStage extends Stage {
         G_graphics[2].lineStyle(1, 0x0000ff);
         for (let i=0; i < this.walls.length; i++) {
             let k = this.walls[i];
-            G_graphics[2].beginFill(0x000066);
+            G_graphics[2].beginFill(0x000066, 0.5);
             G_graphics[2].drawRect(
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,

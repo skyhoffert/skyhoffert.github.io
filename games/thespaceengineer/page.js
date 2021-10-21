@@ -1,4 +1,4 @@
-// PACK.SH : Mon 18 Oct 2021 11:01:45 PM EDT
+// PACK.SH : Wed 20 Oct 2021 10:32:33 PM EDT
 ////////////////////////////////////////////////////////////////////////////////
 // const.js: Constant values.
 
@@ -26,6 +26,7 @@ const KEYS_INIT = {
     "ArrowLeft": {down:false, down_time:0},
     "ArrowRight": {down:false, down_time:0},
     "Enter": {down:false, down_time:0},
+    "Space": {down:false, down_time:0},
     "ControlLeft": {down:false, down_time:0},
     "ControlRight": {down:false, down_time:0},
     "ShiftLeft": {down:false, down_time:0},
@@ -92,13 +93,15 @@ debug: {
             floors: [
                 {x:500, y:550, width:800, height:50},
                 {x:500, y:50, width:800, height:50},
+                {x:300, y:300, width:100, height:100},
             ],
             walls: [
                 {x:75, y:300, width:50, height:550},
                 {x:925, y:300, width:50, height:550},
+                {x:300, y:300, width:100, height:100},
             ],
             backdrops: [
-                {x:500, y:300, width:800, height:550},
+                {x:500, y:300, width:900, height:550},
             ],
         },
     },
@@ -482,6 +485,8 @@ class Player extends Entity {
         this.speed_y = 4;
 
         this.grounded = false;
+        this.facing_right = true;
+        this.right_side_up = true;
 
         this.AddSprite({id:"player", x: this.x, y: this.y, width: this.width*GAME_SCALE, 
             height: this.height*GAME_SCALE, filename: "still_1.png"});
@@ -499,28 +504,91 @@ class Player extends Entity {
         this.y += this.vy * dT;
 
         let floors = G_objs["stage"].floors;
-        let coll_idx = -1;
+        let walls = G_objs["stage"].walls;
+        let coll_idxs = {left:-1, right:-1, bottom:-1, top:-1};
+        let coll_pts = {
+            bottom:{x: this.x, y: this.y + this.height/2 + 1},
+            left:  {x: this.x - this.width*0.26, y: this.y},
+            right: {x: this.x + this.width*0.26, y: this.y},
+            top:   {x: this.x, y: this.y - this.height/2 - 1},
+        };
         for (let i = 0; i < floors.length; i++) {
             let f = floors[i];
-            if (Contains(this.x, this.y + this.height/2 + 1, f.x, f.y, f.width, f.height)) {
-                coll_idx = i;
+            if (Contains(coll_pts.bottom.x, coll_pts.bottom.y, f.x, f.y, f.width, f.height)) {
+                coll_idxs.bottom = i;
+                break;
+            }
+            if (Contains(coll_pts.top.x, coll_pts.top.y, f.x, f.y, f.width, f.height)) {
+                coll_idxs.top = i;
+                break;
+            }
+        }
+        for (let i = 0; i < walls.length; i++) {
+            let w = walls[i];
+            if (Contains(coll_pts.left.x, coll_pts.left.y, w.x, w.y, w.width, w.height)) {
+                coll_idxs.left = i;
+                break;
+            }
+            if (Contains(coll_pts.right.x, coll_pts.right.y, w.x, w.y, w.width, w.height)) {
+                coll_idxs.right = i;
                 break;
             }
         }
 
-        if (coll_idx != -1) {
+        // Bottom collision.
+        if (coll_idxs.bottom != -1) {
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
+        } else if (coll_idxs.top != -1) {
+            this.vx = 0;
+            this.vy = 0;
+            this.grounded = true;
+        } else if (this.grounded) {
+            console.log("DBUG: Started floating?");
+            this.grounded = false;
         }
 
+        // Left/Right collision.
+        if (coll_idxs.left != -1) {
+            this.vx = 0;
+            this.x += 1;
+        } else if (coll_idxs.right != -1) {
+            this.vx = 0;
+            this.x -= 1;
+        }
+
+        // Keyboard input.
         if (this.grounded) {
-            if (G_keys.KeyD.down) {
-                this.vx = this.speed_x;
-            } else if (G_keys.KeyA.down) {
-                this.vx = -this.speed_x;
-            } else {
-                this.vx = 0;
+            if (coll_idxs.left == -1 && coll_idxs.right == -1) {
+                if (G_keys.KeyD.down) {
+                    this.vx = this.speed_x;
+                    if (this.facing_right == false) {
+                        this.sprites.player.scale.x = -this.sprites.player.scale.x;
+                        this.facing_right = true;
+                    }
+                } else if (G_keys.KeyA.down) {
+                    if (this.facing_right == true) {
+                        this.sprites.player.scale.x = -this.sprites.player.scale.x;
+                        this.facing_right = false;
+                    }
+                    this.vx = -this.speed_x;
+                } else {
+                    this.vx = 0;
+                }
+            }
+
+            if (G_keys.Space.down) {
+                this.grounded = false;
+                this.sprites.player.scale.y = -this.sprites.player.scale.y;
+                if (this.right_side_up) {
+                    this.vy = -this.speed_y;
+                    this.right_side_up = false;
+                } else {
+                    this.grounded = false;
+                    this.vy = this.speed_y;
+                    this.right_side_up = true;
+                }
             }
         }
 
@@ -645,6 +713,10 @@ class GameStage extends Stage {
             this.level.rooms[this.current_room].player.velocity.y);
     }
 
+    Loaded() {
+        return super.Loaded() && this.player.Loaded();
+    }
+
     Update(dT) {
         if (this.active == false) { return; }
 
@@ -673,7 +745,7 @@ class GameStage extends Stage {
         G_graphics[2].lineStyle(1, 0xff0000);
         for (let i=0; i < this.floors.length; i++) {
             let k = this.floors[i];
-            G_graphics[2].beginFill(0x660000);
+            G_graphics[2].beginFill(0x660000, 0.5);
             G_graphics[2].drawRect(
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
@@ -685,7 +757,7 @@ class GameStage extends Stage {
         G_graphics[2].lineStyle(1, 0x0000ff);
         for (let i=0; i < this.walls.length; i++) {
             let k = this.walls[i];
-            G_graphics[2].beginFill(0x000066);
+            G_graphics[2].beginFill(0x000066, 0.5);
             G_graphics[2].drawRect(
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
