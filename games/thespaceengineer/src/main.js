@@ -75,15 +75,15 @@ app.ticker.add((dT) => {
     while (G_actions.length > 0) {
         let act = G_actions[0];
 
-        if (LOG_LEVEL >= LOG_LEVELS.INFO) {
-            console.log("INFO: Global action " + act);
-        }
+        LogInfo("Global action " + act + ".");
 
-        if (act == "load TestGame") {
+        if (act.includes("load debug")) {
             // Action: load TestGame.
 
+            let toks = act.split(",");
             G_objs["stage"].Destroy();
-            G_objs["stage"] = new TestGame();
+            delete G_objs["stage"];
+            G_objs["stage"] = new GameStage("debug", toks[1], toks[2]);
             G_needs_update = true;
 
         }

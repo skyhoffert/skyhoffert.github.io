@@ -55,7 +55,7 @@ class MainMenu extends Stage {
         if (G_keys.KeyQ.down) {
             // DEBUG KEY.
 
-            G_actions.push("load TestGame");
+            G_actions.push("load debug,00,00");
             this.active = false;
 
         } else if (G_keys.KeyW.down || G_keys.ArrowUp.down) {
@@ -80,7 +80,7 @@ class MainMenu extends Stage {
             let item_number = Round((this.pointer.y - this.menu_line_y) / this.menu_line_y_spacing);
             if (item_number == 0) {
                 this.active = false;
-                G_actions.push("load TestGame");
+                G_actions.push("load debug,00,00");
             } else if (item_number == 1) {
                 // TODO: other buttons.
             }
@@ -94,25 +94,49 @@ class MainMenu extends Stage {
 }
 
 class GameStage extends Stage {
-    constructor(lvlname) {
+    constructor(lvlname, toroom="00", fromroom="00") {
         super();
 
         this.level_name = lvlname;
         this.level = JSON.parse(JSON.stringify(LEVELS[lvlname]));
-        this.current_room = this.level.spawn_room;
+        this.current_room = toroom;
+        this.previous_room = fromroom;
         this.floors = this.level.rooms[this.current_room].floors;
         this.walls = this.level.rooms[this.current_room].walls;
         this.backdrops = this.level.rooms[this.current_room].backdrops;
+        this.exits = this.level.rooms[this.current_room].exits;
 
         this.AddSprite({id:"bg", x:WIDTH/2, y:HEIGHT/2, 
             width:GAME_WIDTH, height:GAME_HEIGHT,
             draw_layer:0, filename:"background.png"});
 
         this.player = new Player(
-            this.level.rooms[this.current_room].player.spawn.x,
-            this.level.rooms[this.current_room].player.spawn.y,
-            this.level.rooms[this.current_room].player.velocity.x,
-            this.level.rooms[this.current_room].player.velocity.y);
+            this.level.rooms[this.current_room].player.spawn[this.previous_room].x,
+            this.level.rooms[this.current_room].player.spawn[this.previous_room].y,
+            this.level.rooms[this.current_room].player.velocity[this.previous_room].x,
+            this.level.rooms[this.current_room].player.velocity[this.previous_room].y);
+        
+        this.buttons = [];
+        for (let i = 0; i < this.level.rooms[this.current_room].buttons.length; i++) {
+            let b = this.level.rooms[this.current_room].buttons[i];
+            this.buttons.push(new ButtonAndDoor(b.bx, b.by, b.dx, b.dy, b.dw, b.dh));
+        }
+        
+        this.detected_reset = false;
+        this.detected_exit = false;
+    }
+
+    Destroy() {
+        super.Destroy();
+        this.player.Destroy();
+    }
+
+    Reset() {
+        this.player.x = this.level.rooms[this.current_room].player.spawn[this.previous_room].x;
+        this.player.y = this.level.rooms[this.current_room].player.spawn[this.previous_room].y;
+        this.player.vx = this.level.rooms[this.current_room].player.velocity[this.previous_room].x;
+        this.player.vy = this.level.rooms[this.current_room].player.velocity[this.previous_room].y;
+        this.player.Reset();
     }
 
     Loaded() {
@@ -122,12 +146,49 @@ class GameStage extends Stage {
     Update(dT) {
         if (this.active == false) { return; }
 
+        if (this.detected_reset) {
+            if (G_keys.KeyR.down == false) {
+                this.detected_reset = false;
+                this.Reset();
+                LogDebug("Resetting.");
+                return;
+            }
+        } else {
+            if (G_keys.KeyR.down) {
+                this.detected_reset = true;
+                LogTrace("Game will reset.");
+            } 
+        }
+
+        if (this.detected_exit) {
+            if (G_keys.KeyW.down == false) {
+                LogDebug("Player wants to exit.");
+                this.detected_exit = false;
+
+                for (let i = 0; i < this.exits.length; i++) {
+                    let e = this.exits[i];
+                    if (Contains(this.player.x, this.player.y, e.x, e.y, e.width, e.height)) {
+                        G_actions.push("load debug,"+e.to+","+this.current_room);
+                    }
+                }
+            }
+        } else {
+            if (G_keys.KeyW.down) {
+                this.detected_exit = true;
+                LogTrace("Player will try to exit.");
+            }
+        }
+
         if (content.visible == false) {
             content.visible = this.Loaded() && this.player.Loaded();
             return;
         }
 
         this.player.Update(dT);
+    }
+
+    PlayerRequestsExit() {
+
     }
 
     Draw() {
@@ -140,7 +201,7 @@ class GameStage extends Stage {
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
-                G_graphics[1].endFill();
+            G_graphics[1].endFill();
         }
 
         // Draw Floors.
@@ -152,7 +213,7 @@ class GameStage extends Stage {
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
-                G_graphics[2].endFill();
+            G_graphics[2].endFill();
         }
 
         // Draw Walls.
@@ -166,13 +227,21 @@ class GameStage extends Stage {
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
             G_graphics[2].endFill();
         }
-    }
-}
 
-class TestGame extends GameStage {
-    constructor() {
-        super("debug");
+        // Draw Exits.
+        G_graphics[3].lineStyle(1, 0x00ff00);
+        for (let i=0; i < this.exits.length; i++) {
+            let k = this.exits[i];
+            G_graphics[3].beginFill(0x006600, 0.5);
+            G_graphics[3].drawRect(
+                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
+                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
+                k.width * GAME_SCALE, k.height * GAME_SCALE);
+            G_graphics[3].endFill();
+        }
 
-        this.AddText({id:"txt_basic", x:WIDTH/2, y:50*GAME_SCALE, text:"test text"});
+        for (let i=0; i < this.buttons.length; i++) {
+            this.buttons[i].Draw();
+        }
     }
 }

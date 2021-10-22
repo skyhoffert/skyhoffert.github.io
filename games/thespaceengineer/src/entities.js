@@ -187,9 +187,65 @@ class Player extends Entity {
             height: this.height*GAME_SCALE, filename: "still_1.png"});
     }
 
+    Reset() {
+        this.grounded = false;
+        this.facing_right = true;
+        this.right_side_up = true;
+        if (this.sprites.player.scale.x < 0) {
+            this.sprites.player.scale.x = -this.sprites.player.scale.x;
+        }
+        if (this.sprites.player.scale.y < 0) {
+            this.sprites.player.scale.y = -this.sprites.player.scale.y;
+        }
+    }
+
     SyncWithSprite() {
         this.sprites.player.x = GameToPIXIX(this.x);
         this.sprites.player.y = GameToPIXIY(this.y);
+    }
+
+    CheckGrounding(ci) {
+        if (this.grounded == true) { return; }
+
+        if (ci.bottom != -1) {
+            let f = G_objs["stage"].floors[ci.bottom];
+            let d = -1;
+            let x = this.x;
+            let y = this.y + this.height/2;
+
+            // Perform an inverse Raycast upwards.
+            for (let i = 0; i < this.height; i += 0.1) {
+                if (!Contains(x, y - i, f.x, f.y, f.width, f.height)) {
+                    d = i;
+                    break;
+                }
+            }
+
+            if (d > 0) {
+                this.y -= d;
+                LogDebug("Corrected player grounding by " + Sigs(-d,1));
+            }
+        }
+
+        if (ci.top != -1) {
+            let f = G_objs["stage"].floors[ci.top];
+            let d = -1;
+            let x = this.x;
+            let y = this.y - this.height/2;
+
+            // Perform an inverse Raycast downwards.
+            for (let i = 0; i < this.height; i += 0.1) {
+                if (!Contains(x, y + i, f.x, f.y, f.width, f.height)) {
+                    d = i;
+                    break;
+                }
+            }
+
+            if (d > 0) {
+                this.y += d;
+                LogDebug("Corrected player grounding by " + Sigs(d,1));
+            }
+        }
     }
 
     Update(dT) {
@@ -232,15 +288,17 @@ class Player extends Entity {
 
         // Bottom collision.
         if (coll_idxs.bottom != -1) {
+            this.CheckGrounding(coll_idxs);
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
         } else if (coll_idxs.top != -1) {
+            this.CheckGrounding(coll_idxs);
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
         } else if (this.grounded) {
-            console.log("DBUG: Started floating?");
+            LogDebug("Started floating?");
             this.grounded = false;
         }
 
@@ -288,5 +346,31 @@ class Player extends Entity {
         }
 
         this.SyncWithSprite();
+    }
+}
+
+class ButtonAndDoor extends Entity {
+    constructor(bx, by, dx, dy, dw, dh) {
+        super({id:"bd", x:bx, y:by});
+        this.button_x = bx;
+        this.button_y = by;
+
+        this.door_x = dx;
+        this.door_y = dy;
+        this.door_width = dw;
+        this.door_height = dh;
+
+        this.AddSprite({id:"button", x:this.button_x, y:this.button_y,
+            width: 64, height: 64, filename: "wall.png"});
+    }
+
+    Draw() {
+        G_graphics[2].lineStyle(1, 0x00ffff);
+        G_graphics[2].beginFill(0x006666, 0.5);
+        G_graphics[2].drawRect(
+            GameToPIXIX(this.door_x - this.door_width/2),
+            GameToPIXIY(this.door_y - this.door_height/2),
+            this.door_width* GAME_SCALE, this.door_height * GAME_SCALE);
+        G_graphics[2].endFill();
     }
 }

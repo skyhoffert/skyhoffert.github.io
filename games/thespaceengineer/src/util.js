@@ -97,3 +97,29 @@ function GameToPIXIY(y) {
 function Contains(x, y, rx, ry, rw, rh) {
     return x > rx - rw/2 && x < rx + rw/2 && y > ry - rh/2 && y < ry + rh/2;
 }
+
+function Log(msg) { LogDebug(msg); }
+
+function LogFatal(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.FATAL) { console.log("FATL: "+msg); }
+}
+
+function LogError(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.ERROR) { console.log("ERR : "+msg); }
+}
+
+function LogWarn(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.WARN) { console.log("WARN: "+msg); }
+}
+
+function LogInfo(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.INFO) { console.log("INFO: "+msg); }
+}
+
+function LogDebug(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.DEBUG) { console.log("DBUG: "+msg); }
+}
+
+function LogTrace(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.TRACE) { console.log("TRAC: "+msg); }
+}

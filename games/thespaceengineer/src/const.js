@@ -13,8 +13,8 @@ const GAME_HEIGHT = GAME_HEIGHT_FULL * GAME_SCALE;
 const GAME_LEFT = WIDTH/2 - GAME_WIDTH/2;
 const GAME_TOP = HEIGHT/2 - GAME_HEIGHT/2;
 
-const LOG_LEVELS = {"TRACE":5, "DEBUG":4, "INFO":3, "WARN":2, "ERROR":1, "FATAL":0};
-const LOG_LEVEL = 3;
+const LOG_LEVELS = {TRACE:5, DEBUG:4, INFO:3, WARN:2, ERROR:1, FATAL:0};
+const LOG_LEVEL = LOG_LEVELS.TRACE;
 
 const PI = 3.1415926;
 
@@ -34,6 +34,7 @@ const KEYS_INIT = {
     "KeyD": {down:false, down_time:0},
     "KeyW": {down:false, down_time:0},
     "KeyQ": {down:false, down_time:0},
+    "KeyR": {down:false, down_time:0},
     "Escape": {down:false, down_time:0},
 };
 
@@ -42,39 +43,9 @@ const LAST_NAMES = ["people","history","way","art","world","information","map","
 
 const LEVELS = {
 0: {
-    size: {
-        rows:3,
-        cols:1
-    },
-    width: 1000,
-    height: 600,
-    spawn_room: "00",
-    rooms: {
-        "00": {
-            player: {
-                spawn: {
-                    x: 500, y: 300,
-                },
-                velocity: {
-                    x: 0, y: 1,
-                },
-            },
-            floors: [
-                {x:500, y:550, width:800, height:50},
-                {x:500, y:50, width:800, height:50},
-            ],
-            walls: [
-                {x:50, y:300, width:50, height:500},
-                {x:950, y:300, width:50, height:500},
-            ],
-        },
-    },
+    // TODO!
 },
 debug: {
-    size: {
-        rows:3,
-        cols:3
-    },
     width: 1000,
     height: 600,
     spawn_room: "00",
@@ -82,10 +53,12 @@ debug: {
         "00": {
             player: {
                 spawn: {
-                    x: 500, y: 300,
+                    "00": { x: 500, y: 300 },
+                    "01": { x: 860, y: 485 },
                 },
                 velocity: {
-                    x: 0, y: 5,
+                    "00": { x: 0, y: 10 },
+                    "01": { x: 0, y: 5 },
                 },
             },
             floors: [
@@ -101,6 +74,42 @@ debug: {
             backdrops: [
                 {x:500, y:300, width:900, height:550},
             ],
+            exits: [
+                {x:860, y:485, width:80, height:80, to:"01"},
+            ],
+            buttons: [
+            ],
+        },
+        "01": {
+            player: {
+                spawn: {
+                    "00": { x: 140, y: 485 },
+                    "01": { x: 500, y: 300 },
+                },
+                velocity: {
+                    "00": { x: 0, y: 5 },
+                    "01": { x: 0, y: 10 },
+                },
+            },
+            floors: [
+                {x:500, y:550, width:800, height:50},
+                {x:500, y:50, width:800, height:50},
+                {x:700, y:300, width:100, height:100},
+            ],
+            walls: [
+                {x:75, y:300, width:50, height:550},
+                {x:925, y:300, width:50, height:550},
+                {x:700, y:300, width:100, height:100},
+            ],
+            backdrops: [
+                {x:500, y:300, width:900, height:550},
+            ],
+            exits: [
+                {x:140, y:485, width:80, height:80, to:"00"},
+            ],
+            buttons: [
+                {bx:700, by:250, dx:800, dy:300, dw:100, dh:100},
+            ]
         },
     },
 },

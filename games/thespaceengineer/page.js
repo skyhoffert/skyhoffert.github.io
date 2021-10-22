@@ -1,4 +1,4 @@
-// PACK.SH : Wed 20 Oct 2021 10:32:33 PM EDT
+// PACK.SH : Fri 22 Oct 2021 03:53:40 PM EDT
 ////////////////////////////////////////////////////////////////////////////////
 // const.js: Constant values.
 
@@ -15,8 +15,8 @@ const GAME_HEIGHT = GAME_HEIGHT_FULL * GAME_SCALE;
 const GAME_LEFT = WIDTH/2 - GAME_WIDTH/2;
 const GAME_TOP = HEIGHT/2 - GAME_HEIGHT/2;
 
-const LOG_LEVELS = {"TRACE":5, "DEBUG":4, "INFO":3, "WARN":2, "ERROR":1, "FATAL":0};
-const LOG_LEVEL = 3;
+const LOG_LEVELS = {TRACE:5, DEBUG:4, INFO:3, WARN:2, ERROR:1, FATAL:0};
+const LOG_LEVEL = LOG_LEVELS.TRACE;
 
 const PI = 3.1415926;
 
@@ -36,6 +36,7 @@ const KEYS_INIT = {
     "KeyD": {down:false, down_time:0},
     "KeyW": {down:false, down_time:0},
     "KeyQ": {down:false, down_time:0},
+    "KeyR": {down:false, down_time:0},
     "Escape": {down:false, down_time:0},
 };
 
@@ -44,39 +45,9 @@ const LAST_NAMES = ["people","history","way","art","world","information","map","
 
 const LEVELS = {
 0: {
-    size: {
-        rows:3,
-        cols:1
-    },
-    width: 1000,
-    height: 600,
-    spawn_room: "00",
-    rooms: {
-        "00": {
-            player: {
-                spawn: {
-                    x: 500, y: 300,
-                },
-                velocity: {
-                    x: 0, y: 1,
-                },
-            },
-            floors: [
-                {x:500, y:550, width:800, height:50},
-                {x:500, y:50, width:800, height:50},
-            ],
-            walls: [
-                {x:50, y:300, width:50, height:500},
-                {x:950, y:300, width:50, height:500},
-            ],
-        },
-    },
+    // TODO!
 },
 debug: {
-    size: {
-        rows:3,
-        cols:3
-    },
     width: 1000,
     height: 600,
     spawn_room: "00",
@@ -84,10 +55,12 @@ debug: {
         "00": {
             player: {
                 spawn: {
-                    x: 500, y: 300,
+                    "00": { x: 500, y: 300 },
+                    "01": { x: 860, y: 485 },
                 },
                 velocity: {
-                    x: 0, y: 5,
+                    "00": { x: 0, y: 10 },
+                    "01": { x: 0, y: 5 },
                 },
             },
             floors: [
@@ -103,6 +76,42 @@ debug: {
             backdrops: [
                 {x:500, y:300, width:900, height:550},
             ],
+            exits: [
+                {x:860, y:485, width:80, height:80, to:"01"},
+            ],
+            buttons: [
+            ],
+        },
+        "01": {
+            player: {
+                spawn: {
+                    "00": { x: 140, y: 485 },
+                    "01": { x: 500, y: 300 },
+                },
+                velocity: {
+                    "00": { x: 0, y: 5 },
+                    "01": { x: 0, y: 10 },
+                },
+            },
+            floors: [
+                {x:500, y:550, width:800, height:50},
+                {x:500, y:50, width:800, height:50},
+                {x:700, y:300, width:100, height:100},
+            ],
+            walls: [
+                {x:75, y:300, width:50, height:550},
+                {x:925, y:300, width:50, height:550},
+                {x:700, y:300, width:100, height:100},
+            ],
+            backdrops: [
+                {x:500, y:300, width:900, height:550},
+            ],
+            exits: [
+                {x:140, y:485, width:80, height:80, to:"00"},
+            ],
+            buttons: [
+                {bx:700, by:250, dx:800, dy:300, dw:100, dh:100},
+            ]
         },
     },
 },
@@ -207,6 +216,32 @@ function GameToPIXIY(y) {
 function Contains(x, y, rx, ry, rw, rh) {
     return x > rx - rw/2 && x < rx + rw/2 && y > ry - rh/2 && y < ry + rh/2;
 }
+
+function Log(msg) { LogDebug(msg); }
+
+function LogFatal(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.FATAL) { console.log("FATL: "+msg); }
+}
+
+function LogError(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.ERROR) { console.log("ERR : "+msg); }
+}
+
+function LogWarn(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.WARN) { console.log("WARN: "+msg); }
+}
+
+function LogInfo(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.INFO) { console.log("INFO: "+msg); }
+}
+
+function LogDebug(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.DEBUG) { console.log("DBUG: "+msg); }
+}
+
+function LogTrace(msg) {
+    if (LOG_LEVEL >= LOG_LEVELS.TRACE) { console.log("TRAC: "+msg); }
+}
 ////////////////////////////////////////////////////////////////////////////////
 // main.js: Main program.
 
@@ -285,15 +320,15 @@ app.ticker.add((dT) => {
     while (G_actions.length > 0) {
         let act = G_actions[0];
 
-        if (LOG_LEVEL >= LOG_LEVELS.INFO) {
-            console.log("INFO: Global action " + act);
-        }
+        LogInfo("Global action " + act + ".");
 
-        if (act == "load TestGame") {
+        if (act.includes("load debug")) {
             // Action: load TestGame.
 
+            let toks = act.split(",");
             G_objs["stage"].Destroy();
-            G_objs["stage"] = new TestGame();
+            delete G_objs["stage"];
+            G_objs["stage"] = new GameStage("debug", toks[1], toks[2]);
             G_needs_update = true;
 
         }
@@ -492,9 +527,65 @@ class Player extends Entity {
             height: this.height*GAME_SCALE, filename: "still_1.png"});
     }
 
+    Reset() {
+        this.grounded = false;
+        this.facing_right = true;
+        this.right_side_up = true;
+        if (this.sprites.player.scale.x < 0) {
+            this.sprites.player.scale.x = -this.sprites.player.scale.x;
+        }
+        if (this.sprites.player.scale.y < 0) {
+            this.sprites.player.scale.y = -this.sprites.player.scale.y;
+        }
+    }
+
     SyncWithSprite() {
         this.sprites.player.x = GameToPIXIX(this.x);
         this.sprites.player.y = GameToPIXIY(this.y);
+    }
+
+    CheckGrounding(ci) {
+        if (this.grounded == true) { return; }
+
+        if (ci.bottom != -1) {
+            let f = G_objs["stage"].floors[ci.bottom];
+            let d = -1;
+            let x = this.x;
+            let y = this.y + this.height/2;
+
+            // Perform an inverse Raycast upwards.
+            for (let i = 0; i < this.height; i += 0.1) {
+                if (!Contains(x, y - i, f.x, f.y, f.width, f.height)) {
+                    d = i;
+                    break;
+                }
+            }
+
+            if (d > 0) {
+                this.y -= d;
+                LogDebug("Corrected player grounding by " + Sigs(-d,1));
+            }
+        }
+
+        if (ci.top != -1) {
+            let f = G_objs["stage"].floors[ci.top];
+            let d = -1;
+            let x = this.x;
+            let y = this.y - this.height/2;
+
+            // Perform an inverse Raycast downwards.
+            for (let i = 0; i < this.height; i += 0.1) {
+                if (!Contains(x, y + i, f.x, f.y, f.width, f.height)) {
+                    d = i;
+                    break;
+                }
+            }
+
+            if (d > 0) {
+                this.y += d;
+                LogDebug("Corrected player grounding by " + Sigs(d,1));
+            }
+        }
     }
 
     Update(dT) {
@@ -537,15 +628,17 @@ class Player extends Entity {
 
         // Bottom collision.
         if (coll_idxs.bottom != -1) {
+            this.CheckGrounding(coll_idxs);
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
         } else if (coll_idxs.top != -1) {
+            this.CheckGrounding(coll_idxs);
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
         } else if (this.grounded) {
-            console.log("DBUG: Started floating?");
+            LogDebug("Started floating?");
             this.grounded = false;
         }
 
@@ -595,7 +688,32 @@ class Player extends Entity {
         this.SyncWithSprite();
     }
 }
-////////////////////////////////////////////////////////////////////////////////
+
+class ButtonAndDoor extends Entity {
+    constructor(bx, by, dx, dy, dw, dh) {
+        super({id:"bd", x:bx, y:by});
+        this.button_x = bx;
+        this.button_y = by;
+
+        this.door_x = dx;
+        this.door_y = dy;
+        this.door_width = dw;
+        this.door_height = dh;
+
+        this.AddSprite({id:"button", x:this.button_x, y:this.button_y,
+            width: 64, height: 64, filename: "wall.png"});
+    }
+
+    Draw() {
+        G_graphics[2].lineStyle(1, 0x00ffff);
+        G_graphics[2].beginFill(0x006666, 0.5);
+        G_graphics[2].drawRect(
+            GameToPIXIX(this.door_x - this.door_width/2),
+            GameToPIXIY(this.door_y - this.door_height/2),
+            this.door_width* GAME_SCALE, this.door_height * GAME_SCALE);
+        G_graphics[2].endFill();
+    }
+}////////////////////////////////////////////////////////////////////////////////
 // stages.js: Game stages. 
 
 class Stage extends Entity {
@@ -653,7 +771,7 @@ class MainMenu extends Stage {
         if (G_keys.KeyQ.down) {
             // DEBUG KEY.
 
-            G_actions.push("load TestGame");
+            G_actions.push("load debug,00,00");
             this.active = false;
 
         } else if (G_keys.KeyW.down || G_keys.ArrowUp.down) {
@@ -678,7 +796,7 @@ class MainMenu extends Stage {
             let item_number = Round((this.pointer.y - this.menu_line_y) / this.menu_line_y_spacing);
             if (item_number == 0) {
                 this.active = false;
-                G_actions.push("load TestGame");
+                G_actions.push("load debug,00,00");
             } else if (item_number == 1) {
                 // TODO: other buttons.
             }
@@ -692,25 +810,49 @@ class MainMenu extends Stage {
 }
 
 class GameStage extends Stage {
-    constructor(lvlname) {
+    constructor(lvlname, toroom="00", fromroom="00") {
         super();
 
         this.level_name = lvlname;
         this.level = JSON.parse(JSON.stringify(LEVELS[lvlname]));
-        this.current_room = this.level.spawn_room;
+        this.current_room = toroom;
+        this.previous_room = fromroom;
         this.floors = this.level.rooms[this.current_room].floors;
         this.walls = this.level.rooms[this.current_room].walls;
         this.backdrops = this.level.rooms[this.current_room].backdrops;
+        this.exits = this.level.rooms[this.current_room].exits;
 
         this.AddSprite({id:"bg", x:WIDTH/2, y:HEIGHT/2, 
             width:GAME_WIDTH, height:GAME_HEIGHT,
             draw_layer:0, filename:"background.png"});
 
         this.player = new Player(
-            this.level.rooms[this.current_room].player.spawn.x,
-            this.level.rooms[this.current_room].player.spawn.y,
-            this.level.rooms[this.current_room].player.velocity.x,
-            this.level.rooms[this.current_room].player.velocity.y);
+            this.level.rooms[this.current_room].player.spawn[this.previous_room].x,
+            this.level.rooms[this.current_room].player.spawn[this.previous_room].y,
+            this.level.rooms[this.current_room].player.velocity[this.previous_room].x,
+            this.level.rooms[this.current_room].player.velocity[this.previous_room].y);
+        
+        this.buttons = [];
+        for (let i = 0; i < this.level.rooms[this.current_room].buttons.length; i++) {
+            let b = this.level.rooms[this.current_room].buttons[i];
+            this.buttons.push(new ButtonAndDoor(b.bx, b.by, b.dx, b.dy, b.dw, b.dh));
+        }
+        
+        this.detected_reset = false;
+        this.detected_exit = false;
+    }
+
+    Destroy() {
+        super.Destroy();
+        this.player.Destroy();
+    }
+
+    Reset() {
+        this.player.x = this.level.rooms[this.current_room].player.spawn[this.previous_room].x;
+        this.player.y = this.level.rooms[this.current_room].player.spawn[this.previous_room].y;
+        this.player.vx = this.level.rooms[this.current_room].player.velocity[this.previous_room].x;
+        this.player.vy = this.level.rooms[this.current_room].player.velocity[this.previous_room].y;
+        this.player.Reset();
     }
 
     Loaded() {
@@ -720,12 +862,49 @@ class GameStage extends Stage {
     Update(dT) {
         if (this.active == false) { return; }
 
+        if (this.detected_reset) {
+            if (G_keys.KeyR.down == false) {
+                this.detected_reset = false;
+                this.Reset();
+                LogDebug("Resetting.");
+                return;
+            }
+        } else {
+            if (G_keys.KeyR.down) {
+                this.detected_reset = true;
+                LogTrace("Game will reset.");
+            } 
+        }
+
+        if (this.detected_exit) {
+            if (G_keys.KeyW.down == false) {
+                LogDebug("Player wants to exit.");
+                this.detected_exit = false;
+
+                for (let i = 0; i < this.exits.length; i++) {
+                    let e = this.exits[i];
+                    if (Contains(this.player.x, this.player.y, e.x, e.y, e.width, e.height)) {
+                        G_actions.push("load debug,"+e.to+","+this.current_room);
+                    }
+                }
+            }
+        } else {
+            if (G_keys.KeyW.down) {
+                this.detected_exit = true;
+                LogTrace("Player will try to exit.");
+            }
+        }
+
         if (content.visible == false) {
             content.visible = this.Loaded() && this.player.Loaded();
             return;
         }
 
         this.player.Update(dT);
+    }
+
+    PlayerRequestsExit() {
+
     }
 
     Draw() {
@@ -738,7 +917,7 @@ class GameStage extends Stage {
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
-                G_graphics[1].endFill();
+            G_graphics[1].endFill();
         }
 
         // Draw Floors.
@@ -750,7 +929,7 @@ class GameStage extends Stage {
                 GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
-                G_graphics[2].endFill();
+            G_graphics[2].endFill();
         }
 
         // Draw Walls.
@@ -764,14 +943,22 @@ class GameStage extends Stage {
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
             G_graphics[2].endFill();
         }
-    }
-}
 
-class TestGame extends GameStage {
-    constructor() {
-        super("debug");
+        // Draw Exits.
+        G_graphics[3].lineStyle(1, 0x00ff00);
+        for (let i=0; i < this.exits.length; i++) {
+            let k = this.exits[i];
+            G_graphics[3].beginFill(0x006600, 0.5);
+            G_graphics[3].drawRect(
+                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
+                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
+                k.width * GAME_SCALE, k.height * GAME_SCALE);
+            G_graphics[3].endFill();
+        }
 
-        this.AddText({id:"txt_basic", x:WIDTH/2, y:50*GAME_SCALE, text:"test text"});
+        for (let i=0; i < this.buttons.length; i++) {
+            this.buttons[i].Draw();
+        }
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
