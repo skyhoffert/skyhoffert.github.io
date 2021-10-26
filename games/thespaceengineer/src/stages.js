@@ -101,7 +101,6 @@ class GameStage extends Stage {
         this.level = JSON.parse(JSON.stringify(LEVELS[lvlname]));
         this.current_room = toroom;
         this.previous_room = fromroom;
-        this.floors = this.level.rooms[this.current_room].floors;
         this.walls = this.level.rooms[this.current_room].walls;
         this.backdrops = this.level.rooms[this.current_room].backdrops;
         this.exits = this.level.rooms[this.current_room].exits;
@@ -119,7 +118,7 @@ class GameStage extends Stage {
         this.buttons = [];
         for (let i = 0; i < this.level.rooms[this.current_room].buttons.length; i++) {
             let b = this.level.rooms[this.current_room].buttons[i];
-            this.buttons.push(new ButtonAndDoor(b.bx, b.by, b.dx, b.dy, b.dw, b.dh));
+            this.buttons.push(new Button(b.x, b.y, b.width, b.height, b.wallidx));
         }
         
         this.detected_reset = false;
@@ -162,7 +161,7 @@ class GameStage extends Stage {
 
         if (this.detected_exit) {
             if (G_keys.KeyW.down == false) {
-                LogDebug("Player wants to exit.");
+                LogTrace("Player wants to exit.");
                 this.detected_exit = false;
 
                 for (let i = 0; i < this.exits.length; i++) {
@@ -187,8 +186,13 @@ class GameStage extends Stage {
         this.player.Update(dT);
     }
 
-    PlayerRequestsExit() {
-
+    PressButton(idx) {
+        let wallidx = this.buttons[idx].wallidx;
+        LogTrace("Splicing wall " + wallidx + " and button " + idx + ".");
+        this.walls.splice(wallidx, 1);
+        this.buttons[idx].Destroy();
+        this.buttons.splice(idx, 1);
+        G_needs_update = true;
     }
 
     Draw() {
@@ -202,18 +206,6 @@ class GameStage extends Stage {
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
             G_graphics[1].endFill();
-        }
-
-        // Draw Floors.
-        G_graphics[2].lineStyle(1, 0xff0000);
-        for (let i=0; i < this.floors.length; i++) {
-            let k = this.floors[i];
-            G_graphics[2].beginFill(0x660000, 0.5);
-            G_graphics[2].drawRect(
-                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
-                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
-                k.width * GAME_SCALE, k.height * GAME_SCALE);
-            G_graphics[2].endFill();
         }
 
         // Draw Walls.
@@ -238,10 +230,6 @@ class GameStage extends Stage {
                 GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
                 k.width * GAME_SCALE, k.height * GAME_SCALE);
             G_graphics[3].endFill();
-        }
-
-        for (let i=0; i < this.buttons.length; i++) {
-            this.buttons[i].Draw();
         }
     }
 }

@@ -207,8 +207,16 @@ class Player extends Entity {
     CheckGrounding(ci) {
         if (this.grounded == true) { return; }
 
-        if (ci.bottom != -1) {
-            let f = G_objs["stage"].floors[ci.bottom];
+        if (ci.bottom.idx != -1) {
+            let f = null;
+            if (ci.bottom.cat == COLLISION_CATEGORY.WALL) {
+                f = G_objs["stage"].walls[ci.bottom.idx];
+            } else if (ci.bottom.cat == COLLISION_CATEGORY.BUTTON) {
+                f = G_objs["stage"].buttons[ci.bottom.idx];
+            } else {
+                LogError("Unkown collision category.");
+                return;
+            }
             let d = -1;
             let x = this.x;
             let y = this.y + this.height/2;
@@ -223,12 +231,20 @@ class Player extends Entity {
 
             if (d > 0) {
                 this.y -= d;
-                LogDebug("Corrected player grounding by " + Sigs(-d,1));
+                LogTrace("Corrected player grounding by " + Sigs(-d,1));
             }
         }
 
-        if (ci.top != -1) {
-            let f = G_objs["stage"].floors[ci.top];
+        if (ci.top.idx != -1) {
+            let f = null;
+            if (ci.top.cat == COLLISION_CATEGORY.WALL) {
+                f = G_objs["stage"].walls[ci.top.idx];
+            } else if (ci.top.cat == COLLISION_CATEGORY.BUTTON) {
+                f = G_objs["stage"].buttons[ci.top.idx];
+            } else {
+                LogError("Unkown collision category.");
+                return;
+            }
             let d = -1;
             let x = this.x;
             let y = this.y - this.height/2;
@@ -254,66 +270,89 @@ class Player extends Entity {
         this.x += this.vx * dT;
         this.y += this.vy * dT;
 
-        let floors = G_objs["stage"].floors;
         let walls = G_objs["stage"].walls;
-        let coll_idxs = {left:-1, right:-1, bottom:-1, top:-1};
+        let buttons = G_objs["stage"].buttons;
         let coll_pts = {
-            bottom:{x: this.x, y: this.y + this.height/2 + 1},
-            left:  {x: this.x - this.width*0.26, y: this.y},
-            right: {x: this.x + this.width*0.26, y: this.y},
-            top:   {x: this.x, y: this.y - this.height/2 - 1},
+            bottom:{x: this.x, y: this.y + this.height/2 + 1, cat: COLLISION_CATEGORY.WALL, idx: -1},
+            left:  {x: this.x - this.width*0.26, y: this.y, cat: COLLISION_CATEGORY.WALL, idx: -1},
+            right: {x: this.x + this.width*0.26, y: this.y, cat: COLLISION_CATEGORY.WALL, idx: -1},
+            top:   {x: this.x, y: this.y - this.height/2 - 1, cat: COLLISION_CATEGORY.WALL, idx: -1},
         };
-        for (let i = 0; i < floors.length; i++) {
-            let f = floors[i];
-            if (Contains(coll_pts.bottom.x, coll_pts.bottom.y, f.x, f.y, f.width, f.height)) {
-                coll_idxs.bottom = i;
-                break;
-            }
-            if (Contains(coll_pts.top.x, coll_pts.top.y, f.x, f.y, f.width, f.height)) {
-                coll_idxs.top = i;
-                break;
-            }
-        }
         for (let i = 0; i < walls.length; i++) {
             let w = walls[i];
             if (Contains(coll_pts.left.x, coll_pts.left.y, w.x, w.y, w.width, w.height)) {
-                coll_idxs.left = i;
+                coll_pts.left.idx = i;
                 break;
             }
             if (Contains(coll_pts.right.x, coll_pts.right.y, w.x, w.y, w.width, w.height)) {
-                coll_idxs.right = i;
+                coll_pts.right.idx = i;
+                break;
+            }
+            if (Contains(coll_pts.bottom.x, coll_pts.bottom.y, w.x, w.y, w.width, w.height)) {
+                coll_pts.bottom.idx = i;
+                break;
+            }
+            if (Contains(coll_pts.top.x, coll_pts.top.y, w.x, w.y, w.width, w.height)) {
+                coll_pts.top.idx = i;
+                break;
+            }
+        }
+        for (let i = 0; i < buttons.length; i++) {
+            let b = buttons[i];
+            if (Contains(coll_pts.bottom.x, coll_pts.bottom.y, b.x, b.y, b.width, b.height)) {
+                coll_pts.bottom.idx = i;
+                coll_pts.bottom.cat = COLLISION_CATEGORY.BUTTON;
+                break;
+            }
+            if (Contains(coll_pts.top.x, coll_pts.top.y, b.x, b.y, b.width, b.height)) {
+                coll_pts.top.idx = i;
+                coll_pts.top.cat = COLLISION_CATEGORY.BUTTON;
+                break;
+            }
+            if (Contains(coll_pts.left.x, coll_pts.left.y, b.x, b.y, b.width, b.height)) {
+                coll_pts.left.idx = i;
+                coll_pts.left.cat = COLLISION_CATEGORY.BUTTON;
+                break;
+            }
+            if (Contains(coll_pts.right.x, coll_pts.right.y, b.x, b.y, b.width, b.height)) {
+                coll_pts.right.idx = i;
+                coll_pts.right.cat = COLLISION_CATEGORY.BUTTON;
                 break;
             }
         }
 
         // Bottom collision.
-        if (coll_idxs.bottom != -1) {
-            this.CheckGrounding(coll_idxs);
+        if (coll_pts.bottom.idx != -1) {
+            this.CheckGrounding(coll_pts);
             this.vx = 0;
             this.vy = 0;
             this.grounded = true;
-        } else if (coll_idxs.top != -1) {
-            this.CheckGrounding(coll_idxs);
-            this.vx = 0;
-            this.vy = 0;
-            this.grounded = true;
+        } else if (coll_pts.top.idx != -1) {
+            this.CheckGrounding(coll_pts);
+            if (coll_pts.top.cat == COLLISION_CATEGORY.WALL) {
+                this.vx = 0;
+                this.vy = 0;
+                this.grounded = true;
+            } else if (coll_pts.top.cat == COLLISION_CATEGORY.BUTTON) {
+                G_objs["stage"].PressButton(coll_pts.top.idx);
+            }
         } else if (this.grounded) {
             LogDebug("Started floating?");
             this.grounded = false;
         }
 
         // Left/Right collision.
-        if (coll_idxs.left != -1) {
+        if (coll_pts.left.idx != -1) {
             this.vx = 0;
             this.x += 1;
-        } else if (coll_idxs.right != -1) {
+        } else if (coll_pts.right.idx != -1) {
             this.vx = 0;
             this.x -= 1;
         }
 
         // Keyboard input.
         if (this.grounded) {
-            if (coll_idxs.left == -1 && coll_idxs.right == -1) {
+            if (coll_pts.left.idx == -1 && coll_pts.right.idx == -1) {
                 if (G_keys.KeyD.down) {
                     this.vx = this.speed_x;
                     if (this.facing_right == false) {
@@ -349,28 +388,16 @@ class Player extends Entity {
     }
 }
 
-class ButtonAndDoor extends Entity {
-    constructor(bx, by, dx, dy, dw, dh) {
-        super({id:"bd", x:bx, y:by});
-        this.button_x = bx;
-        this.button_y = by;
+class Button extends Entity {
+    constructor(x, y, w, h, widx) {
+        super({id:"btn", x:x, y:y});
 
-        this.door_x = dx;
-        this.door_y = dy;
-        this.door_width = dw;
-        this.door_height = dh;
+        this.width = w;
+        this.height = h;
 
-        this.AddSprite({id:"button", x:this.button_x, y:this.button_y,
-            width: 64, height: 64, filename: "wall.png"});
-    }
+        this.wallidx = widx;
 
-    Draw() {
-        G_graphics[2].lineStyle(1, 0x00ffff);
-        G_graphics[2].beginFill(0x006666, 0.5);
-        G_graphics[2].drawRect(
-            GameToPIXIX(this.door_x - this.door_width/2),
-            GameToPIXIY(this.door_y - this.door_height/2),
-            this.door_width* GAME_SCALE, this.door_height * GAME_SCALE);
-        G_graphics[2].endFill();
+        this.AddSprite({id:"button", x: GameToPIXIX(this.x), y: GameToPIXIY(this.y),
+            width: this.width * GAME_SCALE, height: this.height * GAME_SCALE, filename: "wall.png"});
     }
 }
