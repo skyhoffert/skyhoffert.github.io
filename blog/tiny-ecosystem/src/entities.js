@@ -164,13 +164,43 @@ class Lurker {
 }
 
 class Creature extends Entity {
-    constructor(x,y) {
-        super({id:"creature",x:x,y:y});
+    constructor(id,x,y,f) {
+        super({id:id,x:x,y:y});
 
         this.color = RandInt(0, 0xffffff);
 
         this.action = -1;
         this.facing = 0; // 0:N, 1:E, 2:S, 3:W.
+
+        this.food = f;
+
+        this.NN = new NN(3,3,[3,3]);
+    }
+
+    Percept() {
+        // Inputs are as follows:
+        //   0: Forward sight length (to rock, water, creature, edge).
+        //   1: Forward sight block type.
+        //   2: Forward left block type.
+        //   3: Forward center block type.
+        //   4: Forward right block type.
+        //   5: Left block type.
+        //   6: Right block type.
+        //   7: Current food.
+
+        // TODO: .
+    }
+
+    Eat() {
+        LogTrace("Creature " + this.id + " has eaten.");
+
+        // TODO: .
+    }
+
+    Reproduce() {
+        LogTrace("Creature " + this.id + " has reproduced.");
+
+        // TODO: .
     }
 
     TurnCW() {
@@ -180,21 +210,27 @@ class Creature extends Entity {
         this.facing = (this.facing - 1) % 4;
     }
 
+    GetTargetPos() {
+        let dis = this.GetForwardDisplacement();
+        return {x:this.x+dis.x, y:this.y+dis.y};
+    }
+
     GetForwardDisplacement() {
         if (this.facing == 0) {
-            return [0,-1];
+            return {x:0,y:-1};
         } else if (this.facing == 1) {
-            return [1,0];
+            return {x:1,y:0};
         } else if (this.facing == 2) {
-            return [0,1];
+            return {x:0,y:1};
         } else if (this.facing == 3) {
-            return [-1,0];
+            return {x:-1,y:0};
         } else {
-            return [0,0];
+            return {x:0,y:0};
         }
     }
 
     Process() {
+        this.Percept();
         this.action = RandInt(0, NUM_ACTIONS);
     }
     

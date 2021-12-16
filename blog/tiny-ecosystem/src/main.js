@@ -10,7 +10,7 @@ const app = new PIXI.Application({
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
-const G_content = new pixi_viewport.Viewport({
+const G_content = new Viewport.Viewport({
     screenWidth: WIDTH,
     screenHeight: HEIGHT,
     worldWidth: WIDTH,

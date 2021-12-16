@@ -130,3 +130,31 @@ function LogDebug(msg) {
 function LogTrace(msg) {
     if (LOG_LEVEL >= LOG_LEVELS.TRACE) { console.log("TRAC: "+msg); }
 }
+
+class NN {
+    constructor(nIn, nOut, layers) {
+        this.inputs = []; // Input values in range [-1,1].
+        this.outputs = []; // Output values in range [0,1].
+        this.layers = []; // Layers should be an array of integers.
+
+        for (let i = 0; i < nIn; i++) {
+            this.inputs.push(0);
+        }
+        for (let i = 0; i < nOut; i++) {
+            this.outputs.push(0);
+        }
+        for (let i = 0; i < layers.length; i++) {
+            this.layers.push([]);
+            for (let j = 0; j < layers[i]; j++) {
+                this.layers[i].push(0);
+            }
+        }
+    }
+
+    Calculate() {
+        for (let i = 0; i < this.layers.length; i++) {
+            for (let j = 0; j < this.layers[i].length; j++) {
+            }
+        }
+    }
+}

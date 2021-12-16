@@ -6,7 +6,7 @@ This tiny ecosystem simulator was inspired by content from YouTube channels davi
 
 ## To Be Done
 
-
+- Creatures can now make actions, but they need to think.
 
 ## Working
 
