@@ -84,6 +84,16 @@ function sContains(x, y, rx, ry, rw, rh) {
   return x > rx - rw/2 && x < rx + rw/2 && y > ry - rh/2 && y < ry + rh/2;
 }
 
+function sDateString(datedelim="-", timedelim=":", spacer=" ") {
+  let now = new Date();
+  return "" + now.getFullYear() + datedelim +
+    (now.getMonth()+1).toString().padStart(2, "0") + datedelim +
+    now.getDate().toString().padStart(2, "0") + spacer +
+    now.getHours().toString().padStart(2, "0") + timedelim +
+    now.getMinutes().toString().padStart(2, "0") + timedelim +
+    now.getSeconds().toString().padStart(2, "0");
+}
+
 const sk_log_levels = {trace:5, debug:4, info:3, warn:2, error:1, fatal:0};
 const sk_log_level = sk_log_levels.trace;
 

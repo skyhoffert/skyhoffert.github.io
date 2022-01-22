@@ -79,6 +79,16 @@ textarea {
   flex: 0 30%;
 }
 
+#btn_savecode {
+  height: 40px;
+  flex: 0 30%;
+}
+
+#btn_saveout {
+  height: 40px;
+  flex: 0 30%;
+}
+
 #txt_out {
   height: 200px;
   flex: 0 100%;
@@ -89,5 +99,5 @@ textarea {
   font-size: 14px;
   margin: 5px;
   padding: 0;
-  user-select: none;
+  overflow: scroll;
 }
