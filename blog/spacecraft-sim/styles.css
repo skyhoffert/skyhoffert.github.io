@@ -1,0 +1,93 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: black;
+  margin: 0;
+  padding: 0;
+}
+
+p {
+  color: white;
+  align-self: flex-end;
+}
+
+div {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+button {
+  margin: 5px;
+}
+
+textarea {
+  font-size: 14px;
+  resize: none;
+  overflow: hidden;
+}
+
+#div_txt {
+  height: 800px;
+  flex: 60%;
+}
+
+#div_control {
+  flex: 40%;
+}
+
+#txt_lines {
+  background-color: black;
+  border-color: gray;
+  color: white;
+  width: 30px;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+#txt_code {
+  background-color: black;
+  border-color: gray;
+  color: white;
+  flex: 50%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#btn_run {
+  height: 40px;
+  flex: 0 30%;
+}
+
+#btn_stop {
+  height: 40px;
+  flex: 0 30%;
+}
+
+#btn_other {
+  height: 40px;
+  flex: 0 30%;
+}
+
+#btn_other2 {
+  height: 40px;
+  flex: 0 30%;
+}
+
+#txt_out {
+  height: 200px;
+  flex: 0 100%;
+  background-color: black;
+  border-color: gray;
+  color: white;
+  width: 100%;
+  font-size: 14px;
+  margin: 5px;
+  padding: 0;
+  user-select: none;
+}
