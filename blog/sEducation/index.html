@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sEducation</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Libraries -->
+  <script src="lib/pixi.min.js"></script>
+  <script src="lib/s.min.js"></script>
+
+  <!-- Source Files -->
+  <script defer src="src/entity.js"></script>
+  <script defer src="src/stages.js"></script>
+  <script defer src="src/handlers.js"></script>
+  <script defer src="src/runner.js"></script>
+  <script defer src="index.js"></script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <button class="btn_opt" id="btn_recover_windows">Recover Windows</button>
+  <button class="btn_opt" id="btn_other">Other</button>
+
+  <div class="div_draggable" id="div_code">
+    <div class="div_draggable_header" id="div_code_header">
+      &nbsp; Code &nbsp;&nbsp;
+      <button class="btn_draggable_header" id="btn_code_minimize">&uarr;</button>
+      <button class="btn_draggable_header" id="btn_code_run">Run</button>
+      <button class="btn_draggable_header" id="btn_code_stop">Stop</button>
+      <button class="btn_draggable_header" id="btn_code_help">Help</button>
+    </div>
+    <textarea class="txtarea" id="txt_code"># Insert code here!&NewLine;</textarea>
+  </div>
+  
+  <div class="div_draggable" id="div_output">
+    <div class="div_draggable_header" id="div_output_header">
+      &nbsp; Output &nbsp;&nbsp;&nbsp;&nbsp;
+      <button class="btn_draggable_header" id="btn_output_minimize">&uarr;</button>
+      <button class="btn_draggable_header" id="btn_output_clear">Clear</button>
+    </div>
+    <textarea readonly class="txtarea" id="txt_output"></textarea>
+  </div>
+</body>
+</html>

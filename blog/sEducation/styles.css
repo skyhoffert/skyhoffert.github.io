@@ -1,0 +1,121 @@
+
+* {
+  font-family: monospace;
+}
+
+body, canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+canvas {
+  z-index: 1;
+}
+
+.div_draggable {
+  position: absolute;
+  z-index: 9;
+  background-color: #222222;
+  text-align: right;
+  border: 1px solid #d3d3d3;
+  width: 400px;
+  resize: both;
+}
+
+#div_code {
+  left: 10px;
+  top: 40px;
+}
+
+#div_output {
+  left: 420px;
+  top: 40px;
+}
+
+.div_draggable_header {
+  margin: 0;
+  padding: 0;
+  cursor: move;
+  z-index: 10;
+  border: 0px;
+  background-color: #993333;
+  color: white;
+  height: 24px;
+  font-size: 18px;
+  text-align: left;
+}
+
+.txtarea {
+  font-size: 12px;
+  width: 386px;
+  height: 400px;
+  margin: 0;
+  padding: 5px;
+  margin-top: 4px;
+  resize: none;
+  background-color: #222222;
+  color: white;
+}
+
+.btn_draggable_header {
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  position: relative;
+  top: 0;
+}
+
+#btn_code_minimize {
+  width: 30px;
+}
+
+#btn_code_run {
+  width: 50px;
+}
+
+#btn_code_stop {
+  width: 60px;
+}
+
+#btn_code_help {
+  width: 60px;
+}
+
+#img_resize_code {
+  width: 10px;
+  height: 10px;
+  position: relative;
+  left: 0px;
+  bottom: 0px;
+}
+
+#btn_output_minimize {
+  width: 30px;
+}
+
+#btn_output_clear {
+  width: 80px;
+}
+
+.btn_opt {
+  position: absolute;
+  display: block;
+  z-index: 2;
+  width: 120px;
+  height: 20px;
+  font-size: 10px;
+  top: 10px;
+}
+
+#btn_recover_windows {
+  left: 10px;
+}
+
+#btn_other {
+  left: 140px;
+}
