@@ -10,6 +10,8 @@ body, canvas {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  width: 100vw;
+  height: 100vh;
 }
 
 h3 {
@@ -31,13 +33,13 @@ canvas {
 }
 
 #div_code {
-  left: 10px;
-  top: 50px;
+  right: 10px;
+  top: 10px;
 }
 
 #div_output {
-  left: 420px;
-  top: 50px;
+  right: 10px;
+  top: 460px;
 }
 
 #div_help {
@@ -155,4 +157,17 @@ canvas {
   margin-left: 5px;
   margin-right: 5px;
   min-width: 40px;
+}
+
+#p_revision {
+  position: absolute;
+  left: 10px;
+  bottom: 0px;
+  color: white;
+  z-index: 2;
+  user-select: none;
+  background-color: black;
+  border: 1px solid white;
+  padding-left: 10px;
+  padding-right: 10px;
 }
