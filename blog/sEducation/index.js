@@ -50,10 +50,9 @@ let G_lurkers = {};
 function Init() {
     G_stage = new DebugStage();
     G_needs_update = true;
-}
 
-let x = 100;
-let y = 100;
+    PrintHelp();
+}
 
 let G_prev_tick = Date.now();
 

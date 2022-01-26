@@ -1,9 +1,10 @@
 
-//Make the DIV element draggagle:
-dragElement(document.getElementById("div_code"));
-dragElement(document.getElementById("div_output"));
+// Make the DIV element draggagle:
+DragElement(document.getElementById("div_code"));
+DragElement(document.getElementById("div_output"));
+DragElement(document.getElementById("div_help"));
 
-function dragElement(elmnt) {
+function DragElement(elmnt) {
   var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
   document.getElementById(elmnt.id + "_header").onmousedown = dragMouseDown;
 
@@ -18,11 +19,11 @@ function dragElement(elmnt) {
     document.onmousemove = elementDrag;
     
     if (elmnt.id === "div_code") {
-      document.getElementById("div_code").style.zIndex = 10;
-      document.getElementById("div_output").style.zIndex = 9;
-    } else {
-      document.getElementById("div_code").style.zIndex = 9;
-      document.getElementById("div_output").style.zIndex = 10;
+      Focus("code");
+    } else if (elmnt.id === "div_output") {
+      Focus("output");
+    } else if (elmnt.id === "div_help") {
+      Focus("help");
     }
   }
 
@@ -46,36 +47,55 @@ function dragElement(elmnt) {
   }
 }
 
-document.getElementById("btn_code_minimize").addEventListener("click", function () {
-  let code = document.getElementById("txt_code");
-  let btn = document.getElementById("btn_code_minimize");
-  let res = document.getElementById("img_resize_code");
-  if (code.style.display === "none") {
-    code.style.display = "block";
-    btn.innerHTML = "&uarr;";
-    return;
-  }
-  code.style.display = "none";
-  btn.innerHTML = "&darr;";
-}, false);
+function MinimizeElement(which) {
+  document.getElementById("btn_"+which+"_minimize").addEventListener("click", function () {
+    let code = document.getElementById("txt_"+which);
+    let btn = document.getElementById("btn_"+which+"_minimize");
+    if (code === null) {
+      code = document.getElementById("div_helpcontent");
+      if (code.style.display === "none") {
+        code.style.display = "block";
+        document.getElementById("div_helpbuttons").style.display = "block";
+        btn.innerHTML = "&uarr;";
+        return;
+      }
+      code.style.display = "none";
+      document.getElementById("div_helpbuttons").style.display = "none";
+      btn.innerHTML = "&darr;";
+      return;
+    }
+    if (code.style.display === "none") {
+      code.style.display = "block";
+      btn.innerHTML = "&uarr;";
+      return;
+    }
+    code.style.display = "none";
+    btn.innerHTML = "&darr;";
+  }, false);
+}
 
-document.getElementById("btn_output_minimize").addEventListener("click", function () {
-  let code = document.getElementById("txt_output");
-  let btn = document.getElementById("btn_output_minimize");
-  if (code.style.display === "none") {
-    code.style.display = "block";
-    btn.innerHTML = "&uarr;";
-    return;
-  }
-  code.style.display = "none";
-  btn.innerHTML = "&darr;";
-}, false);
+MinimizeElement("code");
+MinimizeElement("output");
+MinimizeElement("help"); document.getElementById("div_helpcontent").style.display = "none";
 
 document.getElementById("btn_recover_windows").addEventListener("click", function() {
   document.getElementById("div_code").style.left = "10px";
-  document.getElementById("div_code").style.top = "40px";
+  document.getElementById("div_code").style.top = "50px";
   document.getElementById("div_output").style.left = "420px";
-  document.getElementById("div_output").style.top = "40px";
+  document.getElementById("div_output").style.top = "50px";
+  document.getElementById("div_help").style.left = "300px";
+  document.getElementById("div_help").style.top = "10px";
+  if (document.getElementById("div_helpcontent").style.display === "block") {
+    let btn = document.getElementById("btn_help_minimize");
+    let code = document.getElementById("div_helpcontent");
+    code.style.display = "none";
+    document.getElementById("div_helpbuttons").style.display = "none";
+    btn.innerHTML = "&darr;";
+  }
+}, false);
+
+document.getElementById("btn_tutorial").addEventListener("click", function () {
+  console.log("TODO: Start the tutorial.");
 }, false);
 
 document.getElementById("btn_output_clear").addEventListener("click", function () {
@@ -84,10 +104,36 @@ document.getElementById("btn_output_clear").addEventListener("click", function (
   // out.scrollTop = out.scrollHeight;
 }, false);
 
-document.getElementById("btn_code_help").addEventListener("click", function() {
-  PrintHelp();
-}, false);
-
 document.getElementById("btn_code_run").addEventListener("click", function() {
   Run();
 }, false);
+
+document.getElementById("txt_code").addEventListener("click", function () {
+  Focus("code");
+}, false);
+
+document.getElementById("txt_output").addEventListener("click", function () {
+  Focus("output");
+}, false);
+
+document.getElementById("div_helpcontent").addEventListener("click", function () {
+  Focus("help");
+}, false);
+
+function Focus(which) {
+  if (which === "code") {
+    document.getElementById("div_code").style.zIndex = 10;
+    document.getElementById("div_output").style.zIndex = 9;
+    document.getElementById("div_help").style.zIndex = 9;
+  } else if (which === "output") {
+    document.getElementById("div_code").style.zIndex = 9;
+    document.getElementById("div_output").style.zIndex = 10;
+    document.getElementById("div_help").style.zIndex = 9;
+  } else if (which === "help") {
+    document.getElementById("div_code").style.zIndex = 9;
+    document.getElementById("div_output").style.zIndex = 9;
+    document.getElementById("div_help").style.zIndex = 10;
+  } else {
+    console.log("Couldn't focus " + which);
+  }
+}

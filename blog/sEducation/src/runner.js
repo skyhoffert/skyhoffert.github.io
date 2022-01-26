@@ -1,26 +1,79 @@
 
 let current_scenario = "debug";
 
-function PrintHelp() {
-  let out = document.getElementById("txt_output");
-  let str = "";
-  if (current_scenario === "debug") {
-    str += "==== Command Help ====\n";
-    str += "  # [a comment]     : Ignore [a comment].\n";
-    str += "  output [some txt] : Write [some txt] to output.\n";
-    // str += "  stop              : Stops any movement.\n";
-    // str += "  wait [sec]        : Waits [sec] seconds.\n";
-    // str += "  walk [dir]        : Walks [dir] indefinitely.\n";
-    str += "  walk [dir] [dist] : Walks [dir] [dist] units.\n";
-    str += "==== Values: ====\n";
-    str += "  [a comment]: String.\n";
-    str += "  [some txt]: String.\n";
-    // str += "  [sec]: Float. Units of seconds.\n";
-    str += "  [dir]: String. \"up\", \"down\", \"left\", or \"right\".\n";
-    str += "  [dist]: Float. Distance in world units.\n";
+function AddHelpButton(which) {
+  let div_buttons = document.getElementById("div_helpbuttons");
+  let cmd = document.getElementById("help_cmd");
+  let fmt = document.getElementById("help_fmt");
+  let descr = document.getElementById("help_descr");
+
+  let btn = document.createElement("button");
+  btn.className = "btn_help_class";
+  btn.id = "btn_help_"+which;
+  btn.innerHTML = which;
+
+  if (which === "#") {
+
+    btn.addEventListener("click", function () {
+      cmd.innerHTML = "#: Comment. Allows the user to add comments to their code. Anything " +
+        "following the \"#\" symbol is ignored.";
+      fmt.innerHTML = "# [comment]<br>#[comment]";
+      descr.innerHTML = "[comment]: String.";
+    }, false);
+
+  } else if (which === "output") {
+
+    btn.addEventListener("click", function () {
+      cmd.innerHTML = "output: Write a given string.";
+      fmt.innerHTML = "output [text]";
+      descr.innerHTML = "[text]: String. Can include spaces.";
+    }, false);
+
+  } else if (which === "pickup") {
+
+    btn.addEventListener("click", function () {
+      cmd.innerHTML = "pickup: Attempt to make the player character pick up an object.";
+      fmt.innerHTML = "pickup";
+      descr.innerHTML = "";
+    }, false);
+
+  } else if (which === "wait") {
+
+    btn.addEventListener("click", function () {
+      cmd.innerHTML = "wait: Command the player character to wait for a given duration.";
+      fmt.innerHTML = "wait [duration]";
+      descr.innerHTML = "[duration]: Float. Number of seconds to wait for.";
+    }, false);
+    
+  } else if (which === "walk") {
+
+    btn.addEventListener("click", function () {
+      cmd.innerHTML = "walk: Command the player character to walk in a given direction for a " +
+        "given duration.";
+      fmt.innerHTML = "walk [direction] [duration]";
+      descr.innerHTML = "[direction]: String. One of \"up\", \"down\", \"left\", \"right\"." +
+        "<br><br>[duration]: Float. Number of seconds to walk for.";
+    }, false);
+
+  } else {
   }
-  out.value += str;
-  out.scrollTop = out.scrollHeight;
+
+  div_buttons.append(btn);
+}
+
+function PrintHelp() {
+
+  if (current_scenario === "debug") {
+
+    // Now, add buttons to the help window.
+    let btn = null;
+    AddHelpButton("#");
+    AddHelpButton("output");
+    AddHelpButton("pickup");
+    AddHelpButton("wait");
+    AddHelpButton("walk");
+
+  }
 }
 
 function OutputRaw(str) {
@@ -82,28 +135,72 @@ function RunLine(linenum) {
   
   // Otherwise, handle the next action in some time.
   let next_command_time = -1; // ms
+  let lerper_func = function () {};
+
   if (line[0] === "#") {
 
-    next_command_time = 500;
+    next_command_time = 0;
 
   } else if (tokens[0] === "output") {
 
     tokens.splice(0,1);
     let outtxt = tokens.join(" ");
     Output(outtxt);
-    next_command_time = 1000;
+    next_command_time = 0;
+
+  } else if (tokens[0] === "wait") {
+
+    if (tokens.length !== 2) {
+      OutputError(linenum_txt, "Invalid format.");
+      return;
+    }
+
+    let dur = tokens[1];
+    let v_dur = parseFloat(dur);
+    if (v_dur === NaN) {
+      OutputError(linenum_txt, "Invalid dur \"" + dur + "\".");
+      return;
+    }
+
+    next_command_time = v_dur * 1000;
 
   } else if (tokens[0] === "walk") {
 
-    if (tokens.length != 3) {
+    if (tokens.length !== 3) {
       OutputError(linenum_txt, "Invalid format.");
       return;
     }
 
     let dir = tokens[1];
-    let dist = tokens[2];
+    if (!(dir === "up" || dir === "down" || dir === "left" || dir === "right")) {
+      OutputError(linenum_txt, "Unknown dir \"" + dir + "\".");
+      return;
+    }
+    let x_vel = 0;
+    let y_vel = 0;
+    let move_speed = 2;
+    if (dir === "up") {
+      y_vel = -1*move_speed;
+    } else if (dir === "down") {
+      y_vel = move_speed;
+    } else if (dir === "left") {
+      x_vel = -1*move_speed;
+    } else if (dir === "right") {
+      x_vel = move_speed;
+    }
 
-    next_command_time = 1000;
+    let dur = tokens[2];
+    let v_dur = parseFloat(dur);
+    if (v_dur === NaN) {
+      OutputError(linenum_txt, "Invalid dur \"" + dur + "\".");
+      return;
+    }
+
+    next_command_time = v_dur * 1000;
+    lerper_func = function () {
+      G_stage.sprites.player.x += x_vel;
+      G_stage.sprites.player.y += y_vel;
+    };
 
   } else {
     
@@ -112,8 +209,15 @@ function RunLine(linenum) {
 
   }
 
-  // Catch any errors.
-  if (next_command_time <= 0) {
+  // If there is NO wait time, run next command now.
+  if (sFuzzyEquals(next_command_time, 0)) {
+    RunLine(linenum+1);
+    return;
+  }
+
+  // Catch any errors (-1 valued).
+  if (next_command_time < 0) {
+    console.log("Error caught in runner.");
     return;
   }
 
@@ -122,5 +226,6 @@ function RunLine(linenum) {
     if (d) {
       RunLine(linenum+1);
     }
+    lerper_func();
   });
 }

@@ -9,7 +9,7 @@
 
   <!-- Libraries -->
   <script src="lib/pixi.min.js"></script>
-  <script src="lib/s.min.js"></script>
+  <script src="lib/s.js"></script>
 
   <!-- Source Files -->
   <script defer src="src/entity.js"></script>
@@ -22,26 +22,45 @@
   <canvas id="canvas"></canvas>
 
   <button class="btn_opt" id="btn_recover_windows">Recover Windows</button>
-  <button class="btn_opt" id="btn_other">Other</button>
+  <button class="btn_opt" id="btn_tutorial">Start Tutorial</button>
 
   <div class="div_draggable" id="div_code">
     <div class="div_draggable_header" id="div_code_header">
-      &nbsp; Code &nbsp;&nbsp;
+      &nbsp; Code &nbsp;&nbsp;&nbsp;&nbsp;
       <button class="btn_draggable_header" id="btn_code_minimize">&uarr;</button>
       <button class="btn_draggable_header" id="btn_code_run">Run</button>
       <button class="btn_draggable_header" id="btn_code_stop">Stop</button>
-      <button class="btn_draggable_header" id="btn_code_help">Help</button>
     </div>
-    <textarea class="txtarea" id="txt_code"># Insert code here!&NewLine;</textarea>
+    <textarea spellcheck="false" class="txtarea" id="txt_code"># Insert code here!&NewLine;</textarea>
   </div>
   
   <div class="div_draggable" id="div_output">
     <div class="div_draggable_header" id="div_output_header">
-      &nbsp; Output &nbsp;&nbsp;&nbsp;&nbsp;
+      &nbsp; Output &nbsp;&nbsp;
       <button class="btn_draggable_header" id="btn_output_minimize">&uarr;</button>
       <button class="btn_draggable_header" id="btn_output_clear">Clear</button>
     </div>
     <textarea readonly class="txtarea" id="txt_output"></textarea>
+  </div>
+  
+  <div class="div_draggable" id="div_help">
+    <div class="div_draggable_header" id="div_help_header">
+      &nbsp; Help &nbsp;&nbsp;&nbsp;&nbsp;
+      <button class="btn_draggable_header" id="btn_help_minimize">&darr;</button>
+      <!-- <button class="btn_draggable_header" id="btn_output_clear">Clear</button> -->
+    </div>
+    <div id="div_helpbuttons">
+      <h2>Commands:</h2>
+    </div>
+    <div id="div_helpcontent">
+      <h2>Information:</h2>
+      <h3>Command</h3>
+      <p id=help_cmd></p>
+      <h3>Format</h3>
+      <p id=help_fmt></p>
+      <h3>Description</h3>
+      <p id="help_descr"></p>
+    </div>
   </div>
 </body>
 </html>

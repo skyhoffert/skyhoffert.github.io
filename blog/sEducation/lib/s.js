@@ -77,7 +77,7 @@ function sLinspace(a,b,d,incl=true) {
   }
   
   function sFuzzyEquals(v1, v2, fuzz=0.001) {
-    return Abs(v1 - v2) < fuzz;
+    return sAbs(v1 - v2) < fuzz;
   }
   
   function sContains(x, y, rx, ry, rw, rh) {
