@@ -2,6 +2,8 @@
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 
+const DRAW_DEBUG = false;
+
 const canvas = document.getElementById("canvas");
 const app = new PIXI.Application({
     width: WIDTH, height: HEIGHT,

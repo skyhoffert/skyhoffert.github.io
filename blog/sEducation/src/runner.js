@@ -37,6 +37,14 @@ function AddHelpButton(which) {
       descr.innerHTML = "";
     }, false);
 
+  } else if (which === "use") {
+
+    btn.addEventListener("click", function () {
+      cmd.innerHTML = "use: Attempt to make the player character the held item.";
+      fmt.innerHTML = "use";
+      descr.innerHTML = "";
+    }, false);
+
   } else if (which === "wait") {
 
     btn.addEventListener("click", function () {
@@ -72,6 +80,7 @@ function PrintHelp() {
     AddHelpButton("pickup");
     AddHelpButton("wait");
     AddHelpButton("walk");
+    AddHelpButton("use");
 
   }
 }
@@ -198,8 +207,9 @@ function RunLine(linenum) {
 
     next_command_time = v_dur * 1000;
     lerper_func = function () {
-      G_stage.sprites.player.x += x_vel;
-      G_stage.sprites.player.y += y_vel;
+      G_stage.MovePlayer(x_vel, y_vel);
+      // G_stage.sprites.player.x += x_vel;
+      // G_stage.sprites.player.y += y_vel;
     };
 
   } else {
