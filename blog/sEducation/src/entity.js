@@ -37,6 +37,12 @@ class Entity {
       G_draw_layers[dl].addChild(this.sprites[id]);
   }
 
+  MoveSpriteDrawLayer(id, todl) {
+    G_draw_layers[this.sprites[id].draw_layer].removeChild(this.sprites[id]);
+    this.sprites[id].draw_layer = todl;
+    G_draw_layers[this.sprites[id].draw_layer].addChild(this.sprites[id]);
+  }
+
   AddText(a) {
       let id = a.id;
       let x = a.x;

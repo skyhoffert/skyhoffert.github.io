@@ -1,12 +1,12 @@
 
-const WIDTH = window.innerWidth;
-const HEIGHT = window.innerHeight;
+const kWidth = window.innerWidth;
+const kHeight = window.innerHeight;
 
-const DRAW_DEBUG = false;
+const kDrawDebug = false;
 
 const canvas = document.getElementById("canvas");
 const app = new PIXI.Application({
-    width: WIDTH, height: HEIGHT,
+    width: kWidth, height: kHeight,
     backgroundColor: 0x000000,
     resolution: window.devicePixelRatio || 1,
     view: canvas,
@@ -45,6 +45,10 @@ let G_pause = false;
 let G_needs_update = false;
 let G_loaded = false;
 let G_actions = [];
+
+// Will be used by runner.js to stop code from running for a reset.
+let G_stop_for_reset = false;
+let G_running = false;
 
 let G_lerpers = {};
 let G_lurkers = {};

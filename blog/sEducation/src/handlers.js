@@ -96,6 +96,11 @@ document.getElementById("btn_recover_windows").addEventListener("click", functio
 
 document.getElementById("btn_tutorial").addEventListener("click", function () {
   console.log("TODO: Start the tutorial.");
+  OutputRaw("INFO: Tutorial has not yet been implemented. Check back later!");
+}, false);
+
+document.getElementById("btn_code_reset").addEventListener("click", function () {
+  G_stage.Stop();
 }, false);
 
 document.getElementById("btn_output_clear").addEventListener("click", function () {
@@ -118,6 +123,15 @@ document.getElementById("txt_output").addEventListener("click", function () {
 
 document.getElementById("div_helpcontent").addEventListener("click", function () {
   Focus("help");
+}, false);
+
+document.getElementById("btn_play_again").addEventListener("click", function() {
+  G_stage.Reset();
+}, false);
+
+document.getElementById("btn_next_scenario").addEventListener("click", function() {
+  document.getElementById("p_next_scenario").innerHTML = "Next Scenario is currently under " +
+  "development. Check back later for more!";
 }, false);
 
 function Focus(which) {

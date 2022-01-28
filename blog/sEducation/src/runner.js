@@ -102,6 +102,12 @@ let G_lines = [];
 let G_line_lengths = [];
 
 function Run() {
+  G_running = true;
+  G_stage.Reset();
+
+  document.getElementById("txt_code").readOnly = true;
+  document.getElementById("txt_code").style.userSelect = "none";
+  
   G_code = document.getElementById("txt_code").value;
   G_lines = G_code.split("\n");
 
@@ -114,9 +120,25 @@ function Run() {
   RunLine(0);
 }
 
+function RunEnd() {
+  G_running = false;
+  document.getElementById("txt_code").readOnly = false;
+  document.getElementById("txt_code").style.userSelect = "auto";
+}
+
 function RunLine(linenum) {
+  // If "Reset" button was pressed.
+  if (G_stop_for_reset === true) {
+    G_stop_for_reset = false;
+    OutputRaw("==== Run Stopped  " + sDateString() + " ====\n");
+    RunEnd();
+    return;
+  }
+
+  // Once runner reaches the end of the code.
   if (linenum >= G_lines.length) {
     OutputRaw("==== Run Complete " + sDateString() + " ====\n");
+    RunEnd();
     return;
   }
 
@@ -157,10 +179,21 @@ function RunLine(linenum) {
     Output(outtxt);
     next_command_time = 0;
 
+  } else if (tokens[0] === "pickup") {
+
+    G_stage.Pickup();
+    next_command_time = 0;
+
+  } else if (tokens[0] === "use") {
+
+    G_stage.Use();
+    next_command_time = 0;
+
   } else if (tokens[0] === "wait") {
 
     if (tokens.length !== 2) {
       OutputError(linenum_txt, "Invalid format.");
+      RunEnd();
       return;
     }
 
@@ -168,6 +201,7 @@ function RunLine(linenum) {
     let v_dur = parseFloat(dur);
     if (v_dur === NaN) {
       OutputError(linenum_txt, "Invalid dur \"" + dur + "\".");
+      RunEnd();
       return;
     }
 
@@ -177,12 +211,14 @@ function RunLine(linenum) {
 
     if (tokens.length !== 3) {
       OutputError(linenum_txt, "Invalid format.");
+      RunEnd();
       return;
     }
 
     let dir = tokens[1];
     if (!(dir === "up" || dir === "down" || dir === "left" || dir === "right")) {
       OutputError(linenum_txt, "Unknown dir \"" + dir + "\".");
+      RunEnd();
       return;
     }
     let x_vel = 0;
@@ -202,6 +238,7 @@ function RunLine(linenum) {
     let v_dur = parseFloat(dur);
     if (v_dur === NaN) {
       OutputError(linenum_txt, "Invalid dur \"" + dur + "\".");
+      RunEnd();
       return;
     }
 
@@ -215,6 +252,7 @@ function RunLine(linenum) {
   } else {
     
     OutputError(linenum_txt,"Unknown command \"" + line + "\".");
+    RunEnd();
     next_command_time = -1;
 
   }
@@ -228,6 +266,7 @@ function RunLine(linenum) {
   // Catch any errors (-1 valued).
   if (next_command_time < 0) {
     console.log("Error caught in runner.");
+    RunEnd();
     return;
   }
 
