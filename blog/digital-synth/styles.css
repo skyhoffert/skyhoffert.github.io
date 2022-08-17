@@ -1,0 +1,58 @@
+
+.synthbutton
+{
+    position: relative;
+    border: none;
+    width: 200px;
+    background-color: #111111;
+    text-align: center;
+    font-size: 24px;
+    padding: 5px 5px;
+    transition: none;
+    outline: 1px solid black;
+}
+
+.synthbutton:hover
+{
+    font-size: 24px;
+    outline: 1px solid white;
+}
+
+input[type=range]
+{
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+    width: 50px;
+    height: 200px;
+    padding: 0 24px;
+    outline: none;
+    background: transparent;
+}
+
+input
+{
+    color: black;
+    width: 60px;
+    float: left;
+    margin-left: 4px;
+}
+
+h4
+{
+    padding: 2px;
+    margin: 8px 2px;
+}
+
+.synthparamdiv
+{
+    float: left;
+    width: 120px;
+    text-align: center;
+    border-left: 1px solid white;
+}
+
+.synthparamdiv p
+{
+    padding: 2px;
+    margin: 2px;
+}
