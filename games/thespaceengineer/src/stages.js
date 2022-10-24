@@ -1,18 +1,90 @@
 // stages.js: Game stages. 
 
-class Stage extends Entity {
-    constructor() {
+class Stage extends Entity
+{
+    constructor()
+    {
         super({"id":"stage", "x":0, "y":0});
         this.active = true;
 
-        content.visible = false;
+        this.lerpers = [];
+        this.lurkers = [];
+
+        this.objs = [];
+    }
+
+    Update(dT)
+    {
+        super.Update(dT);
+
+        for (let i = 0; i < this.lerpers.length; i++)
+        {
+            this.lerpers[i].Update(dT);
+            if (this.lerpers[i].active == false)
+            {
+                this.lerpers[i].Destroy();
+                delete this.lerpers[i];
+                this.lerpers.splice(i,1);
+                i--;
+            }
+        }
+
+        for (let i = 0; i < this.lurkers.length; i++)
+        {
+            this.lurkers[i].Update(dT);
+            if (this.lurkers[i].active == false)
+            {
+                this.lurkers[i].Destroy();
+                delete this.lurkers[i];
+                this.lurkers.splice(i,1);
+                i--;
+            }
+        }
+
+        for (let i = 0; i < this.objs.length; i++)
+        {
+            this.objs[i].Update(dT);
+            if (this.objs[i].active == false)
+            {
+                this.objs[i].Destroy();
+                delete this.objs[i];
+                this.objs.splice(i, 1);
+                i--;
+            }
+        }
+    }
+    
+    Loaded()
+    {
+        if (this.loaded == true) { return true; }
+
+        for (let k in this.textures)
+        {
+            if (k.loaded == false)
+            {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < this.objs.length; i++)
+        {
+            if (this.objs[i].Loaded() == false)
+            {
+                return false;
+            }
+        }
+
+        this.loaded = true;
+        return true;
     }
 
     Reset() {}
 }
 
-class MainMenu extends Stage {
-    constructor() {
+class MainMenu extends Stage
+{
+    constructor()
+    {
         super();
 
         this.menu_line_x = 200;
@@ -29,7 +101,7 @@ class MainMenu extends Stage {
 
         // About menu item.
         this.AddText({id:"about", x: this.menu_line_x + this.menu_line_x_spacing,
-            y: this.menu_line_y + this.menu_line_y_spacing, text:"About",
+            y: this.menu_line_y + this.menu_line_y_spacing, text:"xyz",
             fontSize: this.menu_fontSize, align:"left"});
 
         // Menu pointer.
@@ -40,196 +112,86 @@ class MainMenu extends Stage {
         this.pointer = this.texts["ptr"];
 
         this.pointer_moved = false;
-        
-        content.visible = false;
     }
 
-    Update(dT) {
+    Update(dT)
+    {
+        super.Update(dT);
+
         if (this.active == false) { return; }
 
-        if (content.visible == false) {
-            content.visible = this.Loaded();
-            return;
-        }
-
-        if (G_keys.KeyQ.down) {
+        if (G_keys.KeyQ.down)
+        {
             // DEBUG KEY.
-
             G_actions.push("load debug,00,00");
             this.active = false;
-
-        } else if (G_keys.KeyW.down || G_keys.ArrowUp.down) {
-
-            if (this.pointer_moved == false &&
-                    this.pointer.y > this.menu_line_y+1) {
+        }
+        else if (G_keys.KeyW.down || G_keys.ArrowUp.down)
+        {
+            if (this.pointer_moved == false && this.pointer.y > this.menu_line_y+1)
+            {
                 this.pointer_moved = true;
                 this.pointer.y -= this.menu_line_y_spacing;
             }
-
-        } else if (G_keys.KeyS.down || G_keys.ArrowDown.down) {
-
-            if (this.pointer_moved == false &&
-                    this.pointer.y < this.menu_line_y + 
-                    (this.menu_line_y_spacing*(this.menu_num_items-1))) {
+        }
+        else if (G_keys.KeyS.down || G_keys.ArrowDown.down)
+        {
+            if (this.pointer_moved == false && this.pointer.y < this.menu_line_y + (this.menu_line_y_spacing*(this.menu_num_items-1)))
+            {
                 this.pointer_moved = true;
                 this.pointer.y += this.menu_line_y_spacing;
             }
-        
-        } else if (G_keys.Enter.down) {
-
+        }
+        else if (G_keys.Enter.down)
+        {
             let item_number = Round((this.pointer.y - this.menu_line_y) / this.menu_line_y_spacing);
-            if (item_number == 0) {
+            if (item_number == 0)
+            {
                 this.active = false;
                 G_actions.push("load debug,00,00");
-            } else if (item_number == 1) {
+            }
+            else if (item_number == 1)
+            {
                 // TODO: other buttons.
             }
-
-        } else {
-
+        }
+        else
+        {
             this.pointer_moved = false;
-
         }
     }
 }
 
-class GameStage extends Stage {
-    constructor(lvlname, toroom="00", fromroom="00") {
+class DebugLevel extends Stage
+{
+    constructor()
+    {
         super();
 
-        this.level_name = lvlname;
-        this.level = JSON.parse(JSON.stringify(LEVELS[lvlname]));
-        this.current_room = toroom;
-        this.previous_room = fromroom;
-        this.walls = this.level.rooms[this.current_room].walls;
-        this.backdrops = this.level.rooms[this.current_room].backdrops;
-        this.exits = this.level.rooms[this.current_room].exits;
+        // Play menu item.
+        this.AddText({id:"debug", x: WIDTH/2,
+            y: 100, text:"Debug Stage", fontSize: 24,
+            align:"center", draw_layer: LAYER_MAINSTAGE});
 
-        this.AddSprite({id:"bg", x:WIDTH/2, y:HEIGHT/2, 
-            width:GAME_WIDTH, height:GAME_HEIGHT,
-            draw_layer:0, filename:"background.png"});
+        this.lerpers.push(new Lerper(1000, function (p, d)
+        {
+            if (d) 
+            {
+                G_stage.lerpers.push(new Lerper(250, function (p,d)
+                {
+                    G_cover_alpha = 1 - p;
+                    G_needs_update = true;
+                }));
+            }
+        }));
 
-        this.player = new Player(
-            this.level.rooms[this.current_room].player.spawn[this.previous_room].x,
-            this.level.rooms[this.current_room].player.spawn[this.previous_room].y,
-            this.level.rooms[this.current_room].player.velocity[this.previous_room].x,
-            this.level.rooms[this.current_room].player.velocity[this.previous_room].y);
-        
-        this.buttons = [];
-        for (let i = 0; i < this.level.rooms[this.current_room].buttons.length; i++) {
-            let b = this.level.rooms[this.current_room].buttons[i];
-            this.buttons.push(new Button(b.x, b.y, b.width, b.height, b.wallidx));
-        }
-        
-        this.detected_reset = false;
-        this.detected_exit = false;
+        this.objs.push(new FloatyString("A", WIDTH/2, HEIGHT/2));
     }
 
-    Destroy() {
-        super.Destroy();
-        this.player.Destroy();
-    }
+    Update(dT)
+    {
+        super.Update(dT);
 
-    Reset() {
-        this.player.x = this.level.rooms[this.current_room].player.spawn[this.previous_room].x;
-        this.player.y = this.level.rooms[this.current_room].player.spawn[this.previous_room].y;
-        this.player.vx = this.level.rooms[this.current_room].player.velocity[this.previous_room].x;
-        this.player.vy = this.level.rooms[this.current_room].player.velocity[this.previous_room].y;
-        this.player.Reset();
-    }
-
-    Loaded() {
-        return super.Loaded() && this.player.Loaded();
-    }
-
-    Update(dT) {
         if (this.active == false) { return; }
-
-        if (this.detected_reset) {
-            if (G_keys.KeyR.down == false) {
-                this.detected_reset = false;
-                this.Reset();
-                LogDebug("Resetting.");
-                return;
-            }
-        } else {
-            if (G_keys.KeyR.down) {
-                this.detected_reset = true;
-                LogTrace("Game will reset.");
-            } 
-        }
-
-        if (this.detected_exit) {
-            if (G_keys.KeyW.down == false) {
-                LogTrace("Player wants to exit.");
-                this.detected_exit = false;
-
-                for (let i = 0; i < this.exits.length; i++) {
-                    let e = this.exits[i];
-                    if (Contains(this.player.x, this.player.y, e.x, e.y, e.width, e.height)) {
-                        G_actions.push("load debug,"+e.to+","+this.current_room);
-                    }
-                }
-            }
-        } else {
-            if (G_keys.KeyW.down) {
-                this.detected_exit = true;
-                LogTrace("Player will try to exit.");
-            }
-        }
-
-        if (content.visible == false) {
-            content.visible = this.Loaded() && this.player.Loaded();
-            return;
-        }
-
-        this.player.Update(dT);
-    }
-
-    PressButton(idx) {
-        let wallidx = this.buttons[idx].wallidx;
-        LogTrace("Splicing wall " + wallidx + " and button " + idx + ".");
-        this.walls.splice(wallidx, 1);
-        this.buttons[idx].Destroy();
-        this.buttons.splice(idx, 1);
-        G_needs_update = true;
-    }
-
-    Draw() {
-        // Draw backdrops.
-        G_graphics[1].lineStyle(0, 0);
-        for (let i=0; i < this.backdrops.length; i++) {
-            let k = this.backdrops[i];
-            G_graphics[1].beginFill(0x222222);
-            G_graphics[1].drawRect(
-                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
-                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
-                k.width * GAME_SCALE, k.height * GAME_SCALE);
-            G_graphics[1].endFill();
-        }
-
-        // Draw Walls.
-        G_graphics[2].lineStyle(1, 0x0000ff);
-        for (let i=0; i < this.walls.length; i++) {
-            let k = this.walls[i];
-            G_graphics[2].beginFill(0x000066, 0.5);
-            G_graphics[2].drawRect(
-                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
-                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
-                k.width * GAME_SCALE, k.height * GAME_SCALE);
-            G_graphics[2].endFill();
-        }
-
-        // Draw Exits.
-        G_graphics[3].lineStyle(1, 0x00ff00);
-        for (let i=0; i < this.exits.length; i++) {
-            let k = this.exits[i];
-            G_graphics[3].beginFill(0x006600, 0.5);
-            G_graphics[3].drawRect(
-                GAME_LEFT + (k.x - k.width/2) * GAME_SCALE,
-                GAME_TOP + (k.y - k.height/2) * GAME_SCALE,
-                k.width * GAME_SCALE, k.height * GAME_SCALE);
-            G_graphics[3].endFill();
-        }
     }
 }

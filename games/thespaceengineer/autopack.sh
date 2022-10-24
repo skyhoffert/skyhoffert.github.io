@@ -1,6 +1,7 @@
 #!/bin/bash
 
-inotifywait -q -m -e close_write -r src/ |
-while read -r filename event; do
+while inotifywait -q src/ > /dev/null ; do
+    echo -n "packed on "
+    date
     ./pack.sh
 done

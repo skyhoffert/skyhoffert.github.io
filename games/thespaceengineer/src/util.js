@@ -37,27 +37,19 @@ function RandID(len=6) {
 }
 
 function RandNormal(mu, sigma, nsamples=6){
-    if(!sigma) sigma = 1
-    if(!mu) mu=0
+    if(!sigma) sigma = 1;
+    if(!mu) mu=0;
 
     var run_total = 0
     for(var i=0 ; i<nsamples ; i++){
-       run_total += Math.random()
+       run_total += Math.random();
     }
 
-    return sigma*(run_total - nsamples/2)/(nsamples/2) + mu
+    return sigma*(run_total - nsamples/2)/(nsamples/2) + mu;
 }
 
 function CapFirst(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-function RandName(last="") {
-    if (last != "") {
-        return CapFirst(FIRST_NAMES[RandInt(0, FIRST_NAMES.length)]) + " " + last;
-    }
-    return CapFirst(FIRST_NAMES[RandInt(0, FIRST_NAMES.length)]) + " " + 
-        CapFirst(LAST_NAMES[RandInt(0, LAST_NAMES.length)]);
 }
 
 function Cot(v) { return 1 / Math.tan(v); }
@@ -101,25 +93,30 @@ function Contains(x, y, rx, ry, rw, rh) {
 function Log(msg) { LogDebug(msg); }
 
 function LogFatal(msg) {
-    if (LOG_LEVEL >= LOG_LEVELS.FATAL) { console.log("FATL: "+msg); }
+    if (LOG_LEVEL >= LOG_LEVELS.FATAL) { console.log("FTL: "+msg); }
 }
 
 function LogError(msg) {
-    if (LOG_LEVEL >= LOG_LEVELS.ERROR) { console.log("ERR : "+msg); }
+    if (LOG_LEVEL >= LOG_LEVELS.ERROR) { console.log("ERR: "+msg); }
 }
 
 function LogWarn(msg) {
-    if (LOG_LEVEL >= LOG_LEVELS.WARN) { console.log("WARN: "+msg); }
+    if (LOG_LEVEL >= LOG_LEVELS.WARN) { console.log("WRN: "+msg); }
 }
 
 function LogInfo(msg) {
-    if (LOG_LEVEL >= LOG_LEVELS.INFO) { console.log("INFO: "+msg); }
+    if (LOG_LEVEL >= LOG_LEVELS.INFO) { console.log("INF: "+msg); }
 }
 
 function LogDebug(msg) {
-    if (LOG_LEVEL >= LOG_LEVELS.DEBUG) { console.log("DBUG: "+msg); }
+    if (LOG_LEVEL >= LOG_LEVELS.DEBUG) { console.log("DBG: "+msg); }
 }
 
 function LogTrace(msg) {
-    if (LOG_LEVEL >= LOG_LEVELS.TRACE) { console.log("TRAC: "+msg); }
+    if (LOG_LEVEL >= LOG_LEVELS.TRACE) { console.log("TRC: "+msg); }
+}
+
+function Millis()
+{
+    return Date.now();
 }

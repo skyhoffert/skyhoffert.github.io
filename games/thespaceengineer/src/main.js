@@ -8,6 +8,8 @@ const app = new PIXI.Application({
     view: canvas,
 });
 
+document.getElementById("version").innerHTML = "v" + THE_SPACE_ENGINEER_VERSION;
+
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 let content = new PIXI.Container();
@@ -16,26 +18,32 @@ G_draw_layers.push(new PIXI.Container()); // 0: Background.
 G_draw_layers.push(new PIXI.Container()); // 1: Mid-Background.
 G_draw_layers.push(new PIXI.Container()); // 2: Main stage layer.
 G_draw_layers.push(new PIXI.Container()); // 3: Foreground.
+G_draw_layers.push(new PIXI.Container()); // 3: Pre-UI.
 G_draw_layers.push(new PIXI.Container()); // 4: UI.
 let G_graphics = [];
 G_graphics.push(new PIXI.Graphics()); // 0: Background Graphics.
 G_graphics.push(new PIXI.Graphics()); // 1: Mid-Background Graphics.
 G_graphics.push(new PIXI.Graphics()); // 2: Main stage Graphics.
 G_graphics.push(new PIXI.Graphics()); // 3: Foreground Graphics.
-G_graphics.push(new PIXI.Graphics()); // 4: UI Graphics.
+G_graphics.push(new PIXI.Graphics()); // 4: Pre-UI Graphics.
+G_graphics.push(new PIXI.Graphics()); // 5: UI Graphics.
 app.stage.addChild(content);
-content.addChild(G_draw_layers[0]);
-G_draw_layers[0].addChild(G_graphics[0]);
-content.addChild(G_draw_layers[1]);
-G_draw_layers[1].addChild(G_graphics[1]);
-content.addChild(G_draw_layers[2]);
-G_draw_layers[2].addChild(G_graphics[2]);
-content.addChild(G_draw_layers[3]);
-G_draw_layers[3].addChild(G_graphics[3]);
-content.addChild(G_draw_layers[4]);
-G_draw_layers[4].addChild(G_graphics[4]);
+content.addChild(G_draw_layers[LAYER_BACKGROUND]);
+G_draw_layers[LAYER_BACKGROUND].addChild(G_graphics[LAYER_BACKGROUND]);
+content.addChild(G_draw_layers[LAYER_MIDBACKGROUND]);
+G_draw_layers[LAYER_MIDBACKGROUND].addChild(G_graphics[LAYER_MIDBACKGROUND]);
+content.addChild(G_draw_layers[LAYER_MAINSTAGE]);
+G_draw_layers[LAYER_MAINSTAGE].addChild(G_graphics[LAYER_MAINSTAGE]);
+content.addChild(G_draw_layers[LAYER_FOREGROUND]);
+G_draw_layers[LAYER_FOREGROUND].addChild(G_graphics[LAYER_FOREGROUND]);
+content.addChild(G_draw_layers[LAYER_PREUI]);
+G_draw_layers[LAYER_PREUI].addChild(G_graphics[LAYER_PREUI]);
+content.addChild(G_draw_layers[LAYER_UI]);
+G_draw_layers[LAYER_UI].addChild(G_graphics[LAYER_UI]);
 
-let G_objs = {};
+let G_cover_alpha = 1;
+
+let G_stage = null;
 
 let G_keys = KEYS_INIT;
 
@@ -44,48 +52,60 @@ let G_needs_update = false;
 let G_loaded = false;
 let G_actions = [];
 
-function Init() {
-    let stage = new MainMenu();
-    G_objs["stage"] = stage;
+let G_last_update_time = Millis();
+
+function Init()
+{
+    G_stage = new MainMenu();
     G_needs_update = true;
+    G_loaded = true;
 }
 
-app.ticker.add((dT) => {
+app.ticker.add(() => {
     if (G_pause == true) { return; }
-    if (G_loaded == false) { Init(); G_loaded = true; }
-    if (G_objs.hasOwnProperty("stage") == false) { return; }
+    if (G_loaded == false) { Init(); }
+    if (G_stage == null) { return; }
 
-    for (let k in G_objs) {
-        G_objs[k].Update(dT);
-    }
-    
-    // TODO: Track lurkers and lerpers for destroy-ing.
+    let now = Millis();
+    let dT = now - G_last_update_time;
+    G_last_update_time = now;
+
+    G_stage.Update(dT);
 
     // If some class set the global update value to true, redraw graphics.
-    if (G_needs_update == true) {
-        for (let i = 0; i < G_graphics.length; i++) {
+    if (G_needs_update == true)
+    {
+        LogTrace("Graphics update.");
+
+        for (let i = 0; i < G_graphics.length; i++)
+        {
             G_graphics[i].clear();
         }
-        for (let k in G_objs) {
-            G_objs[k].Draw();
-        }
+        
+        G_graphics[LAYER_PREUI].beginFill(0x000000, G_cover_alpha);
+        G_graphics[LAYER_PREUI].drawRect(0, 0, WIDTH, HEIGHT);
+
+        G_stage.Draw();
         G_needs_update = false;
     }
 
-    while (G_actions.length > 0) {
+    while (G_actions.length > 0)
+    {
         let act = G_actions[0];
 
         LogInfo("Global action " + act + ".");
 
-        if (act.includes("load debug")) {
-            // Action: load TestGame.
+        if (act.includes("load debug"))
+        {
+            // Action: load debug stage.
 
             let toks = act.split(",");
-            G_objs["stage"].Destroy();
-            delete G_objs["stage"];
-            G_objs["stage"] = new GameStage("debug", toks[1], toks[2]);
+            G_stage.Destroy();
+            delete G_stage;
+            G_stage = new DebugLevel();
+            
+            G_cover_alpha = 1;
             G_needs_update = true;
-
         }
 
         G_actions.splice(0, 1);
