@@ -1,4 +1,4 @@
-// PACK.SH : Sun Oct 23 21:52:52 EDT 2022
+// PACK.SH : Mon Oct 24 23:43:15 EDT 2022
 ////////////////////////////////////////////////////////////////////////////////
 // const.js: Constant values.
 
@@ -161,6 +161,22 @@ function Millis()
 {
     return Date.now();
 }
+
+function NameForChar(c)
+{
+    if      (c == "<")  { return "leftarrow"; }
+    else if (c == ">")  { return "rightarrow"; }
+    else if (c == "*")  { return "asterisk"; }
+    else if (c == "\\") { return "backslash"; }
+    else if (c == "/")  { return "forwardslash"; }
+    else if (c == ":")  { return "colon"; }
+    else if (c == "\"") { return "doublequote"; }
+    else if (c == "?")  { return "questionmark"; }
+    else if (c == "#")  { return "hash"; }
+    else if (c == "|")  { return "vbar"; }
+    
+    return c;
+}
 ////////////////////////////////////////////////////////////////////////////////
 // main.js: Main program.
 
@@ -320,6 +336,8 @@ class Entity
         this.sprites[idx].height = h;
         this.sprites[idx].draw_layer = dl;
         G_draw_layers[dl].addChild(this.sprites[idx]);
+
+        return this.sprites[idx];
     }
 
     AddText(a)
@@ -462,24 +480,90 @@ class Lurker
     }
 }
 
+class StillString extends Entity
+{
+    constructor(a)
+    {
+        super({id:"String,"+a.text.toUpperCase(), x:a.x, y:a.y});
+
+        this.text = a.text.toUpperCase();
+        this.letters = [];
+
+        for (let i = 0; i < this.text.length; i++)
+        {
+            if (this.text[i] == " ") { continue; }
+            
+            let name = NameForChar(this.text[i]);
+
+            this.letters.push(this.AddSprite({id:"sl,?", x:a.x+a.fontSize*i, y:a.y, width:a.fontSize, height:a.fontSize, filename:"font/"+name+".png", draw_layer:LAYER_MAINSTAGE}));
+        }
+    }
+}
+
 class FloatyString extends Entity
 {
-    constructor(t, x, y)
+    constructor(a)
     {
-        super({id: "FloatyString,"+t, x, y});
+        super({id: "FloatyString,"+a.text.toUpperCase(), x:a.x, y:a.y});
 
-        this.AddSprite({id: "letter", x:x, y:y, width:16, height:16, filename:"font/A.png"});
+        this.text = a.text.toUpperCase();
+        this.letters = [];
 
-        this.c_y = y;
+        for (let i = 0; i < this.text.length; i++)
+        {
+            if (this.text[i] == " ") { continue; }
+
+            this.letters.push(new FloatyLetter({letter:this.text[i], x:a.x+a.fontSize*i, y:a.y, amp:5, freq:a.freq, phase:a.phase+i/2, fontSize:a.fontSize}));
+        }
     }
 
+    Update(dT)
+    {
+        for (let i = 0; i < this.letters.length; i++)
+        {
+            this.letters[i].Update(dT);
+        }
+    }
+
+    Destroy()
+    {
+        for (let i = 0; i < this.letters.length; i++)
+        {
+            this.letters[i].Destroy();
+        }
+    }
+}
+
+class FloatyLetter extends Entity
+{
+    constructor(a)
+    {
+        super({id:"fl,"+a.letter.toUpperCase(), x:a.x, y:a.y});
+
+        this.letter = a.letter.toUpperCase();
+
+        let name = NameForChar(this.letter);
+
+        this.AddSprite({id:"fl,"+this.letter, x:a.x, y:a.y, width:a.fontSize, height:a.fontSize, filename:"font/"+name+".png", draw_layer:LAYER_MAINSTAGE});
+
+        this.c_y = a.y;
+
+        this.amp = 5;
+        this.freq = 1/500;
+        this.phase = 0;
+
+        if (a.hasOwnProperty("amp")) { this.amp = a.amp; }
+        if (a.hasOwnProperty("freq")) { this.freq = a.freq; }
+        if (a.hasOwnProperty("phase")) { this.phase = a.phase; }
+    }
+    
     Update(dT)
     {
         super.Update(dT);
 
         for (let i = 0; i < this.sprites.length; i++)
         {
-            this.sprites[i].y = this.c_y + 5*Sin(Millis()/500);
+            this.sprites[i].y = this.c_y + this.amp * Sin(Millis()*this.freq + this.phase);
         }
     }
 }
@@ -654,10 +738,7 @@ class DebugLevel extends Stage
     {
         super();
 
-        // Play menu item.
-        this.AddText({id:"debug", x: WIDTH/2,
-            y: 100, text:"Debug Stage", fontSize: 24,
-            align:"center", draw_layer: LAYER_MAINSTAGE});
+        this.objs.push(new FloatyString({text:"debug stage", x:100, y:100, fontSize:64, amp:1, freq:1/2000, phase:0}));
 
         this.lerpers.push(new Lerper(1000, function (p, d)
         {
@@ -671,7 +752,14 @@ class DebugLevel extends Stage
             }
         }));
 
-        this.objs.push(new FloatyString("A", WIDTH/2, HEIGHT/2));
+        this.objs.push(new FloatyString({text:"This is a test.", x:100, y:200, fontSize:24, amp:5, freq:1/500, phase:2}));
+        this.objs.push(new FloatyString({text:"ABCDEFGHIJKLMNOPQRSTUVWXYZ", x:100, y:250, fontSize:24, amp:5, freq:1/550, phase:0}));
+        this.objs.push(new FloatyString({text:"abcdefghijklmnopqrstuvwxyz", x:100, y:300, fontSize:24, amp:5, freq:1/600, phase:0}));
+        this.objs.push(new FloatyString({text:"1234567890", x:100, y:350, fontSize:24, amp:5, freq:1/650, phase:0}));
+        this.objs.push(new FloatyString({text:"!@#$%^&*()", x:100, y:400, fontSize:24, amp:5, freq:1/700, phase:0}));
+        this.objs.push(new FloatyString({text:"-_=+[{]}\\|;:'\",<.>/?", x:100, y:450, fontSize:24, amp:5, freq:1/750, phase:0}));
+
+        this.objs.push(new StillString({text:"wow cool", x:WIDTH/2, y:HEIGHT*7/8, fontSize:16}));
     }
 
     Update(dT)

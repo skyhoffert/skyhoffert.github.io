@@ -168,10 +168,7 @@ class DebugLevel extends Stage
     {
         super();
 
-        // Play menu item.
-        this.AddText({id:"debug", x: WIDTH/2,
-            y: 100, text:"Debug Stage", fontSize: 24,
-            align:"center", draw_layer: LAYER_MAINSTAGE});
+        this.objs.push(new FloatyString({text:"debug stage", x:100, y:100, fontSize:64, amp:1, freq:1/2000, phase:0}));
 
         this.lerpers.push(new Lerper(1000, function (p, d)
         {
@@ -185,7 +182,14 @@ class DebugLevel extends Stage
             }
         }));
 
-        this.objs.push(new FloatyString("A", WIDTH/2, HEIGHT/2));
+        this.objs.push(new FloatyString({text:"This is a test.", x:100, y:200, fontSize:24, amp:5, freq:1/500, phase:2}));
+        this.objs.push(new FloatyString({text:"ABCDEFGHIJKLMNOPQRSTUVWXYZ", x:100, y:250, fontSize:24, amp:5, freq:1/550, phase:0}));
+        this.objs.push(new FloatyString({text:"abcdefghijklmnopqrstuvwxyz", x:100, y:300, fontSize:24, amp:5, freq:1/600, phase:0}));
+        this.objs.push(new FloatyString({text:"1234567890", x:100, y:350, fontSize:24, amp:5, freq:1/650, phase:0}));
+        this.objs.push(new FloatyString({text:"!@#$%^&*()", x:100, y:400, fontSize:24, amp:5, freq:1/700, phase:0}));
+        this.objs.push(new FloatyString({text:"-_=+[{]}\\|;:'\",<.>/?", x:100, y:450, fontSize:24, amp:5, freq:1/750, phase:0}));
+
+        this.objs.push(new StillString({text:"wow cool", x:WIDTH/2, y:HEIGHT*7/8, fontSize:16}));
     }
 
     Update(dT)

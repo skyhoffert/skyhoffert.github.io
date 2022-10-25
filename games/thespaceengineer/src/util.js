@@ -120,3 +120,19 @@ function Millis()
 {
     return Date.now();
 }
+
+function NameForChar(c)
+{
+    if      (c == "<")  { return "leftarrow"; }
+    else if (c == ">")  { return "rightarrow"; }
+    else if (c == "*")  { return "asterisk"; }
+    else if (c == "\\") { return "backslash"; }
+    else if (c == "/")  { return "forwardslash"; }
+    else if (c == ":")  { return "colon"; }
+    else if (c == "\"") { return "doublequote"; }
+    else if (c == "?")  { return "questionmark"; }
+    else if (c == "#")  { return "hash"; }
+    else if (c == "|")  { return "vbar"; }
+    
+    return c;
+}

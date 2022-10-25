@@ -41,6 +41,8 @@ class Entity
         this.sprites[idx].height = h;
         this.sprites[idx].draw_layer = dl;
         G_draw_layers[dl].addChild(this.sprites[idx]);
+
+        return this.sprites[idx];
     }
 
     AddText(a)
@@ -183,24 +185,90 @@ class Lurker
     }
 }
 
+class StillString extends Entity
+{
+    constructor(a)
+    {
+        super({id:"String,"+a.text.toUpperCase(), x:a.x, y:a.y});
+
+        this.text = a.text.toUpperCase();
+        this.letters = [];
+
+        for (let i = 0; i < this.text.length; i++)
+        {
+            if (this.text[i] == " ") { continue; }
+            
+            let name = NameForChar(this.text[i]);
+
+            this.letters.push(this.AddSprite({id:"sl,?", x:a.x+a.fontSize*i, y:a.y, width:a.fontSize, height:a.fontSize, filename:"font/"+name+".png", draw_layer:LAYER_MAINSTAGE}));
+        }
+    }
+}
+
 class FloatyString extends Entity
 {
-    constructor(t, x, y)
+    constructor(a)
     {
-        super({id: "FloatyString,"+t, x, y});
+        super({id: "FloatyString,"+a.text.toUpperCase(), x:a.x, y:a.y});
 
-        this.AddSprite({id: "letter", x:x, y:y, width:16, height:16, filename:"font/A.png"});
+        this.text = a.text.toUpperCase();
+        this.letters = [];
 
-        this.c_y = y;
+        for (let i = 0; i < this.text.length; i++)
+        {
+            if (this.text[i] == " ") { continue; }
+
+            this.letters.push(new FloatyLetter({letter:this.text[i], x:a.x+a.fontSize*i, y:a.y, amp:5, freq:a.freq, phase:a.phase+i/2, fontSize:a.fontSize}));
+        }
     }
 
+    Update(dT)
+    {
+        for (let i = 0; i < this.letters.length; i++)
+        {
+            this.letters[i].Update(dT);
+        }
+    }
+
+    Destroy()
+    {
+        for (let i = 0; i < this.letters.length; i++)
+        {
+            this.letters[i].Destroy();
+        }
+    }
+}
+
+class FloatyLetter extends Entity
+{
+    constructor(a)
+    {
+        super({id:"fl,"+a.letter.toUpperCase(), x:a.x, y:a.y});
+
+        this.letter = a.letter.toUpperCase();
+
+        let name = NameForChar(this.letter);
+
+        this.AddSprite({id:"fl,"+this.letter, x:a.x, y:a.y, width:a.fontSize, height:a.fontSize, filename:"font/"+name+".png", draw_layer:LAYER_MAINSTAGE});
+
+        this.c_y = a.y;
+
+        this.amp = 5;
+        this.freq = 1/500;
+        this.phase = 0;
+
+        if (a.hasOwnProperty("amp")) { this.amp = a.amp; }
+        if (a.hasOwnProperty("freq")) { this.freq = a.freq; }
+        if (a.hasOwnProperty("phase")) { this.phase = a.phase; }
+    }
+    
     Update(dT)
     {
         super.Update(dT);
 
         for (let i = 0; i < this.sprites.length; i++)
         {
-            this.sprites[i].y = this.c_y + 5*Sin(Millis()/500);
+            this.sprites[i].y = this.c_y + this.amp * Sin(Millis()*this.freq + this.phase);
         }
     }
 }
