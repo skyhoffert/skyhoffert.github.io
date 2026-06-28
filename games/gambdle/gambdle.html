@@ -376,12 +376,10 @@
                 const standardCollectMode = !heldReels[1] && !heldReels[2] && !heldReels[3];
                 
                 if (standardCollectMode) {
-                    // Check if they actually have enough combined funds to play a subsequent round
                     if (balance + pendingPayout >= betCost) {
                         actionButton.textContent = pendingPayout > 0 ? `COLLECT & SPIN` : `SPIN ($${betCost})`;
                         actionButton.style.backgroundColor = "#e74c3c";
                     } else {
-                        // Safe routing branch: forced cash out when bankrupt next turn
                         actionButton.textContent = `COLLECT ($${pendingPayout})`;
                         actionButton.style.backgroundColor = "#2ecc71";
                     }
@@ -596,7 +594,7 @@
         function copyShareHistory() {
             let shareText = `🎰 Gambdle (v1) Result Grid 🎰\nTotal Spins: ${totalSpins}\n\n`;
             shareText += historyGrid.join("\n");
-            shareText += `\n\nPlay Gambdle!`;
+            shareText += `\n\nPlay Gambdle!\nhttps://skyhoffert.com/games/gambdle/gambdle.html`;
 
             navigator.clipboard.writeText(shareText).then(() => {
                 const oldText = shareButton.textContent;
