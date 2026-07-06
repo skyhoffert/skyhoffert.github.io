@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gambdle (v1)</title>
+    <title>Slotsdle (v1)</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -27,6 +27,10 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             font-size: 2.2rem;
             letter-spacing: 2px;
+        }
+
+        a, a:link, a:visited, a:hover, a:active {
+            color: inherit;
         }
 
         .version-badge {
@@ -301,7 +305,7 @@
 </head>
 <body>
 
-    <h1>Gambdle</h1>
+    <h1>Slotsdle</h1>
     <div class="version-badge">v1</div>
     <div class="tagline">How long can you keep spinning?</div>
 
@@ -329,7 +333,7 @@
 
             <div class="btn-group">
                 <button id="action-button" class="spin-btn" onclick="handlePrimaryAction()">SPIN ($10)</button>
-                <button id="share-button" class="share-btn" onclick="copyShareHistory()">Copy Gambdle Grid 📋</button>
+                <button id="share-button" class="share-btn" onclick="copyShareHistory()">Copy Slotsdle Grid 📋</button>
             </div>
 
             <div id="message">Pull the lever or click spin to start!</div>
@@ -355,7 +359,9 @@
         let heldReels = { 1: false, 2: false, 3: false };
         let pendingPayout = 0;
         let usedRespinThisRound = false; 
-        let historyGrid = []; 
+        let historyGrid = [];
+
+        let hasPlayedTodayFlag = false;
 
         const reel1 = document.getElementById('reel1');
         const reel2 = document.getElementById('reel2');
@@ -369,6 +375,12 @@
         const leverArm = document.getElementById('lever-arm');
 
         function updateUI() {
+            if (hasPlayedTodayFlag) {
+                actionButton.disabled = true;
+                actionButton.style.backgroundColor = "#7f8c8d";
+                return;
+            }
+
             balanceDisplay.textContent = `$${balance}`;
             spinsDisplay.textContent = totalSpins;
             
@@ -576,6 +588,7 @@
                 message.textContent = `💀 GAME OVER! Total Spins: ${totalSpins}. Share your score!`;
                 actionButton.style.display = 'none';
                 shareButton.style.display = 'block'; 
+                handleGameOverCompletion();
             }
         }
 
@@ -592,9 +605,9 @@
         }
 
         function copyShareHistory() {
-            let shareText = `🎰 Gambdle (v1) Result Grid 🎰\nTotal Spins: ${totalSpins}\n\n`;
+            let shareText = `🎰 Slotsdle (v1) Result Grid 🎰\nTotal Spins: ${totalSpins}\n\n`;
             shareText += historyGrid.join("\n");
-            shareText += `\n\nPlay Gambdle!\nhttps://skyhoffert.com/games/gambdle/gambdle.html`;
+            shareText += `\n\nPlay Slotsdle!\nhttps://skyhoffert.com/games/slotsdle/slotsdle_v1.html`;
 
             navigator.clipboard.writeText(shareText).then(() => {
                 const oldText = shareButton.textContent;
@@ -608,6 +621,89 @@
                 alert("Failed to copy automatically. Copy this layout directly:\n\n" + shareText);
             });
         }
+
+
+
+        // --- COOKIE HELPERS ---
+
+        // Function to set a cookie that expires at midnight tonight
+        function setDailyCompletionCookie() {
+            const now = new Date();
+            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            const expires = "; expires=" + midnight.toUTCString();
+            
+            // Sets a cookie named "slotsdle_played_today"
+            document.cookie = "slotsdle_played_today=true" + expires + "; path=/; SameSite=Strict";
+        }
+
+        // Function to check if our daily cookie exists
+        function hasPlayedToday() {
+            return document.cookie.split(';').some((item) => item.trim().startsWith('slotsdle_played_today='));
+        }
+
+        // --- GAME INTEGRATION HOOKS ---
+
+        // 1. Run this when your script loads / DOM is ready
+        function checkGameStatusOnLoad() {
+            if (hasPlayedToday()) {
+                // Disable buttons, show message, or block interaction
+                document.getElementById('action-button').disabled = true;
+                hasPlayedTodayFlag = true;
+                document.getElementById('message').textContent = "🔒 You've already played today! Come back tomorrow.";
+            }
+        }
+
+        // 2. Call this inside your existing checkGameOver() function when they empty their wallet
+        function handleGameOverCompletion() {
+            setDailyCompletionCookie();
+            document.getElementById('message').textContent = "💀 GAME OVER! Your results are locked in until tomorrow.";
+        }
+
+
+
+        // Secret dev reset: Click the version badge 5 times quickly to clear the daily lock
+        let devClickCount = 0;
+        let devClickTimer;
+
+        document.querySelector('.version-badge').addEventListener('click', () => {
+            devClickCount++;
+            
+            // Reset count if they stop tapping
+            clearTimeout(devClickTimer);
+            devClickTimer = setTimeout(() => { devClickCount = 0; }, 2000);
+
+            // Trigger reset on the 5th quick tap
+            if (devClickCount >= 5) {
+                // Clear the cookie
+                document.cookie = "slotsdle_played_today=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                
+                // Visual confirmation
+                alert("🛠️ Dev Mode: Daily cookie reset! Reloading...");
+                location.reload();
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', (event) => {
+            checkGameStatusOnLoad();
+            updateUI();
+        });
+
+
+
     </script>
+    
+    
+    <div style="height: 200px;"></div>
+
+
+    
+    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+    <input type="hidden" name="cmd" value="_donations" />
+    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
+    <input type="hidden" name="currency_code" value="USD" />
+    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
+    <p><a href="https://skyhoffert.com" target="_blank">skyhoffert.com</a> | 2026</p>
 </body>
 </html>
