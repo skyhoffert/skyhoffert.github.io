@@ -14,7 +14,7 @@
             justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
-            padding: 20px 10px;
+            padding: 8px;
             box-sizing: border-box;
             color: #fff;
             user-select: none;
@@ -22,10 +22,18 @@
         }
 
         h1 {
-            margin-top: 10px;
+            margin-top: 20px;
             margin-bottom: 0px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            font-size: 2.2rem;
+            font-size: 2.4rem;
+            letter-spacing: 4px;
+        }
+
+        h2 {
+            margin-top: 5px;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: 1.8rem;
             letter-spacing: 2px;
         }
 
@@ -58,8 +66,9 @@
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
-            font-size: 1.1rem;
-            background: rgba(0,0,0,0.2);
+            font-size: 1.2rem;
+            background: rgba(0, 0, 0, 0.28);
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.7), 1px 1px 2px rgba(0, 0, 0, 0.65);
             padding: 8px 16px;
             border-radius: 10px;
         }
@@ -83,8 +92,8 @@
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             text-align: center;
-            width: 300px;
-            max-width: 100%;
+            width: 320px;
+            max-width: 95%;
             z-index: 2;
             box-sizing: border-box;
         }
@@ -218,6 +227,21 @@
             width: 100%;
         }
 
+        .player-nickname {
+            margin-top: 2px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #fffdf5;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.7), 1px 1px 2px rgba(0, 0, 0, 0.45);
+            min-height: 1.2em;
+            background: rgba(0, 0, 0, 0.18);
+            padding: 3px 8px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
         .spin-btn {
             background-color: #e74c3c;
             color: white;
@@ -260,6 +284,127 @@
             transform: translateY(3px);
         }
 
+        .scoreboard-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 14px;
+            box-shadow: 0 4px #2980b9;
+            transition: all 0.1s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .scoreboard-btn:active {
+            box-shadow: 0 1px #2980b9;
+            transform: translateY(3px);
+        }
+
+        .scoreboard-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .scoreboard-overlay.active {
+            display: flex;
+        }
+
+        .scoreboard-modal {
+            background: #2f3e52;
+            border: 3px solid #f1c40f;
+            border-radius: 16px;
+            width: min(560px, 100%);
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+        }
+
+        .scoreboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: #34495e;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .scoreboard-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .scoreboard-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        .scoreboard-tabs {
+            display: flex;
+            gap: 6px;
+            padding: 10px 12px 0;
+        }
+
+        .scoreboard-tab {
+            flex: 1;
+            background: #51637a;
+            color: white;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            padding: 8px 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .scoreboard-tab.active {
+            background: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .scoreboard-content {
+            padding: 12px 14px 16px;
+            max-height: calc(80vh - 120px);
+            overflow: auto;
+        }
+
+        .scoreboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        .scoreboard-table th,
+        .scoreboard-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            text-align: left;
+        }
+
+        .scoreboard-table th {
+            color: #f1c40f;
+            font-weight: 700;
+        }
+
+        .scoreboard-empty {
+            color: #bdc3c7;
+            font-style: italic;
+            padding: 18px 8px;
+            text-align: center;
+        }
+
         button:disabled {
             background-color: #bdc3c7 !important;
             box-shadow: none !important;
@@ -268,15 +413,18 @@
         }
 
         #message {
-            margin-top: 15px;
+            margin-top: 20px;
+            margin-bottom: 6px;
             font-size: 1rem;
             font-weight: bold;
-            min-height: 55px;
+            min-height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-            padding: 0 5px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.18);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            padding: 5px;
             line-height: 1.3;
         }
 
@@ -302,20 +450,24 @@
             }
         }
     </style>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
     <h1>Slotsdle</h1>
     <div class="version-badge">v1</div>
-    <div class="tagline">How long can you keep spinning?</div>
-
-    <div class="stats-container">
-        <div class="stat-box">Balance: <span id="balance">$50</span></div>
-        <div class="stat-box">Spins: <span id="spins-count" style="color: #3498db;">0</span></div>
-    </div>
+    <div class="tagline">How many times can you spin?</div>
 
     <div class="game-wrapper">
         <div class="machine-container">
+
+            <div class="stats-container">
+                <div class="stat-box">Balance: <span id="balance">$50</span></div>
+                <div class="stat-box">Spins: <span id="spins-count" style="color: #61afe2;">0</span></div>
+            </div>
+
             <div class="slots">
                 <div id="wrapper1" class="reel-wrapper" onclick="toggleHold(1)">
                     <div id="reel1" class="reel">🍒</div>
@@ -330,6 +482,8 @@
                     <div class="lock-overlay">HELD</div>
                 </div>
             </div>
+
+            <div id="player-nickname" class="player-nickname">...</div>
 
             <div class="btn-group">
                 <button id="action-button" class="spin-btn" onclick="handlePrimaryAction()">SPIN ($10)</button>
@@ -347,6 +501,48 @@
         </div>
     </div>
 
+    <div style="height: 60px;"></div>
+
+    <div id="scoreboard-overlay" class="scoreboard-overlay" onclick="closeScoreboard(event)">
+        <div class="scoreboard-modal" onclick="event.stopPropagation()">
+            <div class="scoreboard-header">
+                <div class="scoreboard-title">Scores</div>
+                <button class="scoreboard-close" onclick="closeScoreboard()" aria-label="Close scores">×</button>
+            </div>
+            <div class="scoreboard-tabs">
+                <button class="scoreboard-tab active" data-tab="user" onclick="switchScoreboardTab('user')">Your Top 10</button>
+                <button class="scoreboard-tab" data-tab="daily" onclick="switchScoreboardTab('daily')">Daily Top 10</button>
+                <button class="scoreboard-tab" data-tab="alltime" onclick="switchScoreboardTab('alltime')">All Time Top 10</button>
+            </div>
+            <div id="scoreboard-content" class="scoreboard-content">
+                <div id="scoreboard-user" class="scoreboard-panel"></div>
+                <div id="scoreboard-daily" class="scoreboard-panel" style="display:none;"></div>
+                <div id="scoreboard-alltime" class="scoreboard-panel" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <button id="scoreboard-btn" class="scoreboard-btn" onclick="openScoreboard()" style="margin-top: 18px; max-width: 280px;">View Scores 🏆</button>
+    
+    <div style="height: 50px;"></div>
+    
+    <p style="text-align: center;">Contact for questions or feedback:<br><a href="mailto:skyhoffert.contact@gmail.com">skyhoffert.contact@gmail.com</a></p>
+    
+    <div style="height: 10px;"></div>
+
+    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+    <input type="hidden" name="cmd" value="_donations" />
+    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
+    <input type="hidden" name="currency_code" value="USD" />
+    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
+    
+    <div style="height: 5px;"></div>
+    
+    <p><a href="https://skyhoffert.com" target="_blank">skyhoffert.com</a> | 2026</p>
+
+    
     <script>
         const symbols = ['🍒', '🍋', '🍊', '💰'];
         
@@ -363,6 +559,16 @@
 
         let hasPlayedTodayFlag = false;
 
+        let _force_triple = false; // For dev testing
+
+        let uuid = null;
+        let nickname = null;
+
+
+        const SUPABASE_URL = 'https://shxtfuxcgkzrchvkhvgl.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_0ZE23PdJLvJyq6gfT9ORUg_mxHJGPXz';
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const reel1 = document.getElementById('reel1');
         const reel2 = document.getElementById('reel2');
         const reel3 = document.getElementById('reel3');
@@ -373,6 +579,27 @@
         const message = document.getElementById('message');
         const lever = document.getElementById('lever');
         const leverArm = document.getElementById('lever-arm');
+        const playerNicknameDisplay = document.getElementById('player-nickname');
+        const scoreboardOverlay = document.getElementById('scoreboard-overlay');
+        const scoreboardTabs = Array.from(document.querySelectorAll('.scoreboard-tab'));
+        const scoreboardPanels = {
+            user: document.getElementById('scoreboard-user'),
+            daily: document.getElementById('scoreboard-daily'),
+            alltime: document.getElementById('scoreboard-alltime')
+        };
+
+        let scoreboardRefreshToken = 0;
+        let scoreboardDataLoaded = false;
+        let scoreboardData = {
+            user: [],
+            daily: [],
+            alltime: []
+        };
+        let activeScoreboardTab = 'user';
+
+        function updateNicknameDisplay() {
+            playerNicknameDisplay.textContent = nickname && nickname.trim() ? nickname : '...';
+        }
 
         function updateUI() {
             if (hasPlayedTodayFlag) {
@@ -419,6 +646,188 @@
 
         function getRandomSymbol() {
             return symbols[Math.floor(Math.random() * symbols.length)];
+        }
+
+        function setScoreboardLoadingState() {
+            Object.values(scoreboardPanels).forEach(panel => {
+                panel.innerHTML = '<div class="scoreboard-empty">Loading scores...</div>';
+            });
+        }
+
+        async function fetchScoreboardRows(kind) {
+            if (kind == 'user') {
+                const UUID = ensureUuid();
+                const nickname = await dbGetNicknameForUUID(UUID);
+
+                const { data, error, status } = await db
+                    .from('scores_v1')
+                    .select('score')
+                    .eq('uuid', UUID)
+                    .order('score', {ascending: false})
+                    .limit(10);
+
+                if (status !== 200 || error) {
+                    console.error('Error querying scores:', error);
+                    return [];
+                }
+
+                if (!data) {
+                    console.log("No scores for", UUID);
+                    return [];
+                }
+
+                let scores = [];
+
+                for (d in data) {
+                    scores.push({'nickname':nickname, 'score':data[d].score});
+                }
+
+                while (scores.length < 10) {
+                    scores.push({'nickname':"", 'score':""});
+                }
+
+                return scores;
+            } else if (kind == 'daily') {
+                const todayDateString = new Date().toISOString().split('T')[0] + 'T00:00:00.000Z'
+
+                const { data, error, status } = await db
+                    .from('scores_v1')
+                    .select('score, uuid')
+                    .gte('created_at', todayDateString)
+                    .order('score', {ascending: false})
+                    .limit(10);
+
+                if (status !== 200 || error) {
+                    console.error('Error querying scores:', error);
+                    return [];
+                }
+
+                if (!data) {
+                    console.log("No scores for", UUID);
+                    return [];
+                }
+
+                let scores = [];
+
+                for (d in data) {
+                    const nickname = await dbGetNicknameForUUID(data[d].uuid);
+                    scores.push({'nickname':nickname, 'score':data[d].score});
+                }
+                
+                while (scores.length < 10) {
+                    scores.push({'nickname':"", 'score':""});
+                }
+
+                return scores;
+            } else if (kind == 'alltime') {
+                const { data, error, status } = await db
+                    .from('scores_v1')
+                    .select('score, uuid')
+                    .order('score', {ascending: false})
+                    .limit(10);
+
+                if (status !== 200 || error) {
+                    console.error('Error querying scores:', error);
+                    return [];
+                }
+
+                if (!data) {
+                    console.log("No scores for", UUID);
+                    return [];
+                }
+
+                let scores = [];
+
+                for (d in data) {
+                    const nickname = await dbGetNicknameForUUID(data[d].uuid);
+                    scores.push({'nickname':nickname, 'score':data[d].score});
+                }
+                
+                while (scores.length < 10) {
+                    scores.push({'nickname':"", 'score':""});
+                }
+
+                return scores;
+            }
+
+            return [];
+        }
+
+        async function refreshScoreboardData(runId) {
+            const userRows = await fetchScoreboardRows('user');
+            const dailyRows = await fetchScoreboardRows('daily');
+            const alltimeRows = await fetchScoreboardRows('alltime');
+
+            if (runId !== scoreboardRefreshToken || !scoreboardOverlay.classList.contains('active')) {
+                return;
+            }
+
+            scoreboardData = {
+                user: userRows,
+                daily: dailyRows,
+                alltime: alltimeRows
+            };
+            scoreboardDataLoaded = true;
+            renderAllScoreboardPanels();
+        }
+
+        function renderAllScoreboardPanels() {
+            Object.keys(scoreboardPanels).forEach(tab => renderScoreboardPanel(tab));
+        }
+
+        function openScoreboard() {
+            scoreboardOverlay.classList.add('active');
+            scoreboardDataLoaded = false;
+            setScoreboardLoadingState();
+            activeScoreboardTab = 'daily';
+            scoreboardTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === activeScoreboardTab));
+            Object.entries(scoreboardPanels).forEach(([key, panel]) => {
+                panel.style.display = key === activeScoreboardTab ? 'block' : 'none';
+            });
+
+            const runId = ++scoreboardRefreshToken;
+            refreshScoreboardData(runId);
+        }
+
+        function closeScoreboard(event) {
+            if (event && event.target !== scoreboardOverlay) return;
+            scoreboardRefreshToken += 1;
+            scoreboardOverlay.classList.remove('active');
+        }
+
+        function switchScoreboardTab(tab) {
+            activeScoreboardTab = tab;
+            scoreboardTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+            Object.entries(scoreboardPanels).forEach(([key, panel]) => {
+                panel.style.display = key === tab ? 'block' : 'none';
+            });
+            renderScoreboardPanel(tab);
+        }
+
+        function renderScoreboardPanel(tab) {
+            const panel = scoreboardPanels[tab];
+            const rows = scoreboardData[tab] || [];
+
+            if (!scoreboardDataLoaded) {
+                panel.innerHTML = '<div class="scoreboard-empty">Loading scores...</div>';
+                return;
+            }
+
+            if (!rows.length) {
+                panel.innerHTML = '<div class="scoreboard-empty">No scores yet.</div>';
+                return;
+            }
+
+            panel.innerHTML = `
+                <table class="scoreboard-table">
+                    <thead>
+                        <tr><th>Nickname</th><th>Score</th></tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((row, index) => `<tr><td>${index + 1}. ${row.nickname}</td><td>${row.score}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
         }
 
         function toggleHold(reelIndex) {
@@ -478,6 +887,15 @@
                 choiceWindowActive = true;
                 canHold = true;
                 updateUI();
+                
+                if (_force_triple === true) {
+                    reel1.textContent = '🍊';
+                    reel2.textContent = '🍊';
+                    reel3.textContent = '🍊';
+                    _force_triple = false;
+                    updateUI();
+                    console.log("forced");
+                }
             });
         }
 
@@ -589,7 +1007,24 @@
                 actionButton.style.display = 'none';
                 shareButton.style.display = 'block'; 
                 handleGameOverCompletion();
+                dbUploadScore();
             }
+        }
+        
+        function hasNOccurrences(str, targets, n) {
+            // 1. Create a Set of your 3 target characters for fast lookups
+            const targetSet = new Set(targets);
+            const counts = {};
+
+            // 2. Count occurrences safely using for...of (handles Unicode correctly)
+            for (const char of str) {
+                if (targetSet.has(char)) {
+                    counts[char] = (counts[char] || 0) + 1;
+                }
+            }
+
+            // 3. Check if any of the target counts equal exactly n
+            return Object.values(counts).some(count => count === n);
         }
 
         function recordHistoryStep() {
@@ -597,28 +1032,40 @@
             const r2 = reel2.textContent;
             const r3 = reel3.textContent;
             const won = pendingPayout > 0;
+            const isSpecialWin = won && (
+                hasNOccurrences(`${r1}${r2}${r3}`, symbols, 3) ||
+                hasNOccurrences(`${r1}${r2}${r3}`, ['💰'], 2)
+            );
             
-            let blockColor = won ? "🟩" : "⬛";
-            let spinTypeTag = usedRespinThisRound ? "⟲" : " ";
-            
-            if (won) {
-                historyGrid.push(`${blockColor} [${r1}${r2}${r3}] ${spinTypeTag}`);
-            } else {
-                historyGrid.push(`${blockColor}${spinTypeTag}`);
+            const blockColor = won ? "🟩 " : "⬛ ";
+            const spinTypeTag = usedRespinThisRound ? "⟲" : "";
+            const entry = isSpecialWin
+                ? `${blockColor}[${r1}${r2}${r3}] ${spinTypeTag} `
+                : `${blockColor}${spinTypeTag} `;
+
+            if (isSpecialWin && historyGrid.length > 0 && !historyGrid[historyGrid.length - 1].endsWith('\n')) {
+                historyGrid.push('\n');
+            }
+
+            historyGrid.push(entry);
+            if (isSpecialWin) {
+                historyGrid.push('\n');
             }
         }
 
         function copyShareHistory() {
-            let shareText = `🎰 Slotsdle (v1) Result Grid 🎰\nTotal Spins: ${totalSpins}\n\n`;
+            let shareText = getDailyShareText();
 
-            shareText += historyGrid[0];
-            for (let i = 1; i < historyGrid.length; i++) {
-                if (historyGrid[i].slice(0,2) == "🟩" || (historyGrid[i].slice(0,1) == "⬛" && historyGrid[i-1].slice(0,2) == "🟩")) {
-                    shareText += "\n";
-                }
-                shareText += historyGrid[i];
+            if (!shareText) {
+                let today_date = new Date();
+                let dateString = today_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                shareText = `🎰 Slotsdle (v1) Results | ${nickname} | ${dateString}\nSpins: ${totalSpins}\n`;
+
+                shareText += historyGrid.join('');
+                shareText += `\nPlay Slotsdle!\nhttps://skyhoffert.com/games/slotsdle/slotsdle_v1.html`;
+
+                setDailyShareTextCookie(shareText);
             }
-            shareText += `\n\nPlay Slotsdle!\nhttps://skyhoffert.com/games/slotsdle/slotsdle_v1.html`;
 
             navigator.clipboard.writeText(shareText).then(() => {
                 const oldText = shareButton.textContent;
@@ -647,6 +1094,20 @@
             document.cookie = "slotsdle_played_today=true" + expires + "; path=/; SameSite=Strict";
         }
 
+        function setDailyShareTextCookie(text) {
+            const now = new Date();
+            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            const expires = "; expires=" + midnight.toUTCString();
+            
+            // Sets a cookie named "slotsdle_share_text"
+            document.cookie = "slotsdle_share_text=" + encodeURIComponent(text) + expires + "; path=/; SameSite=Strict";
+        }
+
+        function getDailyShareText() {
+            const match = document.cookie.match(/(?:^|; )slotsdle_share_text=([^;]*)/);
+            return match ? decodeURIComponent(match[1]) : null;
+        }
+
         // Function to check if our daily cookie exists
         function hasPlayedToday() {
             return document.cookie.split(';').some((item) => item.trim().startsWith('slotsdle_played_today='));
@@ -666,6 +1127,106 @@
             return deviceID;
         }
 
+        function ensureUuid() {
+            if (!uuid) {
+                uuid = getOrCreateDeviceID();
+            }
+            return uuid;
+        }
+
+        function generateRandomNickname() {
+            const adjectives = ["Lucky", "Spinning", "Golden", "Jolly", "Swift", "Mighty", "Cheerful", "Witty", "Brave", "Clever", "Daring", "Fierce", "Nimble", "Sly", "Bold", "Quick", "Cunning", "Fearless", "Gallant", "Heroic", "Valiant", "Wise", "Zany", "Jovial", "Merry", "Perky", "Snappy", "Spry", "Waggish", "Whimsical"];
+            const nouns = ["Player", "Spinner", "Gambler", "Slotter", "Champion", "Hero", "Ace", "Master", "Wizard", "Ninja", "Pirate", "Knight", "Rogue", "Samurai", "Viking", "Gladiator", "Adventurer", "Explorer", "Seeker", "Wanderer", "Nomad", "Maverick", "Trailblazer", "Pioneer", "Strategist", "Tactician", "Conqueror", "Defender", "Guardian"];
+            const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+            const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+            const randomNum = String(Math.floor(Math.random() * 99)).padStart(2,'0');
+            return `${randomAdjective} ${randomNoun} ${randomNum}`;
+        }
+
+        function generateRecoveryKey() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const array = new Uint8Array(8);
+            window.crypto.getRandomValues(array);
+            return Array.from(array, byte => chars[byte % chars.length]).join('');
+        }
+
+        
+        // --- DATABASE HELPERS ----
+        
+        async function dbCheckForNickname() {
+            const UUID = ensureUuid();
+
+            const { data, error, status } = await db
+                .from('players_v1')
+                .select('nickname')
+                .eq('uuid', UUID)
+                .maybeSingle();
+
+            if (status !== 200 || error) {
+                console.error('Error querying:', error);
+                return { found: null, error: true };
+            }
+
+            if (!data) {
+                return { found: false, error: false };
+            }
+
+            return { found: true, error: false, player: data };
+        }
+
+        async function dbGetNicknameForUUID(given_uuid) {
+            const { data, error, status } = await db
+                .from('players_v1')
+                .select('nickname')
+                .eq('uuid', given_uuid)
+                .maybeSingle();
+
+            if (status !== 200 || error) {
+                console.error('Error querying:', error);
+                return null;
+            }
+
+            if (!data) {
+                return null;
+            }
+
+            return data.nickname;
+        }
+
+        async function dbUpdateNickname(newNickname) {
+            const UUID = ensureUuid();
+
+            const { data, error, status } = await db
+                .from('players_v1')
+                .insert({ uuid: UUID, nickname: newNickname })
+                .select()
+                .maybeSingle();
+
+            if (status !== 201 || error) {
+                console.error('Error ', status, ' updating nickname:', error);
+                return { success: false, error: true };
+            }
+
+            return { success: true, error: false, player: data };
+        }
+
+        async function dbUploadScore() {
+            const UUID = ensureUuid();
+            const { data, error, status } = await db
+                .from('scores_v1')
+                .insert({ uuid: UUID, score: totalSpins })
+                .select()
+                .maybeSingle();
+
+            if (status !== 201 || error) {
+                console.error('Error ', status, ' uploading score:', error);
+                return false;
+            }
+
+            console.log("Uploaded score", totalSpins);
+            return true;
+        }
+
 
         // --- GAME INTEGRATION HOOKS ---
 
@@ -676,9 +1237,50 @@
                 document.getElementById('action-button').disabled = true;
                 hasPlayedTodayFlag = true;
                 document.getElementById('message').textContent = "🔒 You've already played today! Come back tomorrow.";
+
+                if (getDailyShareText()) {
+                    document.getElementById('action-button').style.display = 'none';
+                    document.getElementById('share-button').style.display = 'block';
+                }
             }
             
-            console.log("Device ID:", getOrCreateDeviceID());
+            ensureUuid();
+            console.log("Device ID:", uuid);
+            //console.log("Nickname:", generateRandomNickname());
+            //console.log("Recovery Key:", generateRecoveryKey());
+
+            updateNicknameDisplay();
+
+            dbCheckForNickname()
+                .then(result => {
+                    if (result?.found === true && result.player?.nickname) {
+                        nickname = result.player.nickname;
+                        console.log("Found player in db with nickname:", nickname);
+                    } else if (result?.found === false) {
+                        nickname = generateRandomNickname();
+                        console.log("No player found in db. Generated nickname:", nickname);
+                        dbUpdateNickname(nickname)
+                            .then(updateResult => {
+                                if (updateResult.success) {
+                                    console.log("Successfully saved new nickname to db:", nickname);
+                                } else {
+                                    console.error("Failed to save new nickname to db.");
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error saving new nickname to db:", error);
+                            });
+                    } else {
+                        nickname = null;
+                        console.log("Database lookup error. Keeping placeholder nickname.");
+                    }
+                    updateNicknameDisplay();
+                })
+                .catch(error => {
+                    console.error("Error checking player data:", error);
+                    nickname = null;
+                    updateNicknameDisplay();
+                });
         }
 
         // 2. Call this inside your existing checkGameOver() function when they empty their wallet
@@ -688,6 +1290,7 @@
         }
 
 
+        // --- DEV STUFF ---
 
         // Secret dev reset: Click the version badge 5 times quickly to clear the daily lock
         let devClickCount = 0;
@@ -704,14 +1307,30 @@
             if (devClickCount >= 5) {
                 // Clear the cookie
                 document.cookie = "slotsdle_played_today=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = "slotsdle_share_text=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 
                 // Visual confirmation
                 alert("🛠️ Dev Mode: Daily cookie reset! Reloading...");
                 location.reload();
             }
         });
+
+        function _SetUUID(uuidValue) {
+            if (!uuidValue) {
+                localStorage.removeItem('unique_device_id');
+                console.log("Deleted existing UUID from localStorage.");
+                return;
+            }
+            localStorage.setItem('unique_device_id', uuidValue);
+            console.log("UUID manually set to:", uuidValue);
+        }
+
+
+        
+        // --- MAIN ---
         
         document.addEventListener('DOMContentLoaded', (event) => {
+            ensureUuid();
             checkGameStatusOnLoad();
             updateUI();
         });
@@ -719,19 +1338,5 @@
 
 
     </script>
-    
-    
-    <div style="height: 200px;"></div>
-
-
-    
-    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-    <input type="hidden" name="cmd" value="_donations" />
-    <input type="hidden" name="business" value="7H9DRMQQNF7JC" />
-    <input type="hidden" name="currency_code" value="USD" />
-    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-    </form>
-    <p><a href="https://skyhoffert.com" target="_blank">skyhoffert.com</a> | 2026</p>
 </body>
 </html>
