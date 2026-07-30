@@ -599,14 +599,25 @@
             const won = pendingPayout > 0;
             
             let blockColor = won ? "🟩" : "⬛";
-            let spinTypeTag = usedRespinThisRound ? "(Re-Spin)" : "(Initial)";
+            let spinTypeTag = usedRespinThisRound ? "⟲" : " ";
             
-            historyGrid.push(`${blockColor} [${r1}${r2}${r3}] ${spinTypeTag}`);
+            if (won) {
+                historyGrid.push(`${blockColor} [${r1}${r2}${r3}] ${spinTypeTag}`);
+            } else {
+                historyGrid.push(`${blockColor}${spinTypeTag}`);
+            }
         }
 
         function copyShareHistory() {
             let shareText = `🎰 Slotsdle (v1) Result Grid 🎰\nTotal Spins: ${totalSpins}\n\n`;
-            shareText += historyGrid.join("\n");
+
+            shareText += historyGrid[0];
+            for (let i = 1; i < historyGrid.length; i++) {
+                if (historyGrid[i].slice(0,2) == "🟩" || (historyGrid[i].slice(0,1) == "⬛" && historyGrid[i-1].slice(0,2) == "🟩")) {
+                    shareText += "\n";
+                }
+                shareText += historyGrid[i];
+            }
             shareText += `\n\nPlay Slotsdle!\nhttps://skyhoffert.com/games/slotsdle/slotsdle_v1.html`;
 
             navigator.clipboard.writeText(shareText).then(() => {
@@ -641,6 +652,21 @@
             return document.cookie.split(';').some((item) => item.trim().startsWith('slotsdle_played_today='));
         }
 
+        // Function to check or create unique ID.
+        function getOrCreateDeviceID() {
+            // Check if an ID already exists in localStorage
+            let deviceID = localStorage.getItem('unique_device_id');
+
+            if (!deviceID) {
+                // Generate a cryptographically secure random UUID
+                deviceID = crypto.randomUUID(); 
+                localStorage.setItem('unique_device_id', deviceID);
+            }
+
+            return deviceID;
+        }
+
+
         // --- GAME INTEGRATION HOOKS ---
 
         // 1. Run this when your script loads / DOM is ready
@@ -651,6 +677,8 @@
                 hasPlayedTodayFlag = true;
                 document.getElementById('message').textContent = "🔒 You've already played today! Come back tomorrow.";
             }
+            
+            console.log("Device ID:", getOrCreateDeviceID());
         }
 
         // 2. Call this inside your existing checkGameOver() function when they empty their wallet
