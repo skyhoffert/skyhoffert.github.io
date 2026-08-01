@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Outer Gold Body & Orange Border -->
+  <rect x="2" y="8" width="48" height="52" rx="10" fill="#f1c40f" stroke="#d35400" stroke-width="4"/>
+  
+  <!-- Side Lever -->
+  <path d="M50 36h6v4h-6z" fill="#7f8c8d"/>
+  <path d="M54 22h4v16h-4z" fill="#bdc3c7"/>
+  <circle cx="56" cy="20" r="5" fill="#e74c3c"/>
+
+  <!-- Reel Screen Area -->
+  <rect x="8" y="16" width="36" height="18" rx="4" fill="#34495e"/>
+
+  <!-- Reel 1 (Cherry) -->
+  <rect x="11" y="19" width="9" height="12" rx="2" fill="#ffffff"/>
+  <text x="15.5" y="28" font-size="8" text-anchor="middle">🍒</text>
+
+  <!-- Reel 2 (Cherry) -->
+  <rect x="21.5" y="19" width="9" height="12" rx="2" fill="#ffffff"/>
+  <text x="26" y="28" font-size="8" text-anchor="middle">🍒</text>
+
+  <!-- Reel 3 (Lemon) -->
+  <rect x="32" y="19" width="9" height="12" rx="2" fill="#ffffff"/>
+  <text x="36.5" y="28" font-size="8" text-anchor="middle">🍋</text>
+
+  <!-- Red Spin Button -->
+  <rect x="12" y="40" width="28" height="12" rx="6" fill="#e74c3c"/>
+</svg>

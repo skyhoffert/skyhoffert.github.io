@@ -294,11 +294,14 @@ function InitBolts()
 
 function DrawBackground()
 {
-    let offset = -game_ticks/10;
+    let offset = (-game_ticks/10) % FRAME["width"];
     ctx.drawImage(FRAME["images"]["background"], offset, 0, FRAME["width"], FRAME["height"]);
+    ctx.drawImage(FRAME["images"]["background"], offset, FRAME["height"], FRAME["width"], FRAME["height"]);
     ctx.save();
     ctx.scale(-1,1);
     ctx.drawImage(FRAME["images"]["background"], -(FRAME["width"] + offset), 0, 
+        -FRAME["width"], FRAME["height"]);
+    ctx.drawImage(FRAME["images"]["background"], -(FRAME["width"] + offset), FRAME["height"], 
         -FRAME["width"], FRAME["height"]);
     ctx.restore();
 

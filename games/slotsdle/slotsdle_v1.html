@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='2' y='8' width='48' height='52' rx='10' fill='%23f1c40f' stroke='%23d35400' stroke-width='4'/><path d='M50 36h6v4h-6z' fill='%237f8c8d'/><path d='M54 22h4v16h-4z' fill='%23bdc3c7'/><circle cx='56' cy='20' r='5' fill='%23e74c3c'/><rect x='8' y='16' width='36' height='18' rx='4' fill='%2334495e'/><rect x='11' y='19' width='9' height='12' rx='2' fill='%23fff'/><text x='15.5' y='28' font-size='8' text-anchor='middle'>🍒</text><rect x='21.5' y='19' width='9' height='12' rx='2' fill='%23fff'/><text x='26' y='28' font-size='8' text-anchor='middle'>🍒</text><rect x='32' y='19' width='9' height='12' rx='2' fill='%23fff'/><text x='36.5' y='28' font-size='8' text-anchor='middle'>🍋</text><rect x='12' y='40' width='28' height='12' rx='6' fill='%23e74c3c'/></svg>">
     <title>Slotsdle (v1)</title>
     <style>
         body {
@@ -284,7 +285,14 @@
             transform: translateY(3px);
         }
 
-        .scoreboard-btn {
+        .secondary-btn-group {
+            display: flex;
+            gap: 10px;
+            width: min(280px, 100%);
+            margin-top: 18px;
+        }
+
+        .scoreboard-btn, .help-btn {
             background-color: #3498db;
             color: white;
             border: none;
@@ -293,19 +301,29 @@
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
-            margin-top: 14px;
             box-shadow: 0 4px #2980b9;
             transition: all 0.1s ease;
-            width: 100%;
             box-sizing: border-box;
         }
 
-        .scoreboard-btn:active {
+        .scoreboard-btn {
+            flex: 1;
+        }
+
+        .help-btn {
+            width: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .scoreboard-btn:active, .help-btn:active {
             box-shadow: 0 1px #2980b9;
             transform: translateY(3px);
         }
 
-        .scoreboard-overlay {
+        .modal-overlay {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.72);
@@ -316,39 +334,38 @@
             z-index: 1000;
         }
 
-        .scoreboard-overlay.active {
+        .modal-overlay.active {
             display: flex;
         }
 
-        .scoreboard-modal {
+        .modal-container {
             background: #2f3e52;
             border: 3px solid #f1c40f;
             border-radius: 16px;
             width: min(560px, 100%);
-            max-height: 80vh;
             overflow: hidden;
             box-shadow: 0 15px 40px rgba(0,0,0,0.35);
         }
 
-        .scoreboard-header {
+        .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 14px 16px;
+            padding: 6px 16px;
             background: #34495e;
             border-bottom: 1px solid rgba(255,255,255,0.12);
         }
 
-        .scoreboard-title {
+        .modal-title {
             font-size: 1.05rem;
             font-weight: 700;
         }
 
-        .scoreboard-close {
+        .modal-close {
             background: transparent;
             border: none;
             color: white;
-            font-size: 1.8rem;
+            font-size: 1.2rem;
             cursor: pointer;
         }
 
@@ -372,6 +389,14 @@
         .scoreboard-tab.active {
             background: #f1c40f;
             color: #2c3e50;
+        }
+
+        .modal-body {
+            padding: 6px 16px;
+            max-height: calc(80vh - 70px);
+            overflow-y: auto;
+            line-height: 1.2;
+            font-size: 0.95rem;
         }
 
         .scoreboard-content {
@@ -403,6 +428,17 @@
             font-style: italic;
             padding: 18px 8px;
             text-align: center;
+        }
+
+        .help-list {
+            padding-left: 20px;
+            margin: 8px 0;
+            line-height: 1.2;
+        }
+
+        .help-list li {
+            margin-bottom: 8px;
+            line-height: 1.2;
         }
 
         button:disabled {
@@ -503,11 +539,11 @@
 
     <div style="height: 60px;"></div>
 
-    <div id="scoreboard-overlay" class="scoreboard-overlay" onclick="closeScoreboard(event)">
-        <div class="scoreboard-modal" onclick="event.stopPropagation()">
-            <div class="scoreboard-header">
-                <div class="scoreboard-title">Scores</div>
-                <button class="scoreboard-close" onclick="closeScoreboard()" aria-label="Close scores">×</button>
+    <div id="scoreboard-overlay" class="modal-overlay" onclick="closeScoreboard(event)">
+        <div class="modal-container" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">Scores</div>
+                <button class="modal-close" onclick="closeScoreboard()" aria-label="Close scores">x</button>
             </div>
             <div class="scoreboard-tabs">
                 <button class="scoreboard-tab active" data-tab="user" onclick="switchScoreboardTab('user')">Your Top 10</button>
@@ -522,7 +558,44 @@
         </div>
     </div>
 
-    <button id="scoreboard-btn" class="scoreboard-btn" onclick="openScoreboard()" style="margin-top: 18px; max-width: 280px;">View Scores 🏆</button>
+    <!-- HELP OVERLAY -->
+    <div id="help-overlay" class="modal-overlay" onclick="closeHelp(event)">
+        <div class="modal-container" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">How to Play</div>
+                <button class="modal-close" onclick="closeHelp()" aria-label="Close help">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Spin as many times as possible before running out of money!</p>
+                <ul class="help-list">
+                    <li><strong>Spins and Re-spins</strong> cost <strong>$10</strong>.</li>
+                    <li><strong>Lock & Re-Spin:</strong> After a spin, tap any symbol to lock it into place and re-spin the remaining reels! You <strong>must get a triple match</strong> in order to earn money on a re-spin.</li>
+                    <li><strong>Payouts:</strong>
+                        <ul style="padding-left: 20px; margin-top: 5px;">
+                            <li>💰💰💰 <strong>Triple Money Bags:</strong> $90</li>
+                            <li>🍒🍒🍒 <strong>Triple Matching Fruit:</strong> $30</li>
+                            <li>💰💰 <strong>2 Money Bags:</strong> $10</li>
+                            <li>💰 <strong>1 Money Bag:</strong> $5</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-header">
+                <div class="modal-title">Cookies & Leaderboard</div>
+            </div>
+            <div class="modal-body">
+                <p>Daily completion and your leaderboard identity are stored in browser cookies. Scores and nicknames are stored in a remote database. Clearing browser cookies disconnects your identity and generates a new nickname. To reconnect it, email me.</p>
+                <p>Daily leaderboard resets at 08:00 UTC.</p>
+                <p>Cookie hacking or multi-device/browser play to earn a big score is cowardice. Be an ethical gambler.</p>
+                <p>Slotsdle will NEVER sell/track your information or include advertisements.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="secondary-btn-group">
+        <button id="scoreboard-btn" class="scoreboard-btn" onclick="openScoreboard()">View Scores 🏆</button>
+        <button id="help-btn" class="help-btn" onclick="openHelp()" aria-label="Help">?</button>
+    </div>
     
     <div style="height: 50px;"></div>
     
@@ -581,6 +654,7 @@
         const leverArm = document.getElementById('lever-arm');
         const playerNicknameDisplay = document.getElementById('player-nickname');
         const scoreboardOverlay = document.getElementById('scoreboard-overlay');
+        const helpOverlay = document.getElementById('help-overlay');
         const scoreboardTabs = Array.from(document.querySelectorAll('.scoreboard-tab'));
         const scoreboardPanels = {
             user: document.getElementById('scoreboard-user'),
@@ -596,6 +670,67 @@
             alltime: []
         };
         let activeScoreboardTab = 'user';
+
+        // --- GAME SESSION PERSISTENCE HELPERS ---
+        function saveGameState() {
+            if (hasPlayedTodayFlag) return;
+            const state = {
+                balance,
+                totalSpins,
+                canHold,
+                choiceWindowActive,
+                heldReels,
+                pendingPayout,
+                usedRespinThisRound,
+                historyGrid,
+                reels: [reel1.textContent, reel2.textContent, reel3.textContent],
+                messageText: message.textContent,
+                messageColor: message.style.color
+            };
+            localStorage.setItem('slotsdle_active_game_state', JSON.stringify(state));
+        }
+
+        function loadGameState() {
+            const rawState = localStorage.getItem('slotsdle_active_game_state');
+            if (!rawState) return false;
+
+            try {
+                const state = JSON.parse(rawState);
+                balance = state.balance ?? 50;
+                totalSpins = state.totalSpins ?? 0;
+                canHold = state.canHold ?? false;
+                choiceWindowActive = state.choiceWindowActive ?? false;
+                heldReels = state.heldReels ?? { 1: false, 2: false, 3: false };
+                pendingPayout = state.pendingPayout ?? 0;
+                usedRespinThisRound = state.usedRespinThisRound ?? false;
+                historyGrid = state.historyGrid ?? [];
+
+                if (state.reels) {
+                    reel1.textContent = state.reels[0] || '🍒';
+                    reel2.textContent = state.reels[1] || '🍋';
+                    reel3.textContent = state.reels[2] || '🍊';
+                }
+
+                for (let i = 1; i <= 3; i++) {
+                    const wrapper = document.getElementById(`wrapper${i}`);
+                    if (heldReels[i]) wrapper.classList.add('held');
+                    else wrapper.classList.remove('held');
+                }
+
+                if (state.messageText) {
+                    message.textContent = state.messageText;
+                    if (state.messageColor) message.style.color = state.messageColor;
+                }
+                return true;
+            } catch (err) {
+                console.error("Error loading saved game state:", err);
+                return false;
+            }
+        }
+
+        function clearGameState() {
+            localStorage.removeItem('slotsdle_active_game_state');
+        }
 
         function updateNicknameDisplay() {
             playerNicknameDisplay.textContent = nickname && nickname.trim() ? nickname : '...';
@@ -654,6 +789,58 @@
             });
         }
 
+        // Function to get the ISO string for the most recent 06:00 UTC boundary
+        function getDailyCutoffISO() {
+            const now = new Date();
+            
+            // Create a Date object set to today's 08:00:00.000 UTC
+            const cutoff = new Date(Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                8, 0, 0, 0
+            ));
+
+            // If current UTC time is before 06:00 UTC, subtract 1 day (24 hours)
+            if (now < cutoff) {
+                cutoff.setUTCDate(cutoff.getUTCDate() - 1);
+            }
+
+            return cutoff.toISOString();
+        }
+
+        // Updated fetch function for the daily leaderboard
+        async function fetchDailyScoreboardRows() {
+            const dailyCutoff = getDailyCutoffISO();
+
+            const { data, error, status } = await db
+                .from('scores_v1')
+                .select('score, uuid')
+                .gte('created_at', dailyCutoff) // Filter entries created since 06:00 UTC
+                .order('score', { ascending: false })
+                .limit(10);
+
+            if (status !== 200 || error) {
+                console.error('Error querying daily scores:', error);
+                return [];
+            }
+
+            if (!data) return [];
+
+            let scores = [];
+            for (const d of data) {
+                const nickname = await dbGetNicknameForUUID(d.uuid);
+                scores.push({ 'nickname': nickname, 'score': d.score });
+            }
+
+            // Pad out the rest of the 10 spots with empty placeholders
+            while (scores.length < 10) {
+                scores.push({ 'nickname': "", 'score': "" });
+            }
+
+            return scores;
+        }
+
         async function fetchScoreboardRows(kind) {
             if (kind == 'user') {
                 const UUID = ensureUuid();
@@ -688,37 +875,7 @@
 
                 return scores;
             } else if (kind == 'daily') {
-                const todayDateString = new Date().toISOString().split('T')[0] + 'T00:00:00.000Z'
-
-                const { data, error, status } = await db
-                    .from('scores_v1')
-                    .select('score, uuid')
-                    .gte('created_at', todayDateString)
-                    .order('score', {ascending: false})
-                    .limit(10);
-
-                if (status !== 200 || error) {
-                    console.error('Error querying scores:', error);
-                    return [];
-                }
-
-                if (!data) {
-                    console.log("No scores for", UUID);
-                    return [];
-                }
-
-                let scores = [];
-
-                for (d in data) {
-                    const nickname = await dbGetNicknameForUUID(data[d].uuid);
-                    scores.push({'nickname':nickname, 'score':data[d].score});
-                }
-                
-                while (scores.length < 10) {
-                    scores.push({'nickname':"", 'score':""});
-                }
-
-                return scores;
+              return fetchDailyScoreboardRows();
             } else if (kind == 'alltime') {
                 const { data, error, status } = await db
                     .from('scores_v1')
@@ -795,6 +952,15 @@
             scoreboardOverlay.classList.remove('active');
         }
 
+        function openHelp() {
+            helpOverlay.classList.add('active');
+        }
+
+        function closeHelp(event) {
+            if (event && event.target !== helpOverlay) return;
+            helpOverlay.classList.remove('active');
+        }
+
         function switchScoreboardTab(tab) {
             activeScoreboardTab = tab;
             scoreboardTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
@@ -842,6 +1008,7 @@
                 wrapper.classList.remove('held');
             }
             updateUI();
+            saveGameState();
         }
 
         function clearAllHolds() {
@@ -881,21 +1048,22 @@
             choiceWindowActive = false;
             usedRespinThisRound = false; 
             updateUI();
+            saveGameState();
 
             runSpinAnimation(() => {
                 calculatePayoutState(false); 
                 choiceWindowActive = true;
                 canHold = true;
-                updateUI();
                 
                 if (_force_triple === true) {
                     reel1.textContent = '🍊';
                     reel2.textContent = '🍊';
                     reel3.textContent = '🍊';
                     _force_triple = false;
-                    updateUI();
                     console.log("forced");
                 }
+                updateUI();
+                saveGameState();
             });
         }
 
@@ -909,6 +1077,7 @@
             canHold = false;
             usedRespinThisRound = true; 
             updateUI();
+            saveGameState();
 
             runSpinAnimation(() => {
                 calculatePayoutState(true); 
@@ -928,6 +1097,7 @@
             } else {
                 choiceWindowActive = false;
                 updateUI();
+                saveGameState();
                 checkGameOver();
             }
         }
@@ -998,6 +1168,7 @@
             choiceWindowActive = false;
             clearAllHolds();
             updateUI();
+            saveGameState();
             checkGameOver();
         }
 
@@ -1006,6 +1177,7 @@
                 message.textContent = `💀 GAME OVER! Total Spins: ${totalSpins}. Share your score!`;
                 actionButton.style.display = 'none';
                 shareButton.style.display = 'block'; 
+                clearGameState();
                 handleGameOverCompletion();
                 dbUploadScore();
             }
@@ -1242,12 +1414,12 @@
                     document.getElementById('action-button').style.display = 'none';
                     document.getElementById('share-button').style.display = 'block';
                 }
+            } else {
+                loadGameState();
             }
             
             ensureUuid();
             console.log("Device ID:", uuid);
-            //console.log("Nickname:", generateRandomNickname());
-            //console.log("Recovery Key:", generateRecoveryKey());
 
             updateNicknameDisplay();
 
@@ -1305,12 +1477,13 @@
 
             // Trigger reset on the 5th quick tap
             if (devClickCount >= 5) {
-                // Clear the cookie
+                // Clear the cookie and saved state
                 document.cookie = "slotsdle_played_today=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 document.cookie = "slotsdle_share_text=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                clearGameState();
                 
                 // Visual confirmation
-                alert("🛠️ Dev Mode: Daily cookie reset! Reloading...");
+                alert("🛠️ Dev Mode: Daily cookie & game state reset! Reloading...");
                 location.reload();
             }
         });
@@ -1334,8 +1507,6 @@
             checkGameStatusOnLoad();
             updateUI();
         });
-
-
 
     </script>
 </body>
