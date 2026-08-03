@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Derby - 08:00 UTC Horse Racing</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+    <!-- ================= LOADING OVERLAY ================= -->
+    <section id="loading-view" class="view active">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <p>Connecting to Daily Derby...</p>
+        </div>
+    </section>
+
+    <!-- ================= LOGIN VIEW ================= -->
+    <section id="login-view" class="view hidden">
+        <div class="card login-card">
+            <h1>🏇 Daily Derby</h1>
+            <p>Daily Race • 08:00 UTC Post Time</p>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" autocomplete="username" required placeholder="Enter username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" autocomplete="current-password" required
+                        placeholder="••••••••">
+                </div>
+
+                <button type="submit" id="login-btn" class="btn primary">Sign In</button>
+            </form>
+
+            <div id="auth-error" class="error-msg"></div>
+        </div>
+    </section>
+
+    <!-- ================= DASHBOARD / TRACK VIEW ================= -->
+    <section id="dashboard-view" class="view hidden">
+        <header class="app-header">
+            <div class="logo">🏇 Daily Derby</div>
+            <div class="user-info">
+                <span id="user-display">Loading...</span>
+                <button id="logout-btn" class="btn secondary sm">Sign Out</button>
+            </div>
+        </header>
+
+        <main class="dashboard-container">
+            <!-- Section Navigation -->
+            <nav class="track-nav">
+                <button class="nav-tab active" data-target="races-section">📋 Daily Race (08:00 UTC)</button>
+                <button class="nav-tab" data-target="bets-section">🎟 My Bets</button>
+                <button class="nav-tab" data-target="wallet-section">💰 Wallet</button>
+            </nav>
+
+            <!-- Dynamic Section Contents -->
+            <section id="races-section" class="tab-content active">
+                <h2>Today's Race</h2><br>
+                <div class="placeholder-box">Horse roster and live odds display loading...</div>
+            </section>
+
+            <section id="bets-section" class="tab-content hidden">
+                <h2>Active Slips</h2>
+                <div class="placeholder-box">Your pending bets will appear here.</div>
+            </section>
+
+            <section id="wallet-section" class="tab-content hidden">
+                <h2>Account Balance</h2>
+                <div class="placeholder-box">Credits and wagering history.</div>
+            </section>
+        </main>
+    </section>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>
