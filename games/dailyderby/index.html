@@ -2,85 +2,213 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Derby - 08:00 UTC Horse Racing</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Derby</title>
+  <link rel="stylesheet" href="styles.css">
 
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
 
-    <!-- ================= LOADING OVERLAY ================= -->
-    <section id="loading-view" class="view active">
-        <div class="spinner-container">
-            <div class="spinner"></div>
-            <p>Connecting to Daily Derby...</p>
+  <!-- ================= LOADING OVERLAY ================= -->
+  <section id="loading-view" class="view active">
+    <div class="spinner-container">
+      <div class="spinner"></div>
+      <p>Connecting to Daily Derby...</p>
+    </div>
+  </section>
+
+  <!-- ================= LOGIN VIEW ================= -->
+  <section id="login-view" class="view hidden">
+    <div class="card login-card">
+      <h1>🏇 Daily Derby</h1>
+      <p>Daily Race</p>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" autocomplete="username" required placeholder="Enter username">
         </div>
-    </section>
 
-    <!-- ================= LOGIN VIEW ================= -->
-    <section id="login-view" class="view hidden">
-        <div class="card login-card">
-            <h1>🏇 Daily Derby</h1>
-            <p>Daily Race • 08:00 UTC Post Time</p>
-
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" autocomplete="username" required placeholder="Enter username">
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" autocomplete="current-password" required
-                        placeholder="••••••••">
-                </div>
-
-                <button type="submit" id="login-btn" class="btn primary">Sign In</button>
-            </form>
-
-            <div id="auth-error" class="error-msg"></div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
         </div>
-    </section>
 
-    <!-- ================= DASHBOARD / TRACK VIEW ================= -->
-    <section id="dashboard-view" class="view hidden">
-        <header class="app-header">
-            <div class="logo">🏇 Daily Derby</div>
-            <div class="user-info">
-                <span id="user-display">Loading...</span>
-                <button id="logout-btn" class="btn secondary sm">Sign Out</button>
+        <button type="submit" id="login-btn" class="btn primary">Sign In</button>
+      </form>
+
+      <div id="auth-error" class="error-msg"></div>
+    </div>
+  </section>
+
+  <!-- ================= DASHBOARD / TRACK VIEW ================= -->
+  <section id="dashboard-view" class="view hidden">
+    <header class="app-header">
+      <div class="logo">🏇 Daily Derby</div>
+      <div class="user-info">
+        <span id="user-display">Loading...</span>
+        <button id="logout-btn" class="btn secondary sm">Sign Out</button>
+      </div>
+    </header>
+
+    <main class="dashboard-container">
+      <!-- Section Navigation -->
+      <div class="nav-scroll-wrapper">
+        <nav class="track-nav">
+          <button class="nav-tab active" data-target="results-section">🏆 Yesterday's Results</button>
+          <button class="nav-tab" data-target="races-section">📋 Daily Race</button>
+          <button class="nav-tab" data-target="horses-section">🐎 Horse Paddock</button>
+          <button class="nav-tab" data-target="bets-section">🎟 My Bets</button>
+          <button class="nav-tab" data-target="wallet-section">💰 Wallet</button>
+        </nav>
+      </div>
+
+      <!-- Dynamic Section Contents -->
+
+      <!-- 1. RESULTS SECTION (Default Active Tab) -->
+      <section id="results-section" class="tab-content active">
+        <div id="race-results-container" class="card results-card hidden">
+
+          <!-- STATE 1: Initial Prompt -->
+          <div id="results-step-prompt" class="results-step">
+            <span class="status-badge">YESTERDAY'S DERBY</span>
+            <h2>Yesterday's Race Results Are In!</h2>
+            <p class="subtitle">Ready to watch the action unfold?</p>
+            <button id="start-replay-btn" class="btn primary lg">🎬 View Yesterday's Results</button>
+          </div>
+
+          <!-- STATE 2 & 3: Race Animation Canvas & Winner Banner -->
+          <div id="results-step-animation" class="results-step hidden">
+            <div class="animation-stage">
+              <div id="fireworks-canvas-container" class="fireworks-layer hidden"></div>
+              <div id="race-track-viewport" class="track-viewport">
+                <div id="race-track-strip" class="track-strip"></div>
+              </div>
+              <div id="winner-banner" class="winner-banner hidden">
+                <span class="winner-title">🏆 WINNER! 🏆</span>
+                <h1 id="winner-horse-name">Horse Name</h1>
+              </div>
             </div>
-        </header>
+          </div>
 
-        <main class="dashboard-container">
-            <!-- Section Navigation -->
-            <nav class="track-nav">
-                <button class="nav-tab active" data-target="races-section">📋 Daily Race (08:00 UTC)</button>
-                <button class="nav-tab" data-target="bets-section">🎟 My Bets</button>
-                <button class="nav-tab" data-target="wallet-section">💰 Wallet</button>
-            </nav>
+          <!-- STATE 4: Animated Bet Reveal -->
+          <div id="results-step-bets" class="results-step hidden">
+            <h3>Your Wager Results</h3>
+            <div id="animated-bets-container" class="bets-reveal-list"></div>
+          </div>
 
-            <!-- Dynamic Section Contents -->
-            <section id="races-section" class="tab-content active">
-                <h2>Today's Race</h2><br>
-                <div class="placeholder-box">Horse roster and live odds display loading...</div>
-            </section>
+          <!-- STATE 5 & 6: Final Summary Screen -->
+          <div id="results-step-summary" class="results-step hidden">
+            <div class="summary-header">
+              <span class="status-badge">RACE SUMMARY</span>
+              <h2 id="summary-date-title">Yesterday's Derby Recap</h2>
+            </div>
 
-            <section id="bets-section" class="tab-content hidden">
-                <h2>Active Slips</h2>
-                <div class="placeholder-box">Your pending bets will appear here.</div>
-            </section>
+            <!-- Financial Winnings Callout -->
+            <div class="cash-summary-box">
+              <span>Total Cash Winnings</span>
+              <h1 id="summary-total-winnings">$0.00</h1>
+            </div>
 
-            <section id="wallet-section" class="tab-content hidden">
-                <h2>Account Balance</h2>
-                <div class="placeholder-box">Credits and wagering history.</div>
-            </section>
-        </main>
-    </section>
+            <h4>Your Settled Wagers</h4>
+            <div id="summary-bets-list" class="roster-list"></div>
+
+            <div class="summary-actions">
+              <button id="copy-summary-btn" class="btn primary">📋 Copy Results Summary</button>
+              <button id="replay-sequence-btn" class="btn secondary">🔄 Replay Animation</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- RACES SECTION (Odds View) -->
+      <section id="races-section" class="tab-content hidden">
+        <div class="card countdown-card">
+          <span class="status-badge">NEXT RACE</span>
+          <div id="countdown-timer" class="timer-digits">--:--:--</div>
+          <p class="timer-label">Time Remaining Until Post Time</p>
+        </div>
+
+        <div class="card">
+          <h3>Today's Entries & Live Odds</h3>
+          <div id="today-odds-list" class="roster-list">Loading entries...</div>
+        </div>
+      </section>
+
+      <!-- HORSES SECTION (Detailed Stats & Paddock) -->
+      <section id="horses-section" class="tab-content hidden">
+        <div class="card">
+          <h3>Horse Paddock & Historical Stats</h3>
+          <p class="subtitle">Full statistics, condition status, and wildcard attributes.</p>
+          <div id="paddock-horse-list" class="paddock-list">Loading horse records...</div>
+        </div>
+      </section>
+
+      <section id="bets-section" class="tab-content hidden">
+        <div class="card">
+          <h3>Active Wagers & Slip History</h3>
+          <div id="bets-list-container" class="roster-list">
+            <div class="placeholder-box">Loading your wagers...</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="wallet-section" class="tab-content hidden">
+        <h2>Account Balance</h2>
+        <div class="placeholder-box">Credits and wagering history.</div>
+      </section>
+    </main>
+  </section>
+
+  <!-- ================= BETTING SLIP MODAL ================= -->
+  <div id="bet-modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🎟️ Place Your Bet</h3>
+        <button id="close-bet-modal" class="close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="bet-summary">
+          <!-- Make sure these IDs match: -->
+          <div class="bet-horse-name" id="modal-horse-name">Horse Name</div>
+          <div class="bet-odds-badge" id="modal-horse-odds">0/0</div>
+        </div>
+
+        <form id="bet-form">
+          <!-- Wallet Balance Display -->
+          <div class="wallet-info-bar">
+            <span>Available Wallet:</span>
+            <strong id="modal-wallet-balance">$30.00</strong>
+          </div>
+
+          <div class="form-group wager-stepper-group">
+            <div class="field-label" id="wager-amount-label">Wager Amount ($5 Increments)</div>
+
+            <div class="stepper-controls" role="group" aria-labelledby="wager-amount-label">
+              <button type="button" id="btn-decrease-wager" class="btn stepper-btn" aria-label="Decrease wager">-$5</button>
+
+              <div id="wager-display" class="wager-amount-display" aria-live="polite">$5</div>
+
+              <button type="button" id="btn-increase-wager" class="btn stepper-btn" aria-label="Increase wager">+$5</button>
+            </div>
+          </div>
+
+          <div class="payout-calculator">
+            <span>Est. Potential Payout:</span>
+            <strong id="modal-payout">$0.00</strong>
+          </div>
+
+          <div id="modal-status-msg" class="modal-status-msg"></div>
+          <button type="submit" id="bet-submit-btn" class="btn primary">Confirm Wager</button>
+        </form>
+      </div>
+    </div>
 
     <script type="module" src="./js/main.js"></script>
 </body>
