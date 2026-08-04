@@ -50,7 +50,8 @@
     <header class="app-header">
       <div class="logo-container" style="display: flex; flex-direction: column;">
         <div class="logo">🏇 Daily Derby</div>
-        <div id="header-race-date" style="font-size: 0.85rem; color: #10b981; font-weight: 700; letter-spacing: 0.05em; margin-top: 0.15rem;">
+        <div id="header-race-date"
+          style="font-size: 0.85rem; color: #10b981; font-weight: 700; letter-spacing: 0.05em; margin-top: 0.15rem;">
           Race Day: Loading...
         </div>
       </div>
@@ -126,6 +127,15 @@
               <button id="copy-summary-btn" class="btn primary">📋 Copy Results Summary</button>
               <button id="replay-sequence-btn" class="btn secondary">🔄 Replay Animation</button>
             </div>
+
+            <!-- NEW: Full Official Finishing Order -->
+            <div class="full-results-section"
+              style="margin-top: 2.5rem; text-align: left; padding-top: 1.5rem; border-top: 1px solid #374151;">
+              <h4
+                style="margin-bottom: 1rem; color: #9ca3af; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; text-align: center;">
+                Official Finishing Order</h4>
+              <div id="full-race-results-list" class="roster-list"></div>
+            </div>
           </div>
 
         </div>
@@ -165,7 +175,19 @@
 
       <section id="wallet-section" class="tab-content hidden">
         <h2>Account Balance</h2>
-        <div class="placeholder-box">Credits and wagering history.</div>
+
+        <div class="card" style="margin-top: 1.25rem;">
+          <h3>🏆 All-Time Record</h3>
+          <div id="alltime-stats-container">
+            <p class="subtitle">Loading your career stats...</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.25rem;">
+          <h3>Recent Wagering History</h3>
+          <p class="subtitle">Your results from the past 3 race days.</p>
+          <div id="wallet-history-container" class="roster-list">Loading history...</div>
+        </div>
       </section>
     </main>
   </section>
@@ -196,11 +218,13 @@
             <div class="field-label" id="wager-amount-label">Wager Amount ($5 Increments)</div>
 
             <div class="stepper-controls" role="group" aria-labelledby="wager-amount-label">
-              <button type="button" id="btn-decrease-wager" class="btn stepper-btn" aria-label="Decrease wager">-$5</button>
+              <button type="button" id="btn-decrease-wager" class="btn stepper-btn"
+                aria-label="Decrease wager">-$5</button>
 
               <div id="wager-display" class="wager-amount-display" aria-live="polite">$5</div>
 
-              <button type="button" id="btn-increase-wager" class="btn stepper-btn" aria-label="Increase wager">+$5</button>
+              <button type="button" id="btn-increase-wager" class="btn stepper-btn"
+                aria-label="Increase wager">+$5</button>
             </div>
           </div>
 

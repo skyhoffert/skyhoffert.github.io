@@ -997,3 +997,21 @@ body {
   font-weight: 600;
   color: #9ca3af;
 }
+
+/* ==========================================================================
+   11. NEW RACE ANIMATIONS
+   ========================================================================== */
+.track-strip {
+  position: relative;
+  width: 100%;
+  min-height: 210px; /* Ensure container matches canvas height */
+  height: auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin-bottom: 50px;
+}
+
+@keyframes runToCenter {
+  0% { left: -200px; transform: translateY(-50%); }
+  100% { left: 50%; transform: translate(-50%, -50%); } /* Lock perfectly dead center */
+}

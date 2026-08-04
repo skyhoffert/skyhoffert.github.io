@@ -1051,20 +1051,31 @@
             saveGameState();
 
             runSpinAnimation(() => {
-                calculatePayoutState(false); 
-                choiceWindowActive = true;
-                canHold = true;
-                
-                if (_force_triple === true) {
-                    reel1.textContent = '🍊';
-                    reel2.textContent = '🍊';
-                    reel3.textContent = '🍊';
-                    _force_triple = false;
-                    console.log("forced");
-                }
-                updateUI();
-                saveGameState();
-            });
+				calculatePayoutState(false); 
+				
+				const r1 = reel1.textContent;
+				const r2 = reel2.textContent;
+				const r3 = reel3.textContent;
+				const isThreeOfAKind = (r1 === r2 && r2 === r3);
+
+				if (isThreeOfAKind) {
+					// Instantly conclude round for triple matches on the first spin
+					concludeRound();
+				} else {
+					choiceWindowActive = true;
+					canHold = true;
+				}
+
+				if (_force_triple === true) {
+					reel1.textContent = '🍊';
+					reel2.textContent = '🍊';
+					reel3.textContent = '🍊';
+					_force_triple = false;
+					console.log("forced");
+				}
+				updateUI();
+				saveGameState();
+			});
         }
 
         function optionalReSpin() {

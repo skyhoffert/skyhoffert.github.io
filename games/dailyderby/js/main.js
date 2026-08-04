@@ -2,7 +2,7 @@ import { loginUser, logoutUser, verifyBackendSession } from './auth.js';
 import { startRaceTimer, stopRaceTimer } from './timer.js';
 import { loadTodayRoster, renderOddsGrid, renderPaddockGrid } from './horses.js';
 import { initBetModal } from './betslip.js';
-import { loadUserBets, initBetRemovalListeners } from './myBets.js';
+import { loadUserBets, initBetRemovalListeners, loadWalletHistory, loadAllTimeStats } from './myBets.js';
 import { initRaceResultsView } from './raceReplay.js';
 import { getGameDateString, getFormattedRaceDay } from './util.js';
 
@@ -16,6 +16,11 @@ const logoutBtn = document.getElementById('logout-btn');
 const userDisplay = document.getElementById('user-display');
 
 const TAB_STORAGE_KEY = 'daily_derby_active_tab_state';
+
+// Tracks whether tab-specific data has already been fetched this session,
+// so re-clicking tabs doesn't re-query every time.
+let walletDataLoaded = false;
+let betsDataLoaded = false;
 
 // --- APP INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -49,6 +54,19 @@ function initTabNavigation() {
     });
   }
 
+    // Loads tab-specific data the first time a given tab is opened
+  function maybeLoadTabData(targetId) {
+    if (targetId === 'wallet-section' && !walletDataLoaded) {
+      walletDataLoaded = true;
+      loadAllTimeStats();
+      loadWalletHistory();
+    }
+    if (targetId === 'bets-section' && !betsDataLoaded) {
+      betsDataLoaded = true;
+      loadUserBets();
+    }
+  }
+
   // 1. Check for previously saved tab state from TODAY
   const storedStateRaw = localStorage.getItem(TAB_STORAGE_KEY);
   if (storedStateRaw) {
@@ -66,6 +84,9 @@ function initTabNavigation() {
           // Activate saved tab/section
           targetTab.classList.add('active');
           targetSection.classList.remove('hidden');
+
+          // If the restored tab is wallet or bets, load its data now
+          maybeLoadTabData(storedState.tabId);
 
           // Add a small delay, then smoothly slide the tab into the center
           setTimeout(() => {
@@ -94,6 +115,9 @@ function initTabNavigation() {
 
       e.currentTarget.classList.add('active');
       targetSection.classList.remove('hidden');
+
+      // Lazy-load tab data on first visit to wallet/bets tabs
+      maybeLoadTabData(targetId);
 
       // Smoothly center the clicked tab
       e.currentTarget.scrollIntoView({
@@ -138,11 +162,12 @@ if (loginForm) {
   });
 }
 
-// --- LOGOUT EVENT LISTENER ---
 if (logoutBtn) {
   logoutBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     await logoutUser();
+    walletDataLoaded = false;
+    betsDataLoaded = false; // Reset so next login re-fetches fresh data
     showLogin();
   });
 }
@@ -163,12 +188,11 @@ async function showDashboard(user) {
   // 1. Initialize Results View first on landing
   await initRaceResultsView();
 
-  // 2. Pre-load background data for other tabs
+  // 2. Pre-load background data for other tabs (bets/wallet data loads lazily on tab click)
   startRaceTimer('countdown-timer');
   const roster = await loadTodayRoster();
   renderOddsGrid(roster, 'today-odds-list');
   renderPaddockGrid(roster, 'paddock-horse-list');
-  await loadUserBets();
 }
 
 function showLogin() {
