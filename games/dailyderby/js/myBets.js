@@ -1,5 +1,6 @@
-import { supabase, CookieManager } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js';
 import { refundToWallet } from './wallet.js';
+import { CookieManager, getGameDateString } from './util.js'; // Updated imports
 
 /**
  * Load user's placed bets from Supabase and render them
@@ -15,7 +16,6 @@ export async function loadUserBets(containerId = 'bets-list-container') {
   }
 
   const session = JSON.parse(rawSession);
-  const todayStr = new Date().toISOString().split('T')[0];
 
   // Fetch today's bets joined with horse names
   const { data: bets, error } = await supabase
@@ -30,7 +30,7 @@ export async function loadUserBets(containerId = 'bets-list-container') {
       horses_daily_derby ( name )
     `)
     .eq('player_id', session.id)
-    .eq('race_date', todayStr) // Strictly show today's bets
+    .eq('race_date', getGameDateString(0)) // Strictly show today's bets
     .order('created_at', { ascending: false });
 
   if (error) {

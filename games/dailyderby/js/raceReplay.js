@@ -1,18 +1,10 @@
-import { supabase, CookieManager } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js';
+import { CookieManager, getGameDateString } from './util.js'; // Updated imports
 
 let currentRaceResult = null;
 let currentPlayerBets = [];
 
 const WATCHED_COOKIE_KEY = 'daily_derby_watched_date';
-
-/**
- * Helper to get yesterday's date string (YYYY-MM-DD)
- */
-function getYesterdayDateString() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
-}
 
 function getSession() {
   const raw = CookieManager.get('daily_derby_player_session');
@@ -26,7 +18,7 @@ export async function initRaceResultsView() {
   const session = getSession();
   if (!session) return;
 
-  const yesterdayStr = getYesterdayDateString();
+  const yesterdayStr = getGameDateString(-1);
 
   // Fetch Yesterday's Result & User's Bets
   const [resultData, betsData] = await Promise.all([
@@ -268,7 +260,7 @@ function renderSummaryScreen() {
  */
 function copySummaryToClipboard() {
   if (!currentPlayerBets || currentPlayerBets.length === 0) {
-    navigator.clipboard.writeText(`🏇 Daily Derby (${getYesterdayDateString()}):\nNo bets placed.`);
+    navigator.clipboard.writeText(`🏇 Daily Derby (${getGameDateString(-1)}):\nNo bets placed.`);
     return;
   }
 
@@ -296,7 +288,7 @@ function copySummaryToClipboard() {
   const netSign = netTotal >= 0 ? '+' : '-';
   const formattedNet = `${netSign}$${Math.abs(netTotal)}`;
 
-  const summaryText = `🏇 Daily Derby (${getYesterdayDateString()}):\n${boxTokens}\nTotal: ${formattedNet}\n\nPlay Daily Derby today!`;
+  const summaryText = `🏇 Daily Derby (${getGameDateString(-1)}):\n${boxTokens}\nTotal: ${formattedNet}\n\nPlay Daily Derby today!`;
 
   navigator.clipboard.writeText(summaryText).then(() => {
     const copyBtn = document.getElementById('copy-summary-btn');

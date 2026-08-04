@@ -48,7 +48,12 @@
   <!-- ================= DASHBOARD / TRACK VIEW ================= -->
   <section id="dashboard-view" class="view hidden">
     <header class="app-header">
-      <div class="logo">🏇 Daily Derby</div>
+      <div class="logo-container" style="display: flex; flex-direction: column;">
+        <div class="logo">🏇 Daily Derby</div>
+        <div id="header-race-date" style="font-size: 0.85rem; color: #10b981; font-weight: 700; letter-spacing: 0.05em; margin-top: 0.15rem;">
+          Race Day: Loading...
+        </div>
+      </div>
       <div class="user-info">
         <span id="user-display">Loading...</span>
         <button id="logout-btn" class="btn secondary sm">Sign Out</button>

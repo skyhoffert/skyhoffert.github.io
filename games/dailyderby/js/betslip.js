@@ -1,6 +1,7 @@
-import { supabase, CookieManager } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js';
 import { loadUserBets } from './myBets.js';
 import { getTodayWalletBalance, deductFromWallet } from './wallet.js';
+import { CookieManager, getGameDateString } from './util.js'; // Updated imports
 
 let selectedBetData = null;
 let currentWager = 5; // Default increment
@@ -205,7 +206,7 @@ async function placeWagerInBackend(wagerAmount) {
     .insert([{
       player_id: session.id,
       horse_id: selectedBetData.horseId,
-      race_date: new Date().toISOString().split('T')[0],
+      race_date: getGameDateString(0), // Uses new utility
       wager_amount: wagerAmount,
       odds_at_placement: selectedBetData.odds,
       potential_payout: potentialPayout,

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { getGameDateString } from './util.js'; // New import
 
 /**
  * Fetch today's race roster with horse statistics & last race date
@@ -15,7 +16,7 @@ export async function loadTodayRoster() {
         id, name, base_speed, stamina, grit, bio, last_raced_date
       )
     `)
-    .eq('race_date', new Date().toISOString().split('T')[0])
+    .eq('race_date', getGameDateString(0))
     .order('post_position', { ascending: true });
 
   if (error) {

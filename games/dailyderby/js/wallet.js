@@ -1,4 +1,5 @@
-import { supabase, CookieManager } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js';
+import { CookieManager } from './util.js';
 
 /**
  * Gets or initializes today's $30 wallet balance for the logged-in player

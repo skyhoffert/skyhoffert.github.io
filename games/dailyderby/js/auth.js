@@ -1,4 +1,5 @@
-import { supabase, CookieManager } from './supabaseClient.js';
+import { supabase } from './supabaseClient.js';
+import { CookieManager } from './util.js'; // Updated import
 
 const SESSION_COOKIE_NAME = 'daily_derby_player_session';
 

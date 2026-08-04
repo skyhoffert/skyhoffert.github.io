@@ -4,6 +4,7 @@ import { loadTodayRoster, renderOddsGrid, renderPaddockGrid } from './horses.js'
 import { initBetModal } from './betslip.js';
 import { loadUserBets, initBetRemovalListeners } from './myBets.js';
 import { initRaceResultsView } from './raceReplay.js';
+import { getGameDateString, getFormattedRaceDay } from './util.js';
 
 // DOM References
 const loadingView = document.getElementById('loading-view');
@@ -15,11 +16,6 @@ const logoutBtn = document.getElementById('logout-btn');
 const userDisplay = document.getElementById('user-display');
 
 const TAB_STORAGE_KEY = 'daily_derby_active_tab_state';
-
-// Helper to get today's date (YYYY-MM-DD)
-function getTodayDateString() {
-  return new Date().toISOString().split('T')[0];
-}
 
 // --- APP INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -60,7 +56,7 @@ function initTabNavigation() {
       const storedState = JSON.parse(storedStateRaw);
       
       // ONLY restore if the interaction happened today
-      if (storedState.date === getTodayDateString() && storedState.tabId) {
+      if (storedState.date === getGameDateString(0) && storedState.tabId) {
         const targetTab = document.querySelector(`.nav-tab[data-target="${storedState.tabId}"]`);
         const targetSection = document.getElementById(storedState.tabId);
 
@@ -108,7 +104,7 @@ function initTabNavigation() {
 
       // SAVE STATE: Record the tab ID and today's date
       const stateToSave = {
-        date: getTodayDateString(),
+        date: getGameDateString(0),
         tabId: targetId
       };
       localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(stateToSave));
@@ -158,6 +154,11 @@ async function showDashboard(user) {
   dashboardView.className = 'view active';
 
   if (userDisplay) userDisplay.textContent = user.username || 'Player';
+
+  const raceDateEl = document.getElementById('header-race-date');
+  if (raceDateEl) {
+    raceDateEl.textContent = `Race Day: ${getFormattedRaceDay()}`;
+  }
 
   // 1. Initialize Results View first on landing
   await initRaceResultsView();
