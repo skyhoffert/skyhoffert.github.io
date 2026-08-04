@@ -5,13 +5,16 @@ declare
   v_race_date date := ((now() at time zone 'utc') - interval '8 hours')::date - interval '1 day';
   v_winning_horse_id uuid;
 begin
-  -- Step A: Rank all horses based on odds probability using the A-Res algorithm
+  -- Step A: Rank all horses based on odds probability (adjusted by today's condition) using the A-Res algorithm.
+  -- condition_modifier nudges win weight but never touches the displayed morning_line_odds.
   with ranked_horses as (
     select id as roster_id, horse_id,
            row_number() over (
              order by -ln(random()) / (
-               cast(split_part(morning_line_odds, '/', 2) as float) / 
-               (cast(split_part(morning_line_odds, '/', 1) as float) + cast(split_part(morning_line_odds, '/', 2) as float))
+               (
+                 cast(split_part(morning_line_odds, '/', 2) as float) /
+                 (cast(split_part(morning_line_odds, '/', 1) as float) + cast(split_part(morning_line_odds, '/', 2) as float))
+               ) * (1 + coalesce(condition_modifier, 0) / 100.0)
              ) asc
            ) as position
     from public.daily_rosters_daily_derby
@@ -37,12 +40,6 @@ begin
     else 'Lost'
   end
   where race_date = v_race_date and status = 'Pending';
-  
-  -- Step D: Update master horses table last_raced_date
-  update public.horses_daily_derby h
-  set last_raced_date = v_race_date
-  from public.daily_rosters_daily_derby r
-  where r.horse_id = h.id and r.race_date = v_race_date;
 
 end;
 $$ language plpgsql security definer;

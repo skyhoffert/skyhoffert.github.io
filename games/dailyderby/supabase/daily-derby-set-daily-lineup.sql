@@ -11,7 +11,7 @@ begin
 
   -- Insert the new 10-horse lineup
   insert into public.daily_rosters_daily_derby (
-    race_date, horse_id, morning_line_odds, post_position
+    race_date, horse_id, morning_line_odds, condition_status, condition_modifier, post_position
   )
   with top_7 as (
     -- Get the top 7 horses from yesterday's race
@@ -38,14 +38,15 @@ begin
   ),
   shuffled_roster as (
     -- Shuffle them so the top 7 aren't always gates 1-7
-    select *, row_number() over (order by random()) as gate_num
+    select *, row_number() over (order by random()) as gate_num,
+           floor(random() * 3)::int as condition_bucket -- 0 = negative, 1 = fresh, 2 = positive
     from combined_roster
   )
-  select 
+  select
     v_today,
     horse_id,
-    -- Dynamic Odds Logic based on previous finish
-    case 
+    -- Dynamic Odds Logic based on previous finish (condition is never factored in here)
+    case
       when finish_position = 1 then '2/1'   -- Heavy favorite
       when finish_position = 2 then '7/2'
       when finish_position = 3 then '5/1'
@@ -53,6 +54,17 @@ begin
       when finish_position between 6 and 7 then '12/1' -- Underdogs
       else '15/1' -- The 3 new entrants start as longshots
     end as morning_line_odds,
+    -- Condition is a random 1/3 negative / 1/3 fresh / 1/3 positive roll, independent of odds
+    case condition_bucket
+      when 0 then (array['Tired', 'Sore', 'Distracted', 'Off Their Feed'])[floor(random() * 4 + 1)]
+      when 2 then (array['Feisty', 'Fired Up', 'In The Zone', 'Raring to Go'])[floor(random() * 4 + 1)]
+      else 'Fresh'
+    end as condition_status,
+    case condition_bucket
+      when 0 then -5
+      when 2 then 5
+      else 0
+    end as condition_modifier,
     gate_num as post_position
   from shuffled_roster;
 

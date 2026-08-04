@@ -4,6 +4,7 @@ import { loadTodayRoster, renderOddsGrid, renderPaddockGrid } from './horses.js'
 import { initBetModal } from './betslip.js';
 import { loadUserBets, initBetRemovalListeners, loadWalletHistory, loadAllTimeStats } from './myBets.js';
 import { initRaceResultsView } from './raceReplay.js';
+import { getTodayWalletBalance } from './wallet.js';
 import { getGameDateString, getFormattedRaceDay } from './util.js';
 
 // DOM References
@@ -184,6 +185,9 @@ async function showDashboard(user) {
   if (raceDateEl) {
     raceDateEl.textContent = `Race Day: ${getFormattedRaceDay()}`;
   }
+
+  // Populates the header wallet balance (updateWalletUI runs inside)
+  getTodayWalletBalance();
 
   // 1. Initialize Results View first on landing
   await initRaceResultsView();

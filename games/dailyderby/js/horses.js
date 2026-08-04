@@ -5,18 +5,19 @@ import { getGameDateString } from './util.js'; // New import
  * Fetch today's race roster with horse statistics & last race date
  */
 export async function loadTodayRoster() {
+  const today = getGameDateString(0);
+
   const { data, error } = await supabase
     .from('daily_rosters_daily_derby')
     .select(`
       post_position,
       morning_line_odds,
       condition_status,
-      wildcard_trait,
       horses_daily_derby (
-        id, name, base_speed, stamina, grit, bio, last_raced_date
+        id, name, base_speed, stamina, grit, bio, wildcard_trait
       )
     `)
-    .eq('race_date', getGameDateString(0))
+    .eq('race_date', today)
     .order('post_position', { ascending: true });
 
   if (error) {
@@ -24,7 +25,39 @@ export async function loadTodayRoster() {
     return [];
   }
 
+  const horseIds = data.map(item => item.horses_daily_derby.id);
+  const lastRacedMap = await getLastRacedDates(horseIds, today);
+
+  data.forEach(item => {
+    item.horses_daily_derby.last_raced_date = lastRacedMap[item.horses_daily_derby.id] || null;
+  });
+
   return data;
+}
+
+/**
+ * Looks up each horse's most recent race date from roster history, excluding today
+ */
+async function getLastRacedDates(horseIds, beforeDate) {
+  if (!horseIds.length) return {};
+
+  const { data, error } = await supabase
+    .from('daily_rosters_daily_derby')
+    .select('horse_id, race_date')
+    .in('horse_id', horseIds)
+    .lt('race_date', beforeDate)
+    .order('race_date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching last raced dates:', error);
+    return {};
+  }
+
+  const map = {};
+  for (const row of data) {
+    if (!(row.horse_id in map)) map[row.horse_id] = row.race_date;
+  }
+  return map;
 }
 
 /**
@@ -117,7 +150,7 @@ export function renderPaddockGrid(rosterData, containerId = 'paddock-horse-list'
 
         <div class="horse-row-details">
           <span class="badge badge-status">Status: ${item.condition_status}</span>
-          <span class="badge badge-wildcard">Wildcard: ${item.wildcard_trait}</span>
+          <span class="badge badge-wildcard">Wildcard: ${h.wildcard_trait}</span>
         </div>
 
         <div class="stats-inline-grid">
