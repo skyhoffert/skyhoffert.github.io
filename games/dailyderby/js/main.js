@@ -1,6 +1,7 @@
 import { loginUser, logoutUser, verifyBackendSession } from './auth.js';
 import { startRaceTimer, stopRaceTimer } from './timer.js';
 import { loadTodayRoster, renderOddsGrid, renderPaddockGrid } from './horses.js';
+import { loadTodayTrackName, renderTrackName } from './tracks.js';
 import { initBetModal } from './betslip.js';
 import { loadUserBets, initBetRemovalListeners, loadWalletHistory, loadAllTimeStats } from './myBets.js';
 import { initRaceResultsView } from './raceReplay.js';
@@ -194,6 +195,10 @@ async function showDashboard(user) {
 
   // 2. Pre-load background data for other tabs (bets/wallet data loads lazily on tab click)
   startRaceTimer('countdown-timer');
+  loadTodayTrackName().then(trackName => {
+    renderTrackName(trackName, 'next-race-track-name');
+    renderTrackName(trackName, 'track-info-name');
+  });
   const roster = await loadTodayRoster();
   renderOddsGrid(roster, 'today-odds-list');
   renderPaddockGrid(roster, 'paddock-horse-list');

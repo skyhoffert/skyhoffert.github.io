@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient.js';
 import { loadUserBets } from './myBets.js';
 import { getTodayWalletBalance, deductFromWallet } from './wallet.js';
-import { CookieManager, getGameDateString } from './util.js'; // Updated imports
+import { CookieManager, getGameDateString, calculatePayout } from './util.js'; // Updated imports
 
 let selectedBetData = null;
 let currentWager = 5; // Default increment
@@ -176,15 +176,7 @@ function updateWagerDisplay() {
 function updatePayoutCalculation() {
   if (!selectedBetData) return;
   const payoutElement = document.getElementById('modal-payout');
-  const oddsParts = selectedBetData.odds.split('/');
-  
-  if (oddsParts.length === 2) {
-    const multiplier = parseFloat(oddsParts[0]) / parseFloat(oddsParts[1]);
-    const profit = currentWager * multiplier;
-    payoutElement.textContent = `$${Math.round(currentWager + profit)}`;
-  } else {
-    payoutElement.textContent = `$${currentWager}`;
-  }
+  payoutElement.textContent = `$${calculatePayout(currentWager, selectedBetData.odds)}`;
 }
 
 function showModalStatus(msg, isError) {
@@ -197,9 +189,6 @@ function showModalStatus(msg, isError) {
 
 async function placeWagerInBackend(wagerAmount) {
   const session = JSON.parse(CookieManager.get('daily_derby_player_session'));
-  const oddsParts = selectedBetData.odds.split('/');
-  const multiplier = oddsParts.length === 2 ? (parseFloat(oddsParts[0]) / parseFloat(oddsParts[1])) : 1;
-  const potentialPayout = Math.round(wagerAmount + (wagerAmount * multiplier));
 
   const { error } = await supabase
     .from('bets_daily_derby')
@@ -209,7 +198,6 @@ async function placeWagerInBackend(wagerAmount) {
       race_date: getGameDateString(0), // Uses new utility
       wager_amount: wagerAmount,
       odds_at_placement: selectedBetData.odds,
-      potential_payout: potentialPayout,
       status: 'Pending'
     }]);
 

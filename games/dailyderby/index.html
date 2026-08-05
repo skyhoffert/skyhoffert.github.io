@@ -71,8 +71,9 @@
           <button class="nav-tab active" data-target="results-section">🏆 Yesterday's Results</button>
           <button class="nav-tab" data-target="races-section">📋 Daily Race</button>
           <button class="nav-tab" data-target="horses-section">🐎 Horse Paddock</button>
-          <button class="nav-tab" data-target="bets-section">🎟 My Bets</button>
-          <button class="nav-tab" data-target="wallet-section">💰 Wallet</button>
+          <button class="nav-tab" data-target="tracks-section">🏟 Track</button>
+          <button class="nav-tab" data-target="bets-section">🎟 Betting</button>
+          <button class="nav-tab" data-target="wallet-section">💰 Bet History</button>
         </nav>
       </div>
 
@@ -97,6 +98,7 @@
               <div id="race-track-viewport" class="track-viewport">
                 <div id="race-track-strip" class="track-strip"></div>
               </div>
+              <div id="animation-track-name" class="track-name-recap"></div>
               <div id="winner-banner" class="winner-banner hidden">
                 <span class="winner-title">🏆 WINNER! 🏆</span>
                 <h1 id="winner-horse-name">Horse Name</h1>
@@ -115,6 +117,7 @@
             <div class="summary-header">
               <span class="status-badge">RACE SUMMARY</span>
               <h2 id="summary-date-title">Yesterday's Derby Recap</h2>
+              <div id="summary-track-name" class="track-name-recap"></div>
             </div>
 
             <!-- Financial Winnings Callout -->
@@ -148,11 +151,13 @@
       <section id="races-section" class="tab-content hidden">
         <div class="card countdown-card">
           <span class="status-badge">NEXT RACE</span>
+          <div id="next-race-track-name" class="track-name">Loading track...</div>
           <div id="countdown-timer" class="timer-digits">--:--:--</div>
           <p class="timer-label">Time Remaining Until Post Time</p>
         </div>
 
         <div class="card">
+          <span class="status-badge">TODAY'S FIELD</span>
           <h3>Today's Entries & Live Odds</h3>
           <div id="today-odds-list" class="roster-list">Loading entries...</div>
         </div>
@@ -161,15 +166,39 @@
       <!-- HORSES SECTION (Detailed Stats & Paddock) -->
       <section id="horses-section" class="tab-content hidden">
         <div class="card">
-          <h3>Horse Paddock & Historical Stats</h3>
+          <span class="status-badge">HORSE PADDOCK</span>
+          <h3>Horse Paddock</h3>
           <p class="subtitle">Full statistics, condition status, and wildcard attributes.</p>
           <div id="paddock-horse-list" class="paddock-list">Loading horse records...</div>
         </div>
       </section>
 
+      <!-- TRACKS SECTION (Placeholder for upcoming track feature) -->
+      <section id="tracks-section" class="tab-content hidden">
+        <div class="card coming-soon-card">
+          <span class="status-badge">TODAY'S TRACK</span>
+          <h2 id="track-info-name" class="track-name">Loading track...</h2>
+          <div class="coming-soon-banner">
+            <span class="coming-soon-emoji">🚧</span>
+            <h3>Track Details Coming Soon</h3>
+            <p class="subtitle">Surface conditions, turn radius, crowd atmosphere, and more are galloping their
+              way to you. Stay tuned!</p>
+          </div>
+        </div>
+      </section>
+
       <section id="bets-section" class="tab-content hidden">
         <div class="card">
-          <h3>Active Wagers & Slip History</h3>
+          <span class="status-badge">WALLET</span>
+          <div class="cash-summary-box">
+            <span>Available Balance</span>
+            <h1 id="bets-tab-wallet-balance">$0.00</h1>
+          </div>
+        </div>
+
+        <div class="card">
+          <span class="status-badge">MY BETS</span>
+          <h3>Active Wagers</h3>
           <div id="bets-list-container" class="roster-list">
             <div class="placeholder-box">Loading your wagers...</div>
           </div>
@@ -177,9 +206,8 @@
       </section>
 
       <section id="wallet-section" class="tab-content hidden">
-        <h2>Account Balance</h2>
-
-        <div class="card" style="margin-top: 1.25rem;">
+        <div class="card">
+          <span class="status-badge">CAREER STATS</span>
           <h3>🏆 All-Time Record</h3>
           <div id="alltime-stats-container">
             <p class="subtitle">Loading your career stats...</p>
@@ -187,6 +215,7 @@
         </div>
 
         <div class="card" style="margin-top: 1.25rem;">
+          <span class="status-badge">PAST RESULTS</span>
           <h3>Recent Wagering History</h3>
           <p class="subtitle">Your results from the past 3 race days.</p>
           <div id="wallet-history-container" class="roster-list">Loading history...</div>

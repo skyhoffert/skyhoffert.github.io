@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { refundToWallet } from './wallet.js';
-import { CookieManager, getGameDateString } from './util.js'; // Updated imports
+import { CookieManager, getGameDateString, calculatePayout } from './util.js'; // Updated imports
 
 /**
  * Load user's placed bets from Supabase and render them
@@ -24,7 +24,6 @@ export async function loadUserBets(containerId = 'bets-list-container') {
       id,
       wager_amount,
       odds_at_placement,
-      potential_payout,
       status,
       created_at,
       horses_daily_derby ( name )
@@ -55,7 +54,7 @@ export async function loadUserBets(containerId = 'bets-list-container') {
       </div>
       <div class="program-right">
         <div style="text-align: right;">
-          <span class="program-odds">$${Math.round(parseFloat(bet.potential_payout))}</span>
+          <span class="program-odds">$${calculatePayout(bet.wager_amount, bet.odds_at_placement)}</span>
           <div class="horse-program-sub">Est. Return</div>
         </div>
         ${bet.status === 'Pending' ? `
@@ -168,7 +167,6 @@ export async function loadWalletHistory(containerId = 'wallet-history-container'
       race_date,
       wager_amount,
       odds_at_placement,
-      potential_payout,
       status,
       horses_daily_derby ( name )
     `)
@@ -205,7 +203,7 @@ export async function loadWalletHistory(containerId = 'wallet-history-container'
         const isWon = bet.status === 'Won';
         const isLost = bet.status === 'Lost';
         const wager = Math.round(parseFloat(bet.wager_amount) || 0);
-        const payout = Math.round(parseFloat(bet.potential_payout) || 0);
+        const payout = calculatePayout(bet.wager_amount, bet.odds_at_placement);
 
         if (isWon) netProfit += (payout - wager);
         else if (isLost) netProfit -= wager;
@@ -271,7 +269,7 @@ export async function loadAllTimeStats(containerId = 'alltime-stats-container') 
 
   const { data: bets, error } = await supabase
     .from('bets_daily_derby')
-    .select('wager_amount, potential_payout, status')
+    .select('wager_amount, odds_at_placement, status')
     .eq('player_id', session.id)
     .in('status', ['Won', 'Lost']);
 
@@ -293,7 +291,7 @@ export async function loadAllTimeStats(containerId = 'alltime-stats-container') 
 
   bets.forEach(bet => {
     const wager = Math.round(parseFloat(bet.wager_amount) || 0);
-    const payout = Math.round(parseFloat(bet.potential_payout) || 0);
+    const payout = calculatePayout(bet.wager_amount, bet.odds_at_placement);
 
     if (bet.status === 'Won') {
       wins++;

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { CookieManager, getGameDateString } from './util.js'; // Updated imports
+import { CookieManager, getGameDateString, calculatePayout } from './util.js'; // Updated imports
 
 const GATE_RGB_COLORS = {
   1: [220, 38, 38],    // Red
@@ -145,6 +145,7 @@ function bindReplayControls(raceDate) {
 async function runSequence(raceDate) {
   // Step 2: Race Track Animation (Now passes the post position for color)
   showStep('results-step-animation');
+  renderTrackName('animation-track-name');
   await playRaceAnimation(currentRaceResult.winner_post_position);
 
   // Step 3: Winner Banner (Flashes the actual name once the big horse stops)
@@ -159,6 +160,12 @@ async function runSequence(raceDate) {
   // Step 5: Summary Screen
   showStep('results-step-summary');
   renderSummaryScreen();
+}
+
+function renderTrackName(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = currentRaceResult?.track_name ? `📍 ${currentRaceResult.track_name}` : '';
 }
 
 function showStep(stepId) {
@@ -433,7 +440,7 @@ function playBetsRevealAnimation(bets) {
           <span class="badge ${isWinner ? 'badge-status' : ''}">${isWinner ? '✅ WON' : '❌ LOST'}</span>
         </div>
         <div class="bet-reveal-payout">
-          ${isWinner ? '+$' + parseFloat(bet.potential_payout).toFixed(2) : '-$' + parseFloat(bet.wager_amount).toFixed(2)}
+          ${isWinner ? '+$' + calculatePayout(bet.wager_amount, bet.odds_at_placement).toFixed(2) : '-$' + parseFloat(bet.wager_amount).toFixed(2)}
         </div>
       `;
 
@@ -450,15 +457,16 @@ function playBetsRevealAnimation(bets) {
  */
 function renderSummaryScreen() {
   let totalWinnings = 0;
+  renderTrackName('summary-track-name');
   const summaryBetsList = document.getElementById('summary-bets-list');
-  
+
   if (summaryBetsList) {
     if (currentPlayerBets.length === 0) {
       summaryBetsList.innerHTML = '<div class="placeholder-box">No bets placed yesterday.</div>';
     } else {
       summaryBetsList.innerHTML = currentPlayerBets.map((b, index) => {
         const isWinner = b.horse_id === currentRaceResult.winning_horse_id;
-        const payoutAmount = Math.round(parseFloat(b.potential_payout) || 0);
+        const payoutAmount = calculatePayout(b.wager_amount, b.odds_at_placement);
         if (isWinner) totalWinnings += payoutAmount;
 
         const horseName = b.horses_daily_derby?.name || `Wager #${index + 1}`;
@@ -534,7 +542,7 @@ function copySummaryToClipboard() {
   const boxTokens = currentPlayerBets.map(b => {
     const isWinner = b.horse_id === currentRaceResult.winning_horse_id;
     const wager = Math.round(parseFloat(b.wager_amount) || 0);
-    const payout = Math.round(parseFloat(b.potential_payout) || 0);
+    const payout = calculatePayout(b.wager_amount, b.odds_at_placement);
 
     totalWagered += wager;
 
@@ -576,10 +584,11 @@ async function fetchRaceResult(dateStr) {
       horse_id,
       finish_position,
       post_position,
-      horses_daily_derby:horse_id ( name )
+      horses_daily_derby:horse_id ( name ),
+      tracks_daily_derby ( name )
     `)
     .eq('race_date', dateStr)
-    .order('finish_position', { ascending: true }); 
+    .order('finish_position', { ascending: true });
 
   if (error || !data || data.length === 0) return null;
 
@@ -587,7 +596,8 @@ async function fetchRaceResult(dateStr) {
     winning_horse_id: data[0].horse_id,
     winner_name: data[0].horses_daily_derby?.name || 'Winner',
     winner_post_position: data[0].post_position, // NEW: Grab the gate number
-    full_roster: data 
+    track_name: data[0].tracks_daily_derby?.name || null,
+    full_roster: data
   };
 }
 
@@ -595,11 +605,10 @@ async function fetchPlayerBetsForDate(playerId, dateStr) {
   const { data, error } = await supabase
     .from('bets_daily_derby')
     .select(`
-      id, 
-      horse_id, 
-      wager_amount, 
+      id,
+      horse_id,
+      wager_amount,
       odds_at_placement,
-      potential_payout,
       horses_daily_derby:horse_id ( name )
     `)
     .eq('player_id', playerId)

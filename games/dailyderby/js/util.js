@@ -31,6 +31,23 @@ export function getFormattedRaceDay() {
 }
 
 /**
+ * Computes the total payout (wager + profit) for a given wager and
+ * fractional odds string (e.g. "5/2"). Falls back to returning the
+ * wager unchanged if odds are missing or malformed.
+ */
+export function calculatePayout(wagerAmount, odds) {
+  const wager = parseFloat(wagerAmount) || 0;
+  const oddsParts = (odds || '').split('/');
+
+  if (oddsParts.length === 2) {
+    const multiplier = parseFloat(oddsParts[0]) / parseFloat(oddsParts[1]);
+    return Math.round(wager + (wager * multiplier));
+  }
+
+  return Math.round(wager);
+}
+
+/**
  * Cookie Utilities for Storing Auth Session Token
  */
 export const CookieManager = {

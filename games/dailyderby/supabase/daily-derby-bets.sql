@@ -6,10 +6,12 @@ create table if not exists public.bets_daily_derby (
   race_date date not null default (now() at time zone 'utc' - interval '8 hours')::date,
   wager_amount numeric(10, 2) not null check (wager_amount > 0),
   odds_at_placement text not null,
-  potential_payout numeric(10, 2) not null,
-  status text default 'Pending', 
+  status text default 'Pending',
   created_at timestamp with time zone default now()
 );
+
+-- Redundant with odds_at_placement + wager_amount; drop if it exists from a prior version of this table
+alter table public.bets_daily_derby drop column if exists potential_payout;
 
 -- Enable RLS
 alter table public.bets_daily_derby enable row level security;

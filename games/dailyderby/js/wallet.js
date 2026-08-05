@@ -74,9 +74,11 @@ export function updateWalletUI(balance) {
   
   const modalBalance = document.getElementById('modal-wallet-balance');
   const mainWalletTab = document.getElementById('user-wallet-display');
-  
+  const betsTabBalance = document.getElementById('bets-tab-wallet-balance');
+
   if (modalBalance) modalBalance.textContent = formatted;
   if (mainWalletTab) mainWalletTab.textContent = formatted;
+  if (betsTabBalance) betsTabBalance.textContent = formatted;
 }
 
 function getSession() {

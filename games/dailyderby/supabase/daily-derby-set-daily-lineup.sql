@@ -3,15 +3,19 @@ returns void as $$
 declare
   v_today date := ((now() at time zone 'utc') - interval '8 hours')::date;
   v_yesterday date := v_today - interval '1 day';
+  v_track_id uuid;
 begin
   -- Ensure we don't accidentally generate a roster if one already exists for today
   if exists (select 1 from public.daily_rosters_daily_derby where race_date = v_today) then
     return;
   end if;
 
+  -- Pick today's track at random; every horse in today's roster shares this track
+  select id into v_track_id from public.tracks_daily_derby order by random() limit 1;
+
   -- Insert the new 10-horse lineup
   insert into public.daily_rosters_daily_derby (
-    race_date, horse_id, morning_line_odds, condition_status, condition_modifier, post_position
+    race_date, horse_id, morning_line_odds, condition_status, condition_modifier, post_position, track_id
   )
   with top_7 as (
     -- Get the top 7 horses from yesterday's race
@@ -65,7 +69,8 @@ begin
       when 2 then 5
       else 0
     end as condition_modifier,
-    gate_num as post_position
+    gate_num as post_position,
+    v_track_id
   from shuffled_roster;
 
 end;
