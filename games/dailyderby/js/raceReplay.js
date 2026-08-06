@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { CookieManager, getGameDateString, calculatePayout } from './util.js'; // Updated imports
+import { CookieManager, getGameDateString, calculatePayout, formatGameDateString } from './util.js'; // Updated imports
 
 const GATE_RGB_COLORS = {
   1: [220, 38, 38],    // Red
@@ -108,6 +108,9 @@ export async function initRaceResultsView() {
 
   if (resultsContainer) resultsContainer.classList.remove('hidden');
 
+  renderPreRaceLineup();
+  renderRaceDayInfo('prompt-race-date', yesterdayStr);
+
   // Bind click handlers passing the correct date string
   bindReplayControls(yesterdayStr);
 
@@ -116,7 +119,7 @@ export async function initRaceResultsView() {
 
   if (lastWatchedDate === yesterdayStr) {
     showStep('results-step-summary');
-    renderSummaryScreen();
+    renderSummaryScreen(yesterdayStr);
   } else {
     showStep('results-step-prompt');
   }
@@ -132,7 +135,7 @@ function bindReplayControls(raceDate) {
     startBtn.onclick = () => runSequence(raceDate);
   }
   if (replayBtn) {
-    replayBtn.onclick = () => runSequence(raceDate);
+    replayBtn.onclick = () => showStep('results-step-prompt');
   }
   if (copyBtn) {
     copyBtn.onclick = copySummaryToClipboard;
@@ -145,8 +148,9 @@ function bindReplayControls(raceDate) {
 async function runSequence(raceDate) {
   // Step 2: Race Track Animation (Now passes the post position for color)
   showStep('results-step-animation');
-  renderTrackName('animation-track-name');
-  await playRaceAnimation(currentRaceResult.winner_post_position);
+  renderRaceDayInfo('animation-track-name', raceDate);
+  renderAnimationLegend();
+  await playRaceAnimation(currentRaceResult.winner_post_position, getBetPostPositions());
 
   // Step 3: Winner Banner (Flashes the actual name once the big horse stops)
   await playWinnerZoom(currentRaceResult.winner_name);
@@ -159,13 +163,78 @@ async function runSequence(raceDate) {
 
   // Step 5: Summary Screen
   showStep('results-step-summary');
-  renderSummaryScreen();
+  renderSummaryScreen(raceDate);
 }
 
-function renderTrackName(elementId) {
+function renderRaceDayInfo(elementId, dateStr) {
   const el = document.getElementById(elementId);
   if (!el) return;
-  el.textContent = currentRaceResult?.track_name ? `📍 ${currentRaceResult.track_name}` : '';
+
+  const parts = [];
+  if (dateStr) parts.push(`📅 ${formatGameDateString(dateStr)}`);
+  if (currentRaceResult?.track_name) parts.push(`📍 ${currentRaceResult.track_name}`);
+
+  el.textContent = parts.join('   ·   ');
+}
+
+/**
+ * Returns the set of gate/post positions the player wagered on in yesterday's race.
+ */
+function getBetPostPositions() {
+  const betHorseIds = new Set(currentPlayerBets.map(b => b.horse_id));
+  const roster = currentRaceResult?.full_roster || [];
+  return roster
+    .filter(r => betHorseIds.has(r.horse_id))
+    .map(r => r.post_position);
+}
+
+/**
+ * Pre-race step: lists every runner in yesterday's field, highlighting any horse the player bet on.
+ */
+function renderPreRaceLineup() {
+  const container = document.getElementById('pre-race-lineup');
+  if (!container || !currentRaceResult?.full_roster) return;
+
+  const betHorseIds = new Set(currentPlayerBets.map(b => b.horse_id));
+  const roster = [...currentRaceResult.full_roster].sort((a, b) => a.post_position - b.post_position);
+
+  container.innerHTML = roster.map(r => {
+    const isBet = betHorseIds.has(r.horse_id);
+    const bet = isBet ? currentPlayerBets.find(b => b.horse_id === r.horse_id) : null;
+
+    return `
+      <div class="program-row lineup-row ${isBet ? 'your-bet-row' : ''}">
+        <div class="program-left">
+          <span class="gate-badge gate-${r.post_position}">${r.post_position}</span>
+          <div class="horse-main-info">
+            <span class="horse-program-name">${r.horses_daily_derby?.name || 'Horse'}</span>
+          </div>
+        </div>
+        ${isBet ? `<span class="your-bet-badge">🎯 YOUR BET · $${Math.round(parseFloat(bet.wager_amount))}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Animation step: compact chip legend so the runners (and the player's bets) stay identifiable while racing.
+ */
+function renderAnimationLegend() {
+  const container = document.getElementById('animation-lineup-legend');
+  if (!container || !currentRaceResult?.full_roster) return;
+
+  const betPostPositions = new Set(getBetPostPositions());
+  const roster = [...currentRaceResult.full_roster].sort((a, b) => a.post_position - b.post_position);
+
+  container.innerHTML = roster.map(r => {
+    const isBet = betPostPositions.has(r.post_position);
+    return `
+      <span class="legend-chip ${isBet ? 'your-bet-chip' : ''}">
+        <span class="gate-badge gate-${r.post_position}">${r.post_position}</span>
+        ${isBet ? '🎯 ' : ''}${r.horses_daily_derby?.name || 'Horse'}
+      </span>
+    `;
+  }).join('');
 }
 
 function showStep(stepId) {
@@ -178,7 +247,7 @@ function showStep(stepId) {
 
 /* --- Animation Steps --- */
 
-async function playRaceAnimation(postPosition) {
+async function playRaceAnimation(postPosition, betGates = []) {
   return new Promise(async (resolve) => {
     const trackStrip = document.getElementById('race-track-strip');
     const winnerBanner = document.getElementById('winner-banner');
@@ -215,9 +284,10 @@ async function playRaceAnimation(postPosition) {
       packHorses.push({
         img,
         gate: gateNum,
-        startY: Math.random() * 80 + 0,         
-        speedVariance: 0.85 + (Math.random() * 0.3), 
-        startXOffset: Math.random() * 250       
+        isBet: betGates.includes(gateNum),
+        startY: Math.random() * 80 + 0,
+        speedVariance: 0.85 + (Math.random() * 0.3),
+        startXOffset: Math.random() * 250
       });
     }
 
@@ -305,12 +375,32 @@ async function playRaceAnimation(postPosition) {
               // Remap startY percentages to fit the new 210px track bounds nicely
               const y = turfHeight + 10 + ((horseObj.startY / 100) * trackAreaHeight);
 
+              const maxAllowedWidth = actualWidth < 480 ? 45 : 65; // Slightly larger sprites
+
+              // Highlight ring for horses the player bet on, so they stay trackable in the pack
+              if (horseObj.isBet) {
+                ctx.save();
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.ellipse(x + maxAllowedWidth / 2, y + maxAllowedWidth * 0.55, maxAllowedWidth * 0.6, maxAllowedWidth * 0.28, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillStyle = '#f59e0b';
+                ctx.textAlign = 'center';
+                ctx.fillText('★', x + maxAllowedWidth / 2, y - 4);
+                ctx.textAlign = 'left';
+              }
+
               if (horseObj.img.complete && horseObj.img.naturalWidth > 0) {
-                const maxAllowedWidth = actualWidth < 480 ? 45 : 65; // Slightly larger sprites
                 const aspectRatio = horseObj.img.naturalWidth / horseObj.img.naturalHeight;
                 const drawWidth = maxAllowedWidth;
                 const drawHeight = maxAllowedWidth / aspectRatio;
-                
+
                 ctx.drawImage(horseObj.img, x, y, drawWidth, drawHeight);
               } else {
                 ctx.font = '22px Arial';
@@ -455,9 +545,9 @@ function playBetsRevealAnimation(bets) {
 /**
  * Step 5/6: Render Summary Screen
  */
-function renderSummaryScreen() {
+function renderSummaryScreen(raceDate) {
   let totalWinnings = 0;
-  renderTrackName('summary-track-name');
+  renderRaceDayInfo('summary-track-name', raceDate);
   const summaryBetsList = document.getElementById('summary-bets-list');
 
   if (summaryBetsList) {
@@ -524,14 +614,20 @@ function renderSummaryScreen() {
 
 function copySummaryToClipboard() {
   const raceDate = getGameDateString(-1);
+  const formattedDate = formatGameDateString(raceDate);
 
   // Pull username from the session cookie instead of an undefined variable
   const rawSession = CookieManager.get('daily_derby_player_session');
   const session = rawSession ? JSON.parse(rawSession) : null;
   const username = session?.username || 'Player';
 
+  const headerParts = [`🏇 Daily Derby · Race Day ${formattedDate}`];
+  if (currentRaceResult?.track_name) headerParts.push(currentRaceResult.track_name);
+  headerParts.push(username);
+  const headerLine = headerParts.join(' · ');
+
   if (!currentPlayerBets || currentPlayerBets.length === 0) {
-    navigator.clipboard.writeText(`🏇 Daily Derby, Race Day ${raceDate} | ${username}\nNo bets placed.\nTotal: $0\n\nPlay Daily Derby today!`);
+    navigator.clipboard.writeText(`${headerLine}\nToday's Total: $0\nNo bets placed.\n\nPlay Daily Derby today!`);
     return;
   }
 
@@ -559,9 +655,9 @@ function copySummaryToClipboard() {
   const netSign = netTotal >= 0 ? '+' : '-';
   const formattedNet = `${netSign}$${Math.abs(netTotal)}`;
 
-  const summaryText = `🏇 Daily Derby, Race Day ${raceDate} | ${username}
+  const summaryText = `${headerLine}
+Today's Total: ${formattedNet}
 ${boxTokens}
-Total: ${formattedNet}
 
 Play Daily Derby today!`;
 

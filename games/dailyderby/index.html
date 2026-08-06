@@ -60,7 +60,12 @@
           <span id="user-display">Loading...</span>
           <span id="user-wallet-display">$--.--</span>
         </div>
-        <button id="logout-btn" class="btn secondary sm">Sign Out</button>
+        <button id="profile-icon-btn" class="profile-icon-btn" aria-label="My Profile" title="My Profile">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" />
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -74,6 +79,15 @@
           <button class="nav-tab" data-target="tracks-section">🏟 Track</button>
           <button class="nav-tab" data-target="bets-section">🎟 Betting</button>
           <button class="nav-tab" data-target="wallet-section">💰 Bet History</button>
+          <button class="nav-tab nav-tab-profile" data-target="profile-section">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8" />
+            </svg>
+            My Profile
+          </button>
+          <button class="nav-tab" data-target="howtoplay-section">❓ How to Play</button>
+          <button class="nav-tab" data-target="support-section">💖 Support the Dev</button>
         </nav>
       </div>
 
@@ -87,7 +101,10 @@
           <div id="results-step-prompt" class="results-step">
             <span class="status-badge">YESTERDAY'S DERBY</span>
             <h2>Yesterday's Race Results Are In!</h2>
+            <div id="prompt-race-date" class="track-name-recap"></div>
             <p class="subtitle">Ready to watch the action unfold?</p>
+            <h4 class="lineup-heading">🐎 Yesterday's Field</h4>
+            <div id="pre-race-lineup" class="roster-list lineup-list"></div>
             <button id="start-replay-btn" class="btn primary lg">🎬 View Yesterday's Results</button>
           </div>
 
@@ -99,6 +116,7 @@
                 <div id="race-track-strip" class="track-strip"></div>
               </div>
               <div id="animation-track-name" class="track-name-recap"></div>
+              <div id="animation-lineup-legend" class="lineup-legend"></div>
               <div id="winner-banner" class="winner-banner hidden">
                 <span class="winner-title">🏆 WINNER! 🏆</span>
                 <h1 id="winner-horse-name">Horse Name</h1>
@@ -183,6 +201,9 @@
             <h3>Track Details Coming Soon</h3>
             <p class="subtitle">Surface conditions, turn radius, crowd atmosphere, and more are galloping their
               way to you. Stay tuned!</p>
+            <p class="subtitle">In the meantime, tracks like this one don't build themselves &mdash; if you're
+              enjoying Daily Derby, consider giving me a hand.</p>
+            <button id="tracks-support-btn" class="btn primary">💖 Support the Dev</button>
           </div>
         </div>
       </section>
@@ -219,6 +240,47 @@
           <h3>Recent Wagering History</h3>
           <p class="subtitle">Your results from the past 3 race days.</p>
           <div id="wallet-history-container" class="roster-list">Loading history...</div>
+        </div>
+      </section>
+
+      <!-- HOW TO PLAY SECTION (Placeholder for upcoming rules/guide feature) -->
+      <section id="howtoplay-section" class="tab-content hidden">
+        <div class="card coming-soon-card">
+          <span class="status-badge">GAME GUIDE</span>
+          <h2 class="track-name">How to Play</h2>
+          <div class="coming-soon-banner">
+            <span class="coming-soon-emoji">🚧</span>
+            <h3>How to Play Coming Soon</h3>
+            <p class="subtitle">Full rules, betting tips, and strategy guides are being saddled up. Stay tuned!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SUPPORT ME SECTION -->
+      <section id="support-section" class="tab-content hidden">
+        <div class="card coming-soon-card">
+          <span class="status-badge">SUPPORT THE DERBY</span>
+          <h2 class="track-name">Enjoying Daily Derby?</h2>
+          <div class="coming-soon-banner">
+            <span class="coming-soon-emoji">🏇</span>
+            <h3>Support Development</h3>
+            <p class="subtitle">Daily Derby is a free passion project. If you're having fun, consider tossing a
+              few bucks my way to help keep it running and fund new features!</p>
+            <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=7H9DRMQQNF7JC&currency_code=USD"
+              target="_blank" rel="noopener" class="btn primary lg">💖 Donate via PayPal</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- MY PROFILE SECTION -->
+      <section id="profile-section" class="tab-content hidden">
+        <div class="card">
+          <span class="status-badge">MY PROFILE</span>
+          <h2 id="profile-username" class="track-name">Player</h2>
+          <p class="subtitle">Manage your Daily Derby account.</p>
+          <div class="profile-actions">
+            <button id="logout-btn" class="btn secondary lg">Sign Out</button>
+          </div>
         </div>
       </section>
     </main>
@@ -274,6 +336,10 @@
 
   <!-- ================= FOOTER ================= -->
   <footer class="site-footer">
+    <button id="footer-help-btn" class="btn secondary sm">❓ Help</button>
+    <button id="footer-support-btn" class="btn secondary sm">💖 Support the Dev</button>
+    <p class="ai-disclaimer">Portions of this site's content were generated with the assistance of AI
+      tools.</p>
     <p>Contact: <a href="mailto:skyhoffert.contact@gmail.com">skyhoffert.contact@gmail.com</a></p>
     <p><a href="https://skyhoffert.com" target="_blank" rel="noopener">skyhoffert.com</a> | 2026</p>
   </footer>

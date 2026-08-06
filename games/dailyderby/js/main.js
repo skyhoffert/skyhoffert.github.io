@@ -28,8 +28,44 @@ let betsDataLoaded = false;
 document.addEventListener('DOMContentLoaded', async () => {
   // Bind navigation tabs on load
   initTabNavigation();
+  initTabScrollBehavior();
   initBetModal();
   initBetRemovalListeners(); // Initialize cancel bet listener
+
+  // Footer buttons jump to their respective tabs
+  const footerHelpBtn = document.getElementById('footer-help-btn');
+  if (footerHelpBtn) {
+    footerHelpBtn.onclick = () => {
+      const helpTab = document.querySelector('.nav-tab[data-target="howtoplay-section"]');
+      if (helpTab) helpTab.click();
+    };
+  }
+
+  const footerSupportBtn = document.getElementById('footer-support-btn');
+  if (footerSupportBtn) {
+    footerSupportBtn.onclick = () => {
+      const supportTab = document.querySelector('.nav-tab[data-target="support-section"]');
+      if (supportTab) supportTab.click();
+    };
+  }
+
+  // Header profile icon jumps to the My Profile tab
+  const profileIconBtn = document.getElementById('profile-icon-btn');
+  if (profileIconBtn) {
+    profileIconBtn.onclick = () => {
+      const profileTab = document.querySelector('.nav-tab[data-target="profile-section"]');
+      if (profileTab) profileTab.click();
+    };
+  }
+
+  // Track tab's "coming soon" panel also plugs the Support the Dev tab
+  const tracksSupportBtn = document.getElementById('tracks-support-btn');
+  if (tracksSupportBtn) {
+    tracksSupportBtn.onclick = () => {
+      const supportTab = document.querySelector('.nav-tab[data-target="support-section"]');
+      if (supportTab) supportTab.click();
+    };
+  }
 
   // Verify session cookie against backend on startup
   const user = await verifyBackendSession();
@@ -39,6 +75,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     showLogin();
   }
 });
+
+// --- NAV TAB SCROLL AFFORDANCE ---
+// Lets desktop mouse users scroll the tab bar with a normal (vertical) wheel,
+// and only shows the edge fade/arrow hints when the bar actually overflows.
+const trackNavEl = document.querySelector('.track-nav');
+const navScrollWrapperEl = document.querySelector('.nav-scroll-wrapper');
+
+function updateNavOverflowState() {
+  if (!trackNavEl || !navScrollWrapperEl) return;
+  const hasOverflow = trackNavEl.scrollWidth > trackNavEl.clientWidth + 1;
+  navScrollWrapperEl.classList.toggle('has-overflow', hasOverflow);
+}
+
+function initTabScrollBehavior() {
+  if (!trackNavEl || !navScrollWrapperEl) return;
+
+  trackNavEl.addEventListener('wheel', (e) => {
+    if (e.deltaY === 0) return;
+    if (trackNavEl.scrollWidth <= trackNavEl.clientWidth) return;
+    e.preventDefault();
+    trackNavEl.scrollBy({ left: e.deltaY, behavior: 'smooth' });
+  }, { passive: false });
+
+  // --- Click-and-drag scrolling for desktop mouse users ---
+  let isDragging = false;
+  let dragMoved = false;
+  let startX = 0;
+  let startScrollLeft = 0;
+
+  trackNavEl.addEventListener('mousedown', (e) => {
+    dragMoved = false;
+    if (trackNavEl.scrollWidth <= trackNavEl.clientWidth) return;
+    isDragging = true;
+    startX = e.pageX;
+    startScrollLeft = trackNavEl.scrollLeft;
+    trackNavEl.classList.add('dragging');
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    // Mouse button was released outside the window/browser, so no mouseup fired
+    if (e.buttons === 0) {
+      isDragging = false;
+      trackNavEl.classList.remove('dragging');
+      return;
+    }
+
+    const delta = e.pageX - startX;
+    if (Math.abs(delta) > 4) dragMoved = true;
+    trackNavEl.scrollLeft = startScrollLeft - delta;
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    trackNavEl.classList.remove('dragging');
+  });
+
+  // Swallow the tab-switch click that would otherwise fire right after a drag
+  trackNavEl.addEventListener('click', (e) => {
+    if (dragMoved) {
+      e.stopPropagation();
+      e.preventDefault();
+      dragMoved = false;
+    }
+  }, true);
+
+  window.addEventListener('resize', updateNavOverflowState);
+  updateNavOverflowState();
+}
 
 // --- TAB SWITCHING LOGIC ---
 function initTabNavigation() {
@@ -180,7 +287,13 @@ async function showDashboard(user) {
   loginView.className = 'view hidden';
   dashboardView.className = 'view active';
 
+  // Nav bar is only measurable once the dashboard is actually visible
+  updateNavOverflowState();
+
   if (userDisplay) userDisplay.textContent = user.username || 'Player';
+
+  const profileUsernameEl = document.getElementById('profile-username');
+  if (profileUsernameEl) profileUsernameEl.textContent = user.username || 'Player';
 
   const raceDateEl = document.getElementById('header-race-date');
   if (raceDateEl) {

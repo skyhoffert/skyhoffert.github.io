@@ -17,17 +17,20 @@ export function getGameDateString(dayOffset = 0) {
 }
 
 /**
- * Returns a formatted "Race Day" string (e.g., "Aug 3, 2026")
+ * Formats a "Game Date" string (YYYY-MM-DD, as returned by getGameDateString)
+ * into a display string (e.g., "Aug 3, 2026")
+ */
+export function formatGameDateString(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[month - 1]} ${day}, ${year}`;
+}
+
+/**
+ * Returns a formatted "Race Day" string (e.g., "Aug 3, 2026") for today's game date
  */
 export function getFormattedRaceDay() {
-  const d = new Date();
-  // Subtract 8 hours (28,800,000 ms) to align with 08:00 UTC rollover
-  d.setTime(d.getTime() - 28800000);
-  
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  // Use getUTC methods to ensure browser local time doesn't warp the result
-  return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+  return formatGameDateString(getGameDateString(0));
 }
 
 /**

@@ -346,9 +346,9 @@ function copyAllTimeSummary() {
   const netSign = netProfit >= 0 ? '+' : '-';
   const formattedNet = `${netSign}$${Math.abs(netProfit)}`;
 
-  const summaryText = `🏇 Daily Derby, All-Time Record | ${username}
-${wins}W - ${losses}L (${winRate}% Win Rate)
+  const summaryText = `🏇 Daily Derby · All-Time Record · ${username}
 Career Total: ${formattedNet}
+${wins}W - ${losses}L (${winRate}% Win Rate)
 
 Play Daily Derby today!`;
 
