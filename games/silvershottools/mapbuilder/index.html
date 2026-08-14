@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Map Builder - Silvershot Tools</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="toolbar">
+  <a href="../index.html">&laquo;</a>
+  <span class="title">Map Builder</span>
+
+  <div id="floorTabs" class="tabs"></div>
+  <button id="addFloorBtn" type="button" title="Add a new floor">+ Floor</button>
+
+  <span class="hint">click wall = add door &middot; drag room/door = move &middot; drag edge/corner = resize &middot; click + Delete key = remove &middot; drag bg = pan &middot; scroll = zoom</span>
+</div>
+
+<svg id="canvas" viewBox="0 0 800 600">
+  <rect id="bg" x="-10000" y="-10000" width="20000" height="20000"></rect>
+</svg>
+
+<script src="script.js"></script>
+</body>
+</html>

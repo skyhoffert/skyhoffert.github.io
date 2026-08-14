@@ -1,0 +1,367 @@
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: sans-serif;
+  font-size: 13px;
+  margin: 6px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 12px);
+}
+
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+#toolbar a {
+  text-decoration: none;
+}
+
+.title {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.hint {
+  color: #777;
+  font-size: 0.85em;
+  margin-left: auto;
+}
+
+#viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 1px solid #333;
+  background: #000;
+  overflow: hidden;
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #fff;
+  mix-blend-mode: difference;
+  pointer-events: none;
+  display: none;
+}
+
+#viewport.locked #crosshair {
+  display: block;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  text-align: center;
+}
+
+#viewport.locked #overlay {
+  display: none;
+}
+
+/* Shared by #overlay, #loadingScreen, and #mainMenu. */
+.big {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin: 0;
+}
+
+.small {
+  margin: 0;
+  color: #ccc;
+}
+
+#stats {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  color: #9f9;
+  font-family: monospace;
+  font-size: 0.85em;
+  text-shadow: 0 0 3px #000;
+  pointer-events: none;
+  white-space: pre;
+}
+
+#interactPrompt {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 34px);
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.9em;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+#interactPrompt.visible {
+  opacity: 1;
+}
+
+/* Full-viewport backdrop, same footprint as #overlay - since opening the inventory exits
+   pointer lock, #overlay would otherwise reappear underneath; being later in the DOM and
+   just as opaque keeps it fully covered, visually and for clicks. */
+#inventory {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+#inventory.open {
+  display: flex;
+}
+
+#inventoryPanel {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 20px 24px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #eee;
+}
+
+/* Anchored to the backdrop, not the panel, so it sits clear of the panel's own content
+   instead of overlapping it. */
+#settingsButton {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #666;
+  border-radius: 3px;
+  color: #eee;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#settingsButton:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Mirrors #settingsButton on the opposite corner of the same backdrop. */
+#mainMenuButton {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  height: 30px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #666;
+  border-radius: 3px;
+  color: #eee;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#mainMenuButton:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+#paperdoll {
+  position: relative;
+  width: 90px;
+  height: 200px;
+}
+
+#playerSilhouette {
+  display: block;
+  width: 90px;
+  height: 200px;
+  fill: #222;
+}
+
+/* Overlaid on the silhouette at roughly chest height, rather than stacked below it. */
+#handSlots {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 4px;
+}
+
+#inventoryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 40px);
+  grid-auto-rows: 40px;
+  gap: 4px;
+  align-content: start;
+}
+
+.invSlot {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #666;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  font-size: 9px;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+  color: #ccc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.invSlot:not(.filled):hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.invSlot.filled {
+  background: rgba(120, 170, 255, 0.18);
+  border-color: #7aa2ff;
+  color: #eaf0ff;
+}
+
+.invSlot.dragging {
+  opacity: 0.4;
+}
+
+.invSlot.dragover {
+  outline: 2px solid #ffcc55;
+  outline-offset: -2px;
+}
+
+#inventory.dragging .invSlot {
+  cursor: grabbing;
+}
+
+/* Same full-viewport backdrop pattern as #inventory; later in the DOM so it covers the
+   inventory panel underneath when opened from it. */
+#settings {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+#settings.open {
+  display: flex;
+}
+
+#settingsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 220px;
+  padding: 20px 24px;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #eee;
+}
+
+#settingsPanel h2 {
+  margin: 0;
+  font-size: 1em;
+}
+
+.settingRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85em;
+}
+
+#settingsCloseBtn {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #666;
+  border-radius: 3px;
+  color: #eee;
+  cursor: pointer;
+}
+
+#settingsCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Same full-viewport backdrop pattern as #overlay, just more opaque - these are proper
+   screens of their own rather than a hint over the game. */
+#loadingScreen,
+#mainMenu {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  text-align: center;
+}
+
+#loadingScreen.open,
+#mainMenu.open {
+  display: flex;
+}
+
+#mainMenuPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+#playButton {
+  padding: 8px 24px;
+  font-size: 1.1em;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #888;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+
+#playButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

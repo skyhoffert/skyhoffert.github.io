@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Environment Testbed - Silvershot Tools</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "../vendor/three.module.min.js"
+  }
+}
+</script>
+</head>
+<body>
+<div id="toolbar">
+  <a href="../index.html">&laquo;</a>
+  <span class="title">Environment Testbed</span>
+  <span class="hint">click to look around &middot; WASD/arrows = move &middot; shift = run &middot; space = jump &middot; c = crouch &middot; e = interact &middot; hold click/right-click = hold item (left/right hand) &middot; ctrl = rotate held &middot; i = inventory &middot; v = collision view &middot; Esc = release mouse</span>
+</div>
+
+<div id="viewport">
+  <canvas id="scene"></canvas>
+  <div id="crosshair"></div>
+  <div id="overlay">
+    <p class="big">Click to enter</p>
+    <p class="small">WASD to move, mouse to look, Esc to exit</p>
+  </div>
+  <div id="stats"></div>
+  <div id="interactPrompt"></div>
+  <div id="inventory">
+    <button id="mainMenuButton" type="button" title="Return to main menu">Menu</button>
+    <button id="settingsButton" type="button" title="Settings">&#9881;</button>
+    <div id="inventoryPanel">
+      <div id="paperdoll">
+        <svg id="playerSilhouette" viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="28" r="22" />
+          <rect x="20" y="52" width="60" height="80" rx="14" />
+          <rect x="4" y="58" width="20" height="70" rx="10" />
+          <rect x="76" y="58" width="20" height="70" rx="10" />
+          <rect x="26" y="130" width="20" height="80" rx="10" />
+          <rect x="54" y="130" width="20" height="80" rx="10" />
+        </svg>
+        <div id="handSlots">
+          <div class="invSlot" data-slot="handL" title="Left hand"></div>
+          <div class="invSlot" data-slot="handR" title="Right hand"></div>
+        </div>
+      </div>
+      <div id="inventoryGrid"></div>
+    </div>
+  </div>
+  <div id="settings">
+    <div id="settingsPanel">
+      <h2>Settings</h2>
+      <label class="settingRow">
+        <span>Master Volume</span>
+        <input type="range" id="masterVolumeSlider" min="0" max="100" step="1">
+      </label>
+      <label class="settingRow">
+        <span>Music Volume</span>
+        <input type="range" id="musicVolumeSlider" min="0" max="100" step="1">
+      </label>
+      <label class="settingRow">
+        <span>Sound Effects Volume</span>
+        <input type="range" id="sfxVolumeSlider" min="0" max="100" step="1">
+      </label>
+      <button id="settingsCloseBtn" type="button">Close</button>
+    </div>
+  </div>
+  <div id="loadingScreen">
+    <p class="big">Loading&hellip;</p>
+  </div>
+  <div id="mainMenu" class="open">
+    <div id="mainMenuPanel">
+      <p class="big">Environment Testbed</p>
+      <button id="playButton" type="button">Play</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
