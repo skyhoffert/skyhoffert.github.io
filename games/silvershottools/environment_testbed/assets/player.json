@@ -1,0 +1,49 @@
+{
+  "eyeHeight": 1.7,
+  "crouchEyeHeight": 1.0,
+  "walkSpeed": 4.5,
+  "runMult": 2.2,
+  "jumpSpeed": 6.5,
+  "crouchSpeedMult": 0.5,
+  "crouchTransitionSpeed": 6,
+  "radius": 0.4,
+  "wallCheckHeightsStand": [0.3, 1.4],
+  "wallCheckHeightsCrouch": [0.3, 0.8],
+  "groundProbeUp": 0.5,
+  "groundProbeDown": 5,
+  "leanDistance": 0.5,
+  "leanTilt": 0.18,
+  "leanSpeed": 6,
+  "leanClearance": 0.15,
+  "lookSensitivity": 0.0022,
+  "pitchLimit": 1.5608,
+  "interactRadius": 2.2,
+  "dropReach": 2,
+  "inventory": {
+    "columns": 2,
+    "rows": 2
+  },
+  "hold": {
+    "distance": 1,
+    "sideOffset": 0.2,
+    "rotateSensitivity": 0.008,
+    "springStiffness": 450,
+    "springDamping": 42,
+    "maxForce": 900
+  },
+  "wield": {
+    "distance": 0.35,
+    "sideOffset": 0.25,
+    "downOffset": 0.25,
+    "rotationX": 0,
+    "rotationY": 1.5708,
+    "rotationZ": 0,
+    "twoHand": {
+      "distance": 0.5,
+      "downOffset": 0.3,
+      "rotationX": 0,
+      "rotationY": 3.1416,
+      "rotationZ": 1.5708
+    }
+  }
+}

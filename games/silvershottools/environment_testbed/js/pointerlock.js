@@ -5,7 +5,7 @@ import { canvas, overlay, viewport } from "./dom.js";
 import { listener, tryStartAmbiance } from "./audio.js";
 import { physicsObjects } from "./physics.js";
 import { ctrlDown, heldLeft, heldRight, rotateHeldBody } from "./hold.js";
-import { LOOK_SENSITIVITY, PITCH_LIMIT } from "./constants.js";
+import { playerStats } from "./playerConfig.js";
 
 export let yaw = 0;
 export let pitch = 0;
@@ -43,7 +43,7 @@ document.addEventListener("mousemove", (evt) => {
     return;
   }
 
-  yaw -= evt.movementX * LOOK_SENSITIVITY;
-  pitch -= evt.movementY * LOOK_SENSITIVITY;
-  pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
+  yaw -= evt.movementX * playerStats.lookSensitivity;
+  pitch -= evt.movementY * playerStats.lookSensitivity;
+  pitch = Math.max(-playerStats.pitchLimit, Math.min(playerStats.pitchLimit, pitch));
 });

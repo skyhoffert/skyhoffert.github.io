@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { camera } from "./scene.js";
 import { canvas, interactPromptEl } from "./dom.js";
-import { INTERACT_RADIUS } from "./constants.js";
+import { playerStats } from "./playerConfig.js";
 
 export const interactables = []; // { object, promptText(), onActivate(), holdable }
 export let activeInteractable = null;
@@ -35,7 +35,7 @@ const interactForward = new THREE.Vector3();
 // actually looking at it. When more than one qualifies, the nearest one wins.
 export function updateInteractables() {
   activeInteractable = null;
-  let bestDist = INTERACT_RADIUS;
+  let bestDist = playerStats.interactRadius;
 
   for (const it of interactables) {
     interactBox.setFromObject(it.object);
@@ -44,7 +44,7 @@ export function updateInteractables() {
 
     camera.getWorldDirection(interactForward);
     interactRaycaster.set(camera.position, interactForward);
-    interactRaycaster.far = INTERACT_RADIUS;
+    interactRaycaster.far = playerStats.interactRadius;
     if (interactRaycaster.intersectObject(it.object, true).length === 0) continue;
 
     activeInteractable = it;

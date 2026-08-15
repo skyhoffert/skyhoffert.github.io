@@ -1,0 +1,21 @@
+{
+  "butcher_knife": {
+    "type": "melee",
+    "cooldownTime": 0.18,
+    "swingTime": 0.22,
+    "swingArc": 1.0,
+    "swingLunge": 0.5
+  },
+  "shovel": {
+    "type": "melee",
+    "cooldownTime": 0.26,
+    "swingTime": 0.32,
+    "swingArc": 0.85,
+    "swingLunge": 0.4
+  },
+  "revolver": {
+    "type": "gun",
+    "cooldownTime": 1.1,
+    "ammoCapacity": 6
+  }
+}

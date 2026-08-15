@@ -5,22 +5,8 @@ import { camera } from "./scene.js";
 import { canvas } from "./dom.js";
 import { collisionMeshes } from "./map.js";
 import { yaw } from "./pointerlock.js";
-import {
-  EYE_HEIGHT,
-  CROUCH_EYE_HEIGHT,
-  CROUCH_SPEED_MULT,
-  CROUCH_TRANSITION_SPEED,
-  WALK_SPEED,
-  RUN_MULT,
-  GRAVITY,
-  JUMP_SPEED,
-  WORLD_BOUND,
-  PLAYER_RADIUS,
-  WALL_CHECK_HEIGHTS_STAND,
-  WALL_CHECK_HEIGHTS_CROUCH,
-  GROUND_PROBE_UP,
-  GROUND_PROBE_DOWN,
-} from "./constants.js";
+import { playerStats } from "./playerConfig.js";
+import { worldStats } from "./worldConfig.js";
 
 const keys = new Set();
 window.addEventListener("keydown", (evt) => keys.add(evt.code));
@@ -39,7 +25,7 @@ const moveDir = new THREE.Vector3();
 
 let verticalVelocity = 0;
 let grounded = true;
-let currentEyeHeight = EYE_HEIGHT; // smoothly lerps toward EYE_HEIGHT/CROUCH_EYE_HEIGHT
+let currentEyeHeight = playerStats.eyeHeight; // smoothly lerps toward playerStats.eyeHeight/crouchEyeHeight
 
 const groundRaycaster = new THREE.Raycaster();
 const groundRayOrigin = new THREE.Vector3();
@@ -48,9 +34,9 @@ const DOWN = new THREE.Vector3(0, -1, 0);
 // Highest collision surface directly below (x, fromY, z), or null if there is none within
 // reach (e.g. no COLL_ floor under the point). Shared by the player and physics objects.
 function groundHeightBelow(x, z, fromY) {
-  groundRayOrigin.set(x, fromY + GROUND_PROBE_UP, z);
+  groundRayOrigin.set(x, fromY + playerStats.groundProbeUp, z);
   groundRaycaster.set(groundRayOrigin, DOWN);
-  groundRaycaster.far = GROUND_PROBE_UP + GROUND_PROBE_DOWN;
+  groundRaycaster.far = playerStats.groundProbeUp + playerStats.groundProbeDown;
   const hits = groundRaycaster.intersectObjects(collisionMeshes, false);
   return hits.length ? hits[0].point.y : null;
 }
@@ -70,19 +56,19 @@ function clampAxisMove(delta, axisIsX, feetY, checkHeights) {
   for (let i = 0; i < checkHeights.length; i++) {
     wallRayOrigin.set(camera.position.x, feetY + checkHeights[i], camera.position.z);
     wallRaycaster.set(wallRayOrigin, wallRayDir);
-    wallRaycaster.far = allowed + PLAYER_RADIUS;
+    wallRaycaster.far = allowed + playerStats.radius;
     const hits = wallRaycaster.intersectObjects(collisionMeshes, false);
-    if (hits.length) allowed = Math.min(allowed, Math.max(0, hits[0].distance - PLAYER_RADIUS));
+    if (hits.length) allowed = Math.min(allowed, Math.max(0, hits[0].distance - playerStats.radius));
   }
   return sign * allowed;
 }
 
 // See menu.js's return-to-main-menu flow - puts the player back at spawn for the next round.
 export function resetPlayer() {
-  camera.position.set(0, EYE_HEIGHT, 0);
+  camera.position.set(0, playerStats.eyeHeight, 0);
   verticalVelocity = 0;
   grounded = true;
-  currentEyeHeight = EYE_HEIGHT;
+  currentEyeHeight = playerStats.eyeHeight;
   crouching = false;
   keys.clear();
 }
@@ -93,10 +79,10 @@ export function updateMovement(dt) {
   // Ground-snapping below (which runs every frame, not just while actively falling) settles
   // camera.position.y to feet+currentEyeHeight each frame, so smoothly stepping this value
   // alone is enough to make standing/crouching animate - no separate camera tween needed.
-  const eyeTarget = crouching ? CROUCH_EYE_HEIGHT : EYE_HEIGHT;
+  const eyeTarget = crouching ? playerStats.crouchEyeHeight : playerStats.eyeHeight;
   const eyeDiff = eyeTarget - currentEyeHeight;
   if (Math.abs(eyeDiff) > 0.001) {
-    currentEyeHeight += Math.sign(eyeDiff) * Math.min(Math.abs(eyeDiff), CROUCH_TRANSITION_SPEED * dt);
+    currentEyeHeight += Math.sign(eyeDiff) * Math.min(Math.abs(eyeDiff), playerStats.crouchTransitionSpeed * dt);
   } else {
     currentEyeHeight = eyeTarget;
   }
@@ -111,22 +97,23 @@ export function updateMovement(dt) {
   if (keys.has("KeyA") || keys.has("ArrowLeft")) moveDir.sub(right);
 
   const speed =
-    WALK_SPEED * (crouching ? CROUCH_SPEED_MULT : keys.has("ShiftLeft") || keys.has("ShiftRight") ? RUN_MULT : 1);
+    playerStats.walkSpeed *
+    (crouching ? playerStats.crouchSpeedMult : keys.has("ShiftLeft") || keys.has("ShiftRight") ? playerStats.runMult : 1);
 
   if (moveDir.lengthSq() > 0) {
     moveDir.normalize().multiplyScalar(speed * dt);
     const feetY = camera.position.y - currentEyeHeight;
-    const checkHeights = crouching ? WALL_CHECK_HEIGHTS_CROUCH : WALL_CHECK_HEIGHTS_STAND;
+    const checkHeights = crouching ? playerStats.wallCheckHeightsCrouch : playerStats.wallCheckHeightsStand;
     camera.position.x += clampAxisMove(moveDir.x, true, feetY, checkHeights);
     camera.position.z += clampAxisMove(moveDir.z, false, feetY, checkHeights);
   }
 
   if (keys.has("Space") && grounded) {
-    verticalVelocity = JUMP_SPEED;
+    verticalVelocity = playerStats.jumpSpeed;
     grounded = false;
   }
 
-  verticalVelocity += GRAVITY * dt;
+  verticalVelocity += worldStats.gravity * dt;
   camera.position.y += verticalVelocity * dt;
 
   const feetY = camera.position.y - currentEyeHeight;
@@ -139,6 +126,6 @@ export function updateMovement(dt) {
     grounded = false;
   }
 
-  camera.position.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, camera.position.x));
-  camera.position.z = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, camera.position.z));
+  camera.position.x = Math.max(-worldStats.worldBound, Math.min(worldStats.worldBound, camera.position.x));
+  camera.position.z = Math.max(-worldStats.worldBound, Math.min(worldStats.worldBound, camera.position.z));
 }

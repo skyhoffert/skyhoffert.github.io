@@ -10,20 +10,15 @@ import { registerInteractable } from "./interaction.js";
 import { listener, audioLoader, playOneShot } from "./audio.js";
 import { registerSound, unregisterSound } from "./settings.js";
 import { setupDoor } from "./door.js";
-import {
-  DOOR_NAME,
-  COLLISION_PREFIX,
-  SWITCH_PREFIX,
-  LIGHT_GROUP_PREFIX,
-  LIGHT_RANGE,
-  SWITCH_SOUND_REF_DISTANCE,
-  LIGHT_FLICKER_MIN,
-  LIGHT_FLICKER_CHANGE_MIN,
-  LIGHT_FLICKER_CHANGE_MAX,
-  LIGHT_FLICKER_SPEED,
-} from "./constants.js";
+import { worldStats } from "./worldConfig.js";
+import { DOOR_PREFIX, COLLISION_PREFIX, SWITCH_PREFIX, LIGHT_GROUP_PREFIX, SWITCH_SOUND_REF_DISTANCE } from "./constants.js";
 
 export const collisionMeshes = []; // populated with COLL_-prefixed meshes once the map loads
+// The subset of collisionMeshes with a typed BOX_/SPHERE_/CYLINDER_ prefix (see physics.js's
+// hasTypedCollisionPrefix()) - real physical surfaces (shelves, tables, floors, ...), unlike a
+// plain untyped "COLL_" mesh, which is a player-only movement blocker with no actual shape
+// (e.g. a bookcase's clip-prevention collider) and shouldn't be a valid place to rest an item.
+export const typedCollisionMeshes = [];
 export const mapLights = []; // populated with the map's point/spot lights once it loads
 
 let mapRoot = null; // the loaded gltf.scene currently in the THREE scene, or null
@@ -50,7 +45,7 @@ function wireSwitches(switches, switchConfig) {
     });
 
     registerInteractable(switchObj, {
-      promptText: () => (on ? "[E] Turn off lights" : "[E] Turn on lights"),
+      promptText: () => (on ? "[F] Turn off lights" : "[F] Turn on lights"),
       onActivate: () => {
         on = !on;
         groupLights.forEach((l) => {
@@ -76,11 +71,16 @@ export function setupMap(gltf, switchConfig) {
   hidden.forEach((obj) => obj.removeFromParent());
 
   // Found up front so the traversal below can tell a door-mounted collider apart from a
-  // static one - the door's own COLL_ children need to move with it, not get baked in once.
-  const doorObj = gltf.scene.getObjectByName(DOOR_NAME);
+  // static one - each door's own COLL_ children need to move with it, not get baked in once.
+  // Any number of doors is fine - every DOOR_-prefixed object becomes its own door.
+  const doorObjs = [];
+  gltf.scene.traverse((obj) => {
+    if (obj.name.startsWith(DOOR_PREFIX)) doorObjs.push(obj);
+  });
+  const doorColliders = new Map(); // door object -> its COLL_ children
+  doorObjs.forEach((d) => doorColliders.set(d, []));
 
   const switches = [];
-  const doorColliders = [];
 
   gltf.scene.traverse((obj) => {
     if (obj.name.startsWith(COLLISION_PREFIX)) {
@@ -90,8 +90,10 @@ export function setupMap(gltf, switchConfig) {
       obj.visible = false;
       if (obj.isMesh) {
         collisionMeshes.push(obj); // player's own raycast-based collision, always
-        if (isDescendantOf(obj, doorObj)) {
-          doorColliders.push(obj); // wired up as a kinematic body after the door itself, below
+        if (hasTypedCollisionPrefix(obj.name)) typedCollisionMeshes.push(obj);
+        const ownerDoor = doorObjs.find((d) => isDescendantOf(obj, d));
+        if (ownerDoor) {
+          doorColliders.get(ownerDoor).push(obj); // wired up as a kinematic body after its door, below
         } else if (hasTypedCollisionPrefix(obj.name)) {
           buildStaticColliderBody(obj); // static body for props to physically land on
         }
@@ -124,28 +126,28 @@ export function setupMap(gltf, switchConfig) {
         obj.shadow.bias = -0.0002;
         obj.shadow.normalBias = 0.05;
         obj.shadow.camera.near = 0.1;
-        obj.shadow.camera.far = LIGHT_RANGE;
+        obj.shadow.camera.far = worldStats.lightRange;
         // Blender doesn't export a glTF light range, so without this point/spot lights
         // fall off to zero only asymptotically and end up lighting (and shadowing) the
         // whole map.
-        if (obj.isPointLight || obj.isSpotLight) obj.distance = LIGHT_RANGE;
+        if (obj.isPointLight || obj.isSpotLight) obj.distance = worldStats.lightRange;
       }
     }
   });
   scene.add(gltf.scene);
   mapRoot = gltf.scene;
 
-  if (doorObj) {
-    setupDoor(doorObj, doorColliders);
+  if (doorObjs.length > 0) {
+    doorObjs.forEach((doorObj) => setupDoor(doorObj, doorColliders.get(doorObj)));
   } else {
-    console.warn(`No object named "${DOOR_NAME}" found in the loaded map.`);
+    console.warn(`No objects prefixed "${DOOR_PREFIX}" found in the loaded map.`);
   }
 
   wireSwitches(switches, switchConfig);
 }
 
 // See menu.js's return-to-main-menu flow. Static collision bodies are torn down separately by
-// physics.js's resetPhysicsWorld() and the door by door.js's resetDoor() - this only handles
+// physics.js's resetPhysicsWorld() and doors by door.js's resetDoors() - this only handles
 // the map's own THREE geometry and the arrays this module owns.
 export function resetMapState() {
   if (mapRoot) {
@@ -156,6 +158,7 @@ export function resetMapState() {
   switchSounds.forEach(unregisterSound);
   switchSounds = [];
   collisionMeshes.length = 0;
+  typedCollisionMeshes.length = 0;
   mapLights.length = 0;
 }
 
@@ -166,10 +169,11 @@ export function updateLightFlicker(dt) {
     const d = l.userData;
     d.flickerTimer -= dt;
     if (d.flickerTimer <= 0) {
-      d.flickerTarget = LIGHT_FLICKER_MIN + Math.random() * (1 - LIGHT_FLICKER_MIN);
-      d.flickerTimer = LIGHT_FLICKER_CHANGE_MIN + Math.random() * (LIGHT_FLICKER_CHANGE_MAX - LIGHT_FLICKER_CHANGE_MIN);
+      d.flickerTarget = worldStats.lightFlickerMin + Math.random() * (1 - worldStats.lightFlickerMin);
+      d.flickerTimer =
+        worldStats.lightFlickerChangeMin + Math.random() * (worldStats.lightFlickerChangeMax - worldStats.lightFlickerChangeMin);
     }
-    d.flickerCurrent += (d.flickerTarget - d.flickerCurrent) * Math.min(1, LIGHT_FLICKER_SPEED * dt);
+    d.flickerCurrent += (d.flickerTarget - d.flickerCurrent) * Math.min(1, worldStats.lightFlickerSpeed * dt);
     l.intensity = d.on ? d.baseIntensity * d.flickerCurrent : 0;
   });
 }

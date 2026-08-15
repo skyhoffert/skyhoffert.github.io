@@ -7,8 +7,8 @@
 
 import * as THREE from "three";
 import * as CANNON from "../../vendor/cannon-es.js";
+import { worldStats } from "./worldConfig.js";
 import {
-  GRAVITY,
   COLLISION_PREFIX,
   COLL_BOX_PREFIX,
   COLL_SPHERE_PREFIX,
@@ -17,8 +17,17 @@ import {
   PROP_MASS,
 } from "./constants.js";
 
-export const world = new CANNON.World({ gravity: new CANNON.Vec3(0, GRAVITY, 0) });
+// Built with whatever worldStats.gravity currently is - at this point (module-init time,
+// synchronous) that's just its default, since world.json hasn't loaded yet. syncGravity(),
+// called once world.json has (see menu.js's loadWorld()), re-applies the real value: unlike
+// every other worldStats field, this one's baked into a separate CANNON.Vec3 rather than read
+// live off worldStats each use, so it needs that explicit follow-up.
+export const world = new CANNON.World({ gravity: new CANNON.Vec3(0, worldStats.gravity, 0) });
 world.allowSleep = true; // resting props stop being simulated until something disturbs them
+
+export function syncGravity() {
+  world.gravity.set(0, worldStats.gravity, 0);
+}
 
 export const physicsObjects = new Map(); // OBJ_ instance -> { body, centerOffset }
 
@@ -74,9 +83,29 @@ export function colliderToShape(collider, referenceInverseMatrix) {
 
 // Builds one dynamic compound body for a spawned prop instance from all of its
 // COLL_BOX_/COLL_SPHERE_/COLL_CYLINDER_ children (there can be more than one).
+function shapeDebugString(shape) {
+  if (shape instanceof CANNON.Box) {
+    return `Box half-extents (${shape.halfExtents.x.toFixed(2)}, ${shape.halfExtents.y.toFixed(2)}, ${shape.halfExtents.z.toFixed(2)})`;
+  }
+  if (shape instanceof CANNON.Sphere) return `Sphere radius ${shape.radius.toFixed(2)}`;
+  if (shape instanceof CANNON.Cylinder) return `Cylinder radius ${shape.radiusTop.toFixed(2)} height ${shape.height.toFixed(2)}`;
+  return "unknown shape";
+}
+
 export function buildPropBody(instance) {
+  console.log(`Building physics body for "${instance.name}":`);
   instance.updateMatrixWorld(true);
-  const instanceWorldInverse = new THREE.Matrix4().copy(instance.matrixWorld).invert();
+  // Deliberately excludes the instance's own scale (unlike the identity matrix used for static
+  // map colliders below): cannon-es shapes carry no scale of their own, so a collision child's
+  // size/offset needs to come out in world-sized units. Inverting the instance's *full* world
+  // matrix here would cancel that scale back out, leaving shapes sized in the mesh's raw
+  // pre-export-scale units instead - invisible for props whose root happens to export at scale
+  // 1, but wildly wrong (and physics-exploding) for any prop baked down by some other factor.
+  const instancePos = new THREE.Vector3();
+  const instanceQuat = new THREE.Quaternion();
+  const instanceScale = new THREE.Vector3();
+  instance.matrixWorld.decompose(instancePos, instanceQuat, instanceScale);
+  const instanceWorldInverse = new THREE.Matrix4().compose(instancePos, instanceQuat, new THREE.Vector3(1, 1, 1)).invert();
 
   const body = new CANNON.Body({ mass: PROP_MASS });
   let hasShape = false;
@@ -90,6 +119,7 @@ export function buildPropBody(instance) {
     }
     body.addShape(result.shape, result.position, result.quaternion);
     hasShape = true;
+    console.log(`  "${child.name}" -> ${shapeDebugString(result.shape)} at (${result.position.x.toFixed(2)}, ${result.position.y.toFixed(2)}, ${result.position.z.toFixed(2)})`);
   });
 
   if (!hasShape) {

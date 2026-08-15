@@ -16,7 +16,7 @@
 <div id="toolbar">
   <a href="../index.html">&laquo;</a>
   <span class="title">Environment Testbed</span>
-  <span class="hint">click to look around &middot; WASD/arrows = move &middot; shift = run &middot; space = jump &middot; c = crouch &middot; e = interact &middot; hold click/right-click = hold item (left/right hand) &middot; ctrl = rotate held &middot; i = inventory &middot; v = collision view &middot; Esc = release mouse</span>
+  <span class="hint">click to look around &middot; WASD/arrows = move &middot; shift = run &middot; space = jump &middot; c = crouch &middot; f = interact &middot; q/e = lean &middot; hold click/right-click = hold item (left/right hand) &middot; ctrl = rotate held &middot; i = inventory (drag to move, r = rotate) &middot; v = collision view &middot; Esc = release mouse</span>
 </div>
 
 <div id="viewport">
@@ -28,6 +28,7 @@
   </div>
   <div id="stats"></div>
   <div id="interactPrompt"></div>
+  <div id="bangText">BANG</div>
   <div id="inventory">
     <button id="mainMenuButton" type="button" title="Return to main menu">Menu</button>
     <button id="settingsButton" type="button" title="Settings">&#9881;</button>
@@ -41,13 +42,11 @@
           <rect x="26" y="130" width="20" height="80" rx="10" />
           <rect x="54" y="130" width="20" height="80" rx="10" />
         </svg>
-        <div id="handSlots">
-          <div class="invSlot" data-slot="handL" title="Left hand"></div>
-          <div class="invSlot" data-slot="handR" title="Right hand"></div>
-        </div>
+        <div id="handSlots"></div>
       </div>
       <div id="inventoryGrid"></div>
     </div>
+    <div id="dragPreview"></div>
   </div>
   <div id="settings">
     <div id="settingsPanel">

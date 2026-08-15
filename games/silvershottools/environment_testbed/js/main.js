@@ -1,4 +1,4 @@
-// Entry point: wires up the one cross-feature control that can't live in a single module (E
+// Entry point: wires up the one cross-feature control that can't live in a single module (F
 // activates a non-holdable interactable directly, but opens the inventory for a holdable
 // one), and runs the main loop. Every other system - including the main menu/loading screen
 // that gate the actual asset load, see menu.js - wires up its own DOM listeners as a side
@@ -10,23 +10,25 @@ import { canvas, statsEl } from "./dom.js";
 import { scene, camera, renderer } from "./scene.js";
 
 import { updateLightFlicker } from "./map.js";
-import { updateDoor } from "./door.js";
+import { updateDoors } from "./door.js";
 
 import { updateMovement } from "./movement.js";
 import { yaw, pitch } from "./pointerlock.js";
+import { retractLean, applyLean, leanRoll } from "./lean.js";
 import { stepPhysics } from "./physics.js";
 import { applyHeldForces, heldLeft, heldRight } from "./hold.js";
+import { updateAttacks } from "./attack.js";
 import { debugViewOn, updateDebugView } from "./debug.js";
 import { activeInteractable, updateInteractables } from "./interaction.js";
 import { startInventoryPickup } from "./inventory.js";
 import "./settings-ui.js";
 import "./menu.js";
 
-// E activates non-holdable interactables (doors, switches) directly, but on a holdable prop
+// F activates non-holdable interactables (doors, switches) directly, but on a holdable prop
 // it starts an inventory pickup instead - hand-carrying a prop is still done with the mouse
 // buttons (see hold.js).
 window.addEventListener("keydown", (evt) => {
-  if (evt.code !== "KeyE" || evt.repeat) return;
+  if (evt.code !== "KeyF" || evt.repeat) return;
   if (document.pointerLockElement !== canvas || !activeInteractable) return;
   if (activeInteractable.holdable) startInventoryPickup(activeInteractable);
   else activeInteractable.onActivate();
@@ -40,14 +42,17 @@ function animate(t) {
   timer.update(t);
   const dt = Math.min(timer.getDelta(), 0.1);
 
+  retractLean(); // undo last frame's visual lean offset before movement's checks run against camera.position
   updateMovement(dt);
-  updateDoor(dt);
+  applyLean(dt); // re-apply this frame's lean offset now that movement's used the real position
+  updateDoors(dt);
   updateLightFlicker(dt);
   applyHeldForces();
   stepPhysics(dt);
+  updateAttacks(dt);
   if (debugViewOn) updateDebugView();
   if (!heldLeft || !heldRight) updateInteractables(); // at least one hand still free to grab something
-  camera.rotation.set(pitch, yaw, 0, "YXZ");
+  camera.rotation.set(pitch, yaw, leanRoll, "YXZ");
 
   renderer.render(scene, camera);
 

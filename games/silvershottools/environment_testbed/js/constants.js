@@ -1,48 +1,26 @@
 // Tunable values shared across modules. Grouped by the system they configure, matching the
 // section headers those systems live under in their own files.
 
-export const EYE_HEIGHT = 1.7;
-export const CROUCH_EYE_HEIGHT = 1.0;
-export const CROUCH_SPEED_MULT = 0.5;
-export const CROUCH_TRANSITION_SPEED = 6; // meters/sec the eye height moves toward its crouch/stand target
-export const WALK_SPEED = 4.5; // m/s
-export const RUN_MULT = 2.2;
-export const GRAVITY = -20; // m/s^2
-export const JUMP_SPEED = 6.5; // m/s, initial upward velocity on jump
-export const LOOK_SENSITIVITY = 0.0022;
-export const PITCH_LIMIT = Math.PI / 2 - 0.01;
-export const WORLD_BOUND = 200; // safety clamp so the player can't wander off into the void
-
-export const DOOR_NAME = "door_a";
-export const DOOR_OPEN_ANGLE = Math.PI / 2; // 90 degrees, relative to the modeled closed angle
-export const DOOR_SPEED = Math.PI; // radians/sec
-export const INTERACT_RADIUS = 2.2; // meters, shared by every interactable (doors, switches, ...)
-export const LIGHT_RANGE = 22; // meters, clamps how far point/spot lights (and their shadows) reach
-export const AMBIENT_LIGHT_INTENSITY = 0.04; // low fill light so unlit corners
-
-export const LIGHT_FLICKER_MIN = 0.8; // dimmest a flicker pulls a light down to, as a fraction of its base intensity
-export const LIGHT_FLICKER_CHANGE_MIN = 0.05; // seconds between picking a new random flicker target
-export const LIGHT_FLICKER_CHANGE_MAX = 0.3;
-export const LIGHT_FLICKER_SPEED = 10; // per-second rate intensity chases that target - higher = snappier, lower = smoother
-
+// Player movement/capability stats (eye height, walk/run/jump speed, crouch, lean, collision
+// radius, hold/wield posing, look sensitivity, ...) and world/environment stats (gravity, world
+// bound, light behavior, door timing, interact radius, ...) live in player.json/world.json now,
+// not here - see playerConfig.js's playerStats and worldConfig.js's worldStats, and
+// constants.js's PLAYER_STATS_URL/WORLD_URL below. What's left here is either genuinely
+// load-order-sensitive (can't wait on an async fetch) or a structural/naming convention rather
+// than a tunable stat.
+export const DOOR_PREFIX = "DOOR_"; // e.g. "DOOR_a" - any number of doors, each becomes its own independent open/close state machine (see door.js)
 export const SWITCH_PREFIX = "SW_"; // e.g. "SW_room" controls every light matching L_room_*
-export const LIGHT_GROUP_PREFIX = "L_";
-
+export const LIGHT_GROUP_PREFIX = "LIGHT_";
 export const COLLISION_PREFIX = "COLL_";
-export const PLAYER_RADIUS = 0.4; // meters, horizontal collision radius
-export const WALL_CHECK_HEIGHTS_STAND = [0.3, 1.4]; // meters above the feet to raycast for wall blocking
-export const WALL_CHECK_HEIGHTS_CROUCH = [0.3, 0.8];
-export const GROUND_PROBE_UP = 0.5; // meters above the feet the downward ground probe starts from
-export const GROUND_PROBE_DOWN = 5; // meters below the feet the ground probe still detects a surface
-
 export const OBJECT_PREFIX = "OBJ_"; // holdable physics props, e.g. "OBJ_knife", from objects.glb
 export const SPAWN_PREFIX = "SPAWN_"; // empties in the map that instantiate objects from the library
-export const HOLD_DISTANCE = 1; // meters in front of the camera while carried
-export const HOLD_SIDE_OFFSET = 0.2; // meters left/right of center for the left-/right-hand hold point
-export const HOLD_ROTATE_SENSITIVITY = 0.008; // radians per pixel of mouse movement while ctrl-rotating
-export const HOLD_SPRING_STIFFNESS = 450; // N/m pulling the held body toward the hold point
-export const HOLD_SPRING_DAMPING = 42; // resists that pull proportional to current velocity, kept near critical damping (2*sqrt(stiffness*mass)) as stiffness changes so it doesn't get oscillatory
-export const HOLD_MAX_FORCE = 900; // N, clamps the pull so a far-away pickup doesn't snap violently
+
+export const ATTACK_SWING_TIME = 0.22; // seconds a swing takes, start to finish
+export const ATTACK_COOLDOWN_TIME = 0.18; // seconds after a swing finishes before another can start
+export const ATTACK_SWING_ARC = 1.0; // radians the wielded item rotates through at the peak of its swing
+export const ATTACK_SWING_LUNGE = 0.1; // meters the wielded item pushes forward at the peak of its swing
+
+export const BANG_TEXT_TIME = 0.25; // seconds the "BANG" flash (see attack.js's showBang()) stays on screen per gun-type attack
 
 export const COLL_BOX_PREFIX = COLLISION_PREFIX + "BOX_";
 export const COLL_SPHERE_PREFIX = COLLISION_PREFIX + "SPHERE_";
@@ -63,9 +41,16 @@ export const OBJECTS_URL = "assets/objects.glb";
 // Blender custom properties now lives here instead - much faster to iterate on than
 // round-tripping through Blender's custom-property UI and a re-export every time.
 export const CONFIG_URL = "assets/testbed_map_a.json";
-
-export const INVENTORY_GRID_COLUMNS = 2;
-export const INVENTORY_GRID_ROWS = 2;
+// Per-weapon type/stats (attack cooldown, swing timing, ammo, ...) - see objects.js's
+// weaponStatsFor(). Loaded the same way as CONFIG_URL, and by design the only place any of
+// that needs to be edited - no source changes/rebuild needed to retune or add a weapon.
+export const WEAPONS_URL = "assets/weapons.json";
+// Player movement/capability stats (walk/run/jump speed, crouch, eye height, lean, ...) - see
+// playerConfig.js's setPlayerStats(). Loaded the same way as WEAPONS_URL/CONFIG_URL.
+export const PLAYER_STATS_URL = "assets/player.json";
+// World/environment stats (gravity, world bound, light behavior, door timing, interact
+// radius, ...) - see worldConfig.js's setWorldStats(). Loaded the same way.
+export const WORLD_URL = "assets/world.json";
 
 export const DEBUG_COLOR_STATIC = 0x00ff66;
 export const DEBUG_COLOR_DYNAMIC = 0xff8800;

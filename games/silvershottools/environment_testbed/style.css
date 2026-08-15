@@ -130,6 +130,26 @@ body {
   opacity: 1;
 }
 
+/* Flashed by attack.js's showBang() on every gun-type attack - no ammo/reload modeling yet,
+   just this for feedback. */
+#bangText {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 40px);
+  transform: translateX(-50%);
+  font-size: 2em;
+  font-weight: bold;
+  color: #ffcc33;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.85), 0 2px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.08s;
+}
+
+#bangText.visible {
+  opacity: 1;
+}
+
 /* Full-viewport backdrop, same footprint as #overlay - since opening the inventory exits
    pointer lock, #overlay would otherwise reappear underneath; being later in the DOM and
    just as opaque keeps it fully covered, visually and for clicks. */
@@ -210,24 +230,31 @@ body {
   fill: #222;
 }
 
-/* Overlaid on the silhouette at roughly chest height, rather than stacked below it. */
+/* Overlaid on the silhouette at roughly chest height, rather than stacked below it. Its own
+   2x1 grid (handL = col 1, handR = col 2), same cell mechanics as #inventoryGrid - see
+   inventory.js's createGrid(). A two-handed item is a single tile spanning both columns.
+   grid-template-columns is set inline by createGrid() itself (column count varies for
+   #inventoryGrid - see player.json's inventory.columns/rows - so it can't be a fixed rule here). */
 #handSlots {
   position: absolute;
   left: 50%;
   top: 38%;
   transform: translate(-50%, -50%);
-  display: flex;
+  display: grid;
+  grid-auto-rows: 40px;
   gap: 4px;
 }
 
 #inventoryGrid {
   display: grid;
-  grid-template-columns: repeat(2, 40px);
   grid-auto-rows: 40px;
   gap: 4px;
   align-content: start;
 }
 
+/* Shared box look for both an empty grid cell (.invCell) and an item tile (.invTile) - a tile
+   spans multiple cells via grid-column/row (see inventory.js's renderPlacement()), so its size
+   here only sets the *per-cell* footprint, not its own fixed dimensions. */
 .invSlot {
   width: 40px;
   height: 40px;
@@ -238,13 +265,93 @@ body {
   align-items: center;
   justify-content: center;
   padding: 2px;
-  font-size: 9px;
+  font-size: 22px;
   line-height: 1.1;
   text-align: center;
   overflow: hidden;
   color: #ccc;
   cursor: pointer;
   user-select: none;
+}
+
+.invCell {
+  width: auto;
+  height: auto;
+  z-index: 0;
+}
+
+.invTile {
+  width: auto;
+  height: auto;
+  z-index: 1;
+}
+
+/* Previews where a drag would land - green (default) if that's a legal drop, red (.invalid) if
+   not; see inventory.js's evaluateTarget(). Sized/positioned the same way a tile is, via
+   grid-column/row, so it lines up with whatever cells it's covering. */
+.invGhost {
+  display: none;
+  width: auto;
+  height: auto;
+  border: 2px dashed #7aa2ff;
+  border-radius: 2px;
+  background: rgba(122, 162, 255, 0.15);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.invGhost.visible {
+  display: block;
+}
+
+.invGhost.invalid {
+  border-color: #ff5c5c;
+  background: rgba(255, 92, 92, 0.15);
+}
+
+/* Follows the cursor while an inventory item is being dragged (see inventory.js's
+   updateDragPreview()) - offset up-left via the transform so it sits adjacent to the cursor
+   instead of covering it. Sized to the dragged item's actual w x h footprint (in --w/--h grid
+   cells, set from JS, flipped live when R rotates it) using the same 40px cell / 4px gap as
+   #inventoryGrid/#handSlots, so it previews exactly how much room it'll take up. */
+#dragPreview {
+  --w: 1;
+  --h: 1;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: calc(var(--w) * 40px + (var(--w) - 1) * 4px);
+  height: calc(var(--h) * 40px + (var(--h) - 1) * 4px);
+  transform: translate(calc(-100% - 6px), calc(-100% - 6px));
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #7aa2ff;
+  border-radius: 2px;
+  background: rgba(120, 170, 255, 0.18);
+  font-size: 24px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+  z-index: 20;
+}
+
+#dragPreview.visible {
+  display: flex;
+}
+
+/* Badge shown on top of the preview while dragging (not a pending pickup) with the cursor
+   outside the inventory panel - releasing now drops the item into the world instead of
+   snapping back into a cell. See inventory.js's isOverPanel()/updateDragPreview(). */
+#dragPreview.willDrop::after {
+  content: "\2B07";
+  position: absolute;
+  left: -10px;
+  top: -10px;
+  font-size: 26px;
+  line-height: 1;
+  color: #ffcc55;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .invSlot:not(.filled):hover {
@@ -259,11 +366,6 @@ body {
 
 .invSlot.dragging {
   opacity: 0.4;
-}
-
-.invSlot.dragover {
-  outline: 2px solid #ffcc55;
-  outline-offset: -2px;
 }
 
 #inventory.dragging .invSlot {

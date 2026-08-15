@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { camera } from "./scene.js";
 import { registerSound } from "./settings.js";
-import { AMBIANCE_VOLUME, DOOR_SOUND_REF_DISTANCE } from "./constants.js";
+import { AMBIANCE_VOLUME } from "./constants.js";
 
 export const listener = new THREE.AudioListener();
 camera.add(listener);
@@ -27,17 +27,6 @@ export function tryStartAmbiance() {
 export function stopAmbiance() {
   if (ambiance.isPlaying) ambiance.stop();
 }
-
-// Positional so they sound like they're coming from the door itself; attached to the door
-// object once the map loads (see map.js).
-export const doorOpenSound = new THREE.PositionalAudio(listener);
-export const doorCloseSound = new THREE.PositionalAudio(listener);
-[doorOpenSound, doorCloseSound].forEach((sound) => {
-  sound.setRefDistance(DOOR_SOUND_REF_DISTANCE);
-  registerSound(sound, "sfx", 1);
-});
-audioLoader.load("assets/sounds/door_open.wav", (buffer) => doorOpenSound.setBuffer(buffer));
-audioLoader.load("assets/sounds/door_close.wav", (buffer) => doorCloseSound.setBuffer(buffer));
 
 export function playOneShot(sound) {
   if (!sound.buffer) return;

@@ -7,10 +7,21 @@ import { scene } from "./scene.js";
 import { world, physicsObjects, buildPropBody } from "./physics.js";
 import { registerInteractable } from "./interaction.js";
 import { shuffleInPlace, disposeObject3D } from "./util.js";
-import { OBJECT_PREFIX, SPAWN_PREFIX, COLLISION_PREFIX } from "./constants.js";
+import {
+  OBJECT_PREFIX,
+  SPAWN_PREFIX,
+  COLLISION_PREFIX,
+  ATTACK_SWING_TIME,
+  ATTACK_COOLDOWN_TIME,
+  ATTACK_SWING_ARC,
+  ATTACK_SWING_LUNGE,
+} from "./constants.js";
+
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 const objectLibrary = new Map(); // bare OBJ_ name -> template Object3D from objects.glb (not in the live scene)
 let objectLibraryRoot = null; // the objects.glb scene templates are cloned from, kept only to dispose it on rebuild
+let weaponStats = {}; // bare OBJ_ name -> stats loaded from weapons.json - see weaponStatsFor()
 
 function hideCollisionChildren(root) {
   root.traverse((child) => {
@@ -18,13 +29,17 @@ function hideCollisionChildren(root) {
   });
 }
 
-export function buildObjectLibrary(objectsScene) {
+// weapons is the parsed contents of weapons.json (see constants.js's WEAPONS_URL) - passed in
+// here rather than fetched directly so this module doesn't own any network/loading concerns of
+// its own, consistent with how mapScene/spawnConfig arrive as plain data too.
+export function buildObjectLibrary(objectsScene, weapons) {
   // Rebuilding (e.g. after returning to the main menu and pressing Play again) would otherwise
   // leak the previous cycle's GPU buffers - they're never added to the live scene, so nothing
   // else disposes them.
   if (objectLibraryRoot) disposeObject3D(objectLibraryRoot);
   objectLibraryRoot = objectsScene;
   objectLibrary.clear();
+  weaponStats = weapons || {};
 
   const templates = [];
   objectsScene.traverse((obj) => {
@@ -36,12 +51,13 @@ export function buildObjectLibrary(objectsScene) {
     hideCollisionChildren(obj);
     objectLibrary.set(obj.name.slice(OBJECT_PREFIX.length), obj);
   });
+  console.log(`Object library loaded (${objectLibrary.size}): ${[...objectLibrary.keys()].join(", ")}`);
 }
 
 // Offset (in the instance's own unrotated local space) from its origin/pivot to its actual
 // geometric center, found by zeroing rotation, measuring, then restoring it. Used to hold
 // an object by its visual center rather than wherever its pivot happens to be.
-function computeLocalCenterOffset(instance) {
+export function computeLocalCenterOffset(instance) {
   const savedQuat = instance.quaternion.clone();
   instance.quaternion.identity();
   instance.updateMatrixWorld(true);
@@ -53,6 +69,68 @@ function computeLocalCenterOffset(instance) {
 
 export function objectDisplayName(name) {
   return name.slice(OBJECT_PREFIX.length).replace(/_/g, " ");
+}
+
+// Emoji shown in inventory slots and the drag preview in place of a text label - keyed by the
+// bare (no OBJ_ prefix) name, same as objectLibrary. Add an entry here for every new object in
+// objects.glb; anything missing falls back to DEFAULT_OBJECT_EMOJI rather than showing blank.
+const OBJECT_EMOJI = {
+  butcher_knife: "\u{1F52A}", // 🔪
+  book_a: "\u{1F4D6}", // 📖
+  shovel: "\u{26CF}\u{FE0F}", // ⛏️
+  revolver: "\u{1F52B}", // 🔫
+};
+const DEFAULT_OBJECT_EMOJI = "\u{1F4E6}"; // 📦
+
+export function objectEmoji(name) {
+  return OBJECT_EMOJI[name.slice(OBJECT_PREFIX.length)] || DEFAULT_OBJECT_EMOJI;
+}
+
+// Footprint (in inventory grid cells, {w,h}) an object occupies in its default (unrotated)
+// orientation - keyed the same way as OBJECT_EMOJI. Anything missing is a plain 1x1, same as
+// every object before inventory.js grew multi-cell items.
+const OBJECT_SIZE = {
+  shovel: { w: 1, h: 2 }, // tall enough that it has to rotate to 2x1 to fit across both hand slots
+};
+const DEFAULT_OBJECT_SIZE = { w: 1, h: 1 };
+
+export function objectSize(name) {
+  return OBJECT_SIZE[name.slice(OBJECT_PREFIX.length)] || DEFAULT_OBJECT_SIZE;
+}
+
+// What a wielded object does when attacked with (see attack.js's tryAttack()), and the stats
+// that govern it - all loaded from weapons.json (see buildObjectLibrary()) rather than defined
+// here, so tuning or adding a weapon never needs a source change. "type" is one of:
+// - "prop": nothing - can't be attacked with (e.g. a book). The default for anything not
+//   listed in weapons.json at all, so a new object never swings/fires until it's added there
+//   on purpose.
+// - "melee": swings on a timer - cooldownTime/swingTime/swingArc/swingLunge.
+// - "gun": fired on a timer - cooldownTime, plus ammoCapacity (not consumed anywhere yet - see
+//   attack.js's tryAttack(), which currently just flashes "BANG").
+// Anything a weapon's own entry doesn't specify falls back to these - keeps weapons.json
+// entries short (most props won't even have one) without a weapon silently ending up with a
+// zero/undefined swingTime etc. if a field's forgotten.
+const DEFAULT_MELEE_STATS = { cooldownTime: ATTACK_COOLDOWN_TIME, swingTime: ATTACK_SWING_TIME, swingArc: ATTACK_SWING_ARC, swingLunge: ATTACK_SWING_LUNGE };
+const DEFAULT_GUN_STATS = { cooldownTime: ATTACK_COOLDOWN_TIME, ammoCapacity: 6 };
+const DEFAULT_TYPE = "prop";
+
+// The full stats object for a weapon (type plus whatever fields apply to it, defaults filled
+// in), or just { type: "prop" } for anything not in weapons.json. Used by wield.js to tag a
+// wielded instance once at equip time - see its userData.weaponStats.
+export function weaponStatsFor(name) {
+  const entry = weaponStats[name.slice(OBJECT_PREFIX.length)];
+  const type = (entry && entry.type) || DEFAULT_TYPE;
+  if (type === "prop") return { type };
+  const defaults = type === "gun" ? DEFAULT_GUN_STATS : DEFAULT_MELEE_STATS;
+  return { ...defaults, ...entry, type };
+}
+
+// Clones a template by its full OBJ_-prefixed name (as stored in an inventory slot - see
+// inventory.js), with no physics body or interactable registration - for wield.js's
+// camera-attached viewmodels, which aren't part of the physics/interaction world at all.
+export function cloneObjectTemplate(fullName) {
+  const template = objectLibrary.get(fullName.slice(OBJECT_PREFIX.length));
+  return template ? template.clone(true) : null;
 }
 
 // Wires up a freshly-spawned instance: shadows on its visible geometry, a cannon-es rigid
@@ -72,7 +150,7 @@ function setupPhysicsObject(instance) {
 
   const displayName = objectDisplayName(instance.name);
   registerInteractable(instance, {
-    promptText: () => `[Click] Hold ${displayName} - [E] Pick up`,
+    promptText: () => `[Click] Hold ${displayName} - [F] Pick up`,
     holdable: true,
   });
 }
@@ -118,8 +196,43 @@ export function spawnObjects(mapScene, spawnConfig) {
       scene.add(instance);
       setupPhysicsObject(instance);
       spawnedInstances.push(instance);
+      console.log(
+        `Spawned "${instance.name}" at ${marker.name} (${spawnWorldPos.x.toFixed(2)}, ${spawnWorldPos.y.toFixed(2)}, ${spawnWorldPos.z.toFixed(2)})`
+      );
     });
   });
+}
+
+const probeBox = new THREE.Box3();
+const probeSphere = new THREE.Sphere();
+
+// Local-space bounding-sphere radius of a fresh, untransformed clone of fullName - used to
+// offset a dropped item off of whatever surface it lands on (see dropObjectOnSurface()) so it
+// doesn't clip through regardless of how it ends up oriented to rest on that surface.
+function boundingRadius(instance) {
+  instance.position.set(0, 0, 0);
+  instance.quaternion.identity();
+  instance.updateMatrixWorld(true);
+  return probeBox.setFromObject(instance).getBoundingSphere(probeSphere).radius;
+}
+
+// Drops a fresh instance of a library template against a surface - offset off of hitPoint
+// along hitNormal (in world space) by the instance's own bounding radius, and tilted so its
+// local up axis lines up with the surface normal (so it rests flush whether that surface is a
+// floor, a wall, or a slope). Used by inventory.js when an item's dragged out of the inventory
+// panel and dropped somewhere in the world.
+export function dropObjectOnSurface(fullName, hitPoint, hitNormal) {
+  const instance = cloneObjectTemplate(fullName);
+  if (!instance) return null;
+
+  const radius = boundingRadius(instance);
+  instance.quaternion.setFromUnitVectors(WORLD_UP, hitNormal);
+  instance.position.copy(hitPoint).addScaledVector(hitNormal, radius);
+
+  scene.add(instance);
+  setupPhysicsObject(instance);
+  spawnedInstances.push(instance);
+  return instance;
 }
 
 // See menu.js's return-to-main-menu flow. Each instance's cannon-es body is torn down
