@@ -9,11 +9,28 @@
 // load-order-sensitive (can't wait on an async fetch) or a structural/naming convention rather
 // than a tunable stat.
 export const DOOR_PREFIX = "DOOR_"; // e.g. "DOOR_a" - any number of doors, each becomes its own independent open/close state machine (see door.js)
+export const DRAWER_PREFIX = "DRAWER_"; // e.g. "DRAWER_desk_tr" - the sliding equivalent of DOOR_ (see drawer.js)
 export const SWITCH_PREFIX = "SW_"; // e.g. "SW_room" controls every light matching L_room_*
 export const LIGHT_GROUP_PREFIX = "LIGHT_";
 export const COLLISION_PREFIX = "COLL_";
 export const OBJECT_PREFIX = "OBJ_"; // holdable physics props, e.g. "OBJ_knife", from objects.glb
 export const SPAWN_PREFIX = "SPAWN_"; // empties in the map that instantiate objects from the library
+
+// Fallback defaults for whatever a door/light doesn't specify in the map's own JSON sidecar
+// (testbed_map_a.json's "doors"/"lights", keyed by object name - see map.js's setupMap() and
+// door.js's setupDoor()). Deliberately plain constants, not world.json - every door/light is
+// meant to be configured per-instance there, so these only ever matter for a field an entry
+// left out (or a door/light with no entry there at all).
+export const DOOR_OPEN_ANGLE = Math.PI / 2; // radians, relative to the modeled closed angle
+export const DOOR_SPEED = Math.PI; // radians/sec
+export const DRAWER_AXIS = "-z"; // which local axis a drawer slides along to open - "x"/"y"/"z", optionally "-" prefixed for the opposite direction
+export const DRAWER_SLIDE_DISTANCE = 0.35; // meters, how far along that axis a drawer pulls open
+export const DRAWER_SPEED = 1.0; // meters/sec
+export const LIGHT_RANGE = 22; // meters, clamps how far a point/spot light (and its shadow) reaches
+export const LIGHT_FLICKER_MIN = 0.8; // dimmest a flicker pulls a light down to, as a fraction of its base intensity
+export const LIGHT_FLICKER_CHANGE_MIN = 0.05; // seconds between picking a new random flicker target
+export const LIGHT_FLICKER_CHANGE_MAX = 0.3;
+export const LIGHT_FLICKER_SPEED = 10; // per-second rate intensity chases that target - higher = snappier, lower = smoother
 
 export const ATTACK_SWING_TIME = 0.22; // seconds a swing takes, start to finish
 export const ATTACK_COOLDOWN_TIME = 0.18; // seconds after a swing finishes before another can start
@@ -27,12 +44,14 @@ export const COLL_SPHERE_PREFIX = COLLISION_PREFIX + "SPHERE_";
 export const COLL_CYLINDER_PREFIX = COLLISION_PREFIX + "CYLINDER_";
 export const CYLINDER_SEGMENTS = 12;
 export const PROP_MASS = 1; // kg-ish, uniform for every physics prop for now
+export const WAKE_RADIUS = 1; // meters - see physics.js's wakeNearbyBodies(), called from door.js/drawer.js on toggle
 
 export const AMBIANCE_VOLUME = 0.4;
 export const DOOR_SOUND_REF_DISTANCE = 3; // meters at which PositionalAudio volume starts falling off
 export const SWITCH_SOUND_REF_DISTANCE = 1.5; // smaller than the door's - a switch click is a quiet, close-up sound
 
 export const SETTINGS_COOKIE = "environment_testbed_settings";
+export const VIDEO_SETTINGS_COOKIE = "environment_testbed_video_settings"; // see graphicsSettings.js
 export const SETTINGS_COOKIE_DAYS = 365;
 
 export const MAP_URL = "assets/testbed_map_a.glb";

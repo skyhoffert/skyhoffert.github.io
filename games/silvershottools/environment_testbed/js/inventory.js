@@ -40,6 +40,17 @@ const dragPreviewEl = document.getElementById("dragPreview");
 
 const MAX_INVENTORY_DIM = 8;
 
+// Facing for a non-square item (e.g. the 1x2 shovel), in degrees clockwise from its default
+// (base w x h) orientation - R cycles a preview through all four (see the KeyR handler below).
+// 0/180 keep the base footprint (just flipped end-for-end); 90/270 swap it (w x h -> h x w).
+// Only meaningful when an item's base w !== h - square items ignore this entirely (footprint
+// never changes, and no arrow is shown - see DIR_ARROWS/renderPlacement()).
+const DIR_ARROWS = { 0: "▲", 90: "▶", 180: "▼", 270: "◀" }; // ▲ ▶ ▼ ◀
+
+function footprintForDir(baseW, baseH, dir) {
+  return dir === 90 || dir === 270 ? { w: baseH, h: baseW } : { w: baseW, h: baseH };
+}
+
 // A grid is a rectangle of cells, each either empty (null) or holding a reference to whichever
 // placement currently covers it (multiple cells share the same placement for anything bigger
 // than 1x1). cellEls are purely decorative (grid lines / empty-cell hover); ghostEl previews
@@ -129,25 +140,60 @@ function occupantsIn(grid, col, row, w, h, ignore) {
   return set;
 }
 
+// Tries to fit every placement in `items` into a col/row/w/h region (as if it were empty),
+// without any of them overlapping each other - used to figure out whether a set of items
+// displaced by a drop can all be relocated into wherever the dragged item is vacating (see
+// evaluateTarget()/commitDrop() below), so e.g. a 1x2 item can swap places with two 1x1s (or
+// one smaller item), not just one item of the exact same footprint. Greedy (largest-area first,
+// first available spot scanning row-major) rather than an exhaustive solver - good enough for
+// how small this inventory ever gets, and simple to reason about; a packing it fails to find
+// might occasionally still technically exist for some pathological arrangement, but "no swap"
+// is a safe, visible failure mode either way (the ghost just shows red). Returns an array of
+// { placement, col, row } (absolute grid coordinates, one entry per item in `items`), or null
+// if no arrangement fits everything.
+function packIntoRegion(items, regionCol, regionRow, regionW, regionH) {
+  const occupied = new Array(regionW * regionH).fill(false);
+  const sorted = [...items].sort((a, b) => b.w * b.h - a.w * a.h);
+  const placements = [];
+  for (const p of sorted) {
+    let spot = null;
+    for (let r = 0; spot === null && r <= regionH - p.h; r++) {
+      for (let c = 0; spot === null && c <= regionW - p.w; c++) {
+        let fits = true;
+        for (let rr = r; fits && rr < r + p.h; rr++) {
+          for (let cc = c; fits && cc < c + p.w; cc++) {
+            if (occupied[rr * regionW + cc]) fits = false;
+          }
+        }
+        if (fits) spot = { c, r };
+      }
+    }
+    if (!spot) return null;
+    for (let rr = spot.r; rr < spot.r + p.h; rr++) {
+      for (let cc = spot.c; cc < spot.c + p.w; cc++) {
+        occupied[rr * regionW + cc] = true;
+      }
+    }
+    placements.push({ placement: p, col: regionCol + spot.c, row: regionRow + spot.r });
+  }
+  return placements;
+}
+
 // Whether dropping source at (col, row, w, h) in grid is a legal move - either the target's
-// entirely empty, or occupied by exactly one other item with the exact same footprint (and
-// that item would in turn fit back where source came from), which makes it a swap instead.
-// Shared by the ghost preview and the actual drop so they can never disagree - a case the
+// entirely empty, or whatever it's occupied by (one item, or several smaller ones) can all be
+// packed into source's own vacated footprint instead (packIntoRegion() above), which makes it a
+// swap. Shared by the ghost preview and the actual drop so they can never disagree - a case the
 // preview draws green always agrees with what dropping there will actually do.
 function evaluateTarget(grid, col, row, w, h, source) {
-  if (col < 0 || row < 0 || col + w > grid.cols || row + h > grid.rows) return { ok: false, swapWith: null };
+  if (col < 0 || row < 0 || col + w > grid.cols || row + h > grid.rows) return { ok: false, swapPack: null };
   const occupants = occupantsIn(grid, col, row, w, h, source);
-  if (occupants.size === 0) return { ok: true, swapWith: null };
+  if (occupants.size === 0) return { ok: true, swapPack: null };
   // A pending pickup (source is null - see previewInfo()) is coming from outside the grid
-  // entirely, so there's nothing sensible to swap it with - only an empty target works.
-  if (source && occupants.size === 1) {
-    const other = [...occupants][0];
-    const sameFootprint = other.col === col && other.row === row && other.w === w && other.h === h;
-    if (sameFootprint && canPlace(source.grid, source.col, source.row, other.w, other.h, source)) {
-      return { ok: true, swapWith: other };
-    }
-  }
-  return { ok: false, swapWith: null };
+  // entirely, so there's nowhere sensible to relocate whatever's displaced - only an empty
+  // target works.
+  if (!source) return { ok: false, swapPack: null };
+  const packing = packIntoRegion(occupants, source.col, source.row, source.w, source.h);
+  return packing ? { ok: true, swapPack: packing } : { ok: false, swapPack: null };
 }
 
 function renderPlacement(p) {
@@ -155,13 +201,16 @@ function renderPlacement(p) {
   p.el.title = p.item.displayName;
   p.el.style.gridColumn = `${p.col + 1} / span ${p.w}`;
   p.el.style.gridRow = `${p.row + 1} / span ${p.h}`;
+  if (p.baseW !== p.baseH) p.el.dataset.dirArrow = DIR_ARROWS[p.dir];
+  else delete p.el.dataset.dirArrow;
 }
 
-function addPlacement(grid, col, row, w, h, item) {
+function addPlacement(grid, col, row, w, h, item, dir) {
   const el = document.createElement("div");
   el.className = "invSlot invTile filled";
   grid.containerEl.appendChild(el);
-  const p = { grid, col, row, w, h, item, el };
+  const size = objectSize(item.name);
+  const p = { grid, col, row, w, h, baseW: size.w, baseH: size.h, dir, item, el };
   forEachCell(col, row, w, h, (c, r) => {
     grid.cells[cellIndex(grid, c, r)] = p;
   });
@@ -176,15 +225,19 @@ function removePlacement(p) {
   p.el.remove();
 }
 
-function movePlacement(p, grid, col, row, w, h) {
+function clearCells(p) {
   forEachCell(p.col, p.row, p.w, p.h, (c, r) => {
     p.grid.cells[cellIndex(p.grid, c, r)] = null;
   });
+}
+
+function placeCells(p, grid, col, row, w, h, dir) {
   p.grid = grid;
   p.col = col;
   p.row = row;
   p.w = w;
   p.h = h;
+  p.dir = dir;
   forEachCell(col, row, w, h, (c, r) => {
     grid.cells[cellIndex(grid, c, r)] = p;
   });
@@ -192,15 +245,28 @@ function movePlacement(p, grid, col, row, w, h) {
   renderPlacement(p);
 }
 
+// Split into clearCells()/placeCells() above rather than one combined step because a multi-item
+// swap (see commitDrop()) needs to clear every displaced placement's old cells *before* placing
+// any of them - see its own comment for why doing them one at a time (clear-then-place,
+// clear-then-place, ...) corrupts things whenever one item's old cells are another's new ones.
+function movePlacement(p, grid, col, row, w, h, dir) {
+  clearCells(p);
+  placeCells(p, grid, col, row, w, h, dir);
+}
+
 // Derives wield.js's hand state from the hand grid: a placement covering both cells is
 // two-handed; otherwise whatever (if anything) covers each cell individually is one-handed.
+// twoHandMirrored flips which end (e.g. a shovel's blade) is over which hand - see wield.js's
+// twoHandRotation() - an arbitrary but consistent mapping from the two possible horizontal
+// dirs a 2-cell-wide item can have; if it comes out backwards, flip the sign of
+// player.json's wield.twoHand.rotationZ instead of changing this mapping.
 function syncHandsFromGrid() {
   const left = handGrid.cells[cellIndex(handGrid, 0, 0)];
   const right = handGrid.cells[cellIndex(handGrid, 1, 0)];
   if (left && left === right) {
-    syncHands({ handL: null, handR: null, twoHand: left.item });
+    syncHands({ handL: null, handR: null, twoHand: left.item, twoHandMirrored: left.dir === 270 });
   } else {
-    syncHands({ handL: left ? left.item : null, handR: right ? right.item : null, twoHand: null });
+    syncHands({ handL: left ? left.item : null, handR: right ? right.item : null, twoHand: null, twoHandMirrored: false });
   }
 }
 
@@ -246,7 +312,11 @@ export function startInventoryPickup(interactable) {
   // Don't hand-carry and inventory-pick-up the same prop at once.
   if ((heldLeft && heldLeft.object === obj) || (heldRight && heldRight.object === obj)) return;
   pendingPickup = interactable;
-  previewFlip = false;
+  // 90, not 0 - a non-square (2-cell) item's base footprint (dir 0) is vertical, but the more
+  // useful default is already lying horizontal/facing right, matching how a two-handed item
+  // (see wield.js) actually gets equipped - square items ignore dir entirely, so this only
+  // affects those.
+  previewDir = 90;
   setInventoryOpen(true);
   document.exitPointerLock();
   interactPromptEl.classList.remove("visible");
@@ -267,9 +337,7 @@ export function resetInventory() {
 function tryPlacePendingPickup(grid, col, row) {
   const obj = pendingPickup.object;
   const size = objectSize(obj.name);
-  let w = size.w;
-  let h = size.h;
-  if (previewFlip) [w, h] = [h, w]; // match whatever orientation the preview was showing
+  const { w, h } = footprintForDir(size.w, size.h, previewDir); // match whatever orientation the preview was showing
   const anchorCol = Math.min(col, grid.cols - w);
   const anchorRow = Math.min(row, grid.rows - h);
   if (anchorCol < 0 || anchorRow < 0 || !canPlace(grid, anchorCol, anchorRow, w, h, null)) return;
@@ -284,26 +352,36 @@ function tryPlacePendingPickup(grid, col, row) {
   if (idx !== -1) interactables.splice(idx, 1);
   clearActiveInteractableIf(pendingPickup);
 
-  addPlacement(grid, anchorCol, anchorRow, w, h, {
-    name: obj.name,
-    displayName: objectDisplayName(obj.name),
-    emoji: objectEmoji(obj.name),
-  });
+  addPlacement(
+    grid,
+    anchorCol,
+    anchorRow,
+    w,
+    h,
+    {
+      name: obj.name,
+      displayName: objectDisplayName(obj.name),
+      emoji: objectEmoji(obj.name),
+    },
+    previewDir
+  );
 
   setInventoryOpen(false); // also clears pendingPickup
   requestLock();
   syncHandsFromGrid();
 }
 
-// Click-and-hold an occupied cell, drag to another, release to move it there (or swap, if the
-// target's occupied by exactly one other item with the exact same footprint). R flips the
-// orientation of whatever's currently being previewed - see updateDragPreview(). Feedback: the
-// source tile dims (drag only), the cursor becomes a grabbing hand, a floating tile follows the
-// cursor sized to the item's actual footprint, and a ghost outline over whichever grid is
-// currently under the cursor previews where it'd land (green if that fits, red if it doesn't).
+// Click-and-hold an occupied cell, drag to another, release to move it there (or swap, if
+// whatever's in the way can be packed into source's own vacated spot - see
+// packIntoRegion()/evaluateTarget()). R cycles the orientation of whatever's currently being
+// previewed - see updateDragPreview(). Feedback: the source tile dims (drag only), the cursor
+// becomes a grabbing hand, a floating tile follows the cursor sized to the item's actual
+// footprint (plus a facing arrow if it's non-square), and a ghost outline over whichever grid
+// is currently under the cursor previews where it'd land (green if that fits, red if it
+// doesn't).
 let dragSource = null; // the placement being dragged, or null
-let previewFlip = false; // whether R has been pressed an odd number of times for the current preview
-let dragTarget = null; // { grid, col, row, w, h, ok, swapWith } for wherever the cursor currently is, or null
+let previewDir = 0; // current preview facing, in degrees - see footprintForDir()/DIR_ARROWS
+let dragTarget = null; // { grid, col, row, w, h, dir, ok, swapPack } for wherever the cursor currently is, or null
 let lastMouseX = 0;
 let lastMouseY = 0;
 
@@ -321,20 +399,25 @@ function hideGhosts() {
 
 // What's currently being positioned, if anything: either the placement being dragged out of the
 // grid, or a pending pickup on its way in from the world (see startInventoryPickup()) - either
-// way, an item plus its base (unrotated) footprint, and a placement to ignore in fit checks
-// (null for a pending pickup, since it isn't occupying any cells yet).
+// way, an item plus its base (unrotated, dir-0) footprint, and a placement to ignore in fit
+// checks (null for a pending pickup, since it isn't occupying any cells yet).
 function previewInfo() {
-  if (dragSource) return { item: dragSource.item, w: dragSource.w, h: dragSource.h, ignore: dragSource };
+  if (dragSource) return { item: dragSource.item, baseW: dragSource.baseW, baseH: dragSource.baseH, ignore: dragSource };
   if (pendingPickup) {
     const obj = pendingPickup.object;
     const size = objectSize(obj.name);
-    return { item: { emoji: objectEmoji(obj.name), displayName: objectDisplayName(obj.name) }, w: size.w, h: size.h, ignore: null };
+    return {
+      item: { emoji: objectEmoji(obj.name), displayName: objectDisplayName(obj.name) },
+      baseW: size.w,
+      baseH: size.h,
+      ignore: null,
+    };
   }
   return null;
 }
 
 // Single source of truth for the floating preview tile and the grid ghost - driven entirely off
-// previewInfo() and previewFlip, so every caller (starting a drag/pickup, R, mousemove, or
+// previewInfo() and previewDir, so every caller (starting a drag/pickup, R, mousemove, or
 // either one ending) just calls this rather than juggling show/hide state of its own.
 function updateDragPreview(x, y) {
   const info = previewInfo();
@@ -345,15 +428,18 @@ function updateDragPreview(x, y) {
   dragPreviewEl.classList.toggle("willDrop", !!dragSource && !isOverPanel(x, y));
   hideGhosts();
   dragTarget = null;
-  if (!info) return;
+  if (!info) {
+    delete dragPreviewEl.dataset.dirArrow;
+    return;
+  }
 
   dragPreviewEl.textContent = info.item.emoji;
   dragPreviewEl.style.left = `${x}px`;
   dragPreviewEl.style.top = `${y}px`;
+  if (info.baseW !== info.baseH) dragPreviewEl.dataset.dirArrow = DIR_ARROWS[previewDir];
+  else delete dragPreviewEl.dataset.dirArrow;
 
-  let w = info.w;
-  let h = info.h;
-  if (previewFlip) [w, h] = [h, w];
+  const { w, h } = footprintForDir(info.baseW, info.baseH, previewDir);
   dragPreviewEl.style.setProperty("--w", w);
   dragPreviewEl.style.setProperty("--h", h);
 
@@ -370,14 +456,14 @@ function updateDragPreview(x, y) {
     grid.ghostEl.style.gridRow = `${row + 1} / span ${h}`;
     grid.ghostEl.classList.toggle("invalid", !result.ok);
     grid.ghostEl.classList.add("visible");
-    dragTarget = { grid, col, row, w, h, ok: result.ok, swapWith: result.swapWith };
+    dragTarget = { grid, col, row, w, h, dir: previewDir, ok: result.ok, swapPack: result.swapPack };
     break;
   }
 }
 
 function startDrag(placement, x, y) {
   dragSource = placement;
-  previewFlip = false;
+  previewDir = placement.dir; // preview starts facing however it's already sitting, not reset to 0
   placement.el.classList.add("dragging");
   inventoryEl.classList.add("dragging");
   updateDragPreview(x, y);
@@ -445,16 +531,25 @@ function resolveDragOnClose() {
   ejectItemToWorld(source);
 }
 
-// Resolves a drop already validated by evaluateTarget() (via the ghost preview) as ok: moves
-// the dragged item into the target, swapping with target.swapWith first if it's set.
+// Resolves a drop already validated by evaluateTarget() (via the ghost preview) as ok:
+// relocates whatever the target was occupied by (target.swapPack - one item, or several
+// smaller ones, each with its own pre-computed col/row - see packIntoRegion()) into source's
+// own vacated spot, then moves source into the target. Every displaced placement's (and
+// source's own) old cells are cleared up front, before anyone is placed - clearing and placing
+// one at a time instead would have each move's own "clear my old cells" step wipe out cells
+// another move just claimed, since a swap's "old cells" for one side are exactly the "new
+// cells" another side is about to occupy.
 function commitDrop(source, target) {
-  if (target.swapWith) {
-    const other = target.swapWith;
+  if (target.swapPack) {
     const sourceOrigin = { grid: source.grid, col: source.col, row: source.row };
-    movePlacement(source, target.grid, target.col, target.row, target.w, target.h);
-    movePlacement(other, sourceOrigin.grid, sourceOrigin.col, sourceOrigin.row, other.w, other.h);
+    clearCells(source);
+    target.swapPack.forEach(({ placement }) => clearCells(placement));
+    placeCells(source, target.grid, target.col, target.row, target.w, target.h, target.dir);
+    target.swapPack.forEach(({ placement, col, row }) => {
+      placeCells(placement, sourceOrigin.grid, col, row, placement.w, placement.h, placement.dir);
+    });
   } else {
-    movePlacement(source, target.grid, target.col, target.row, target.w, target.h);
+    movePlacement(source, target.grid, target.col, target.row, target.w, target.h, target.dir);
   }
   syncHandsFromGrid();
 }
@@ -462,7 +557,7 @@ function commitDrop(source, target) {
 window.addEventListener("keydown", (evt) => {
   if (evt.code !== "KeyR" || evt.repeat) return;
   if (!dragSource && !pendingPickup) return;
-  previewFlip = !previewFlip;
+  previewDir = (previewDir + 90) % 360;
   updateDragPreview(lastMouseX, lastMouseY);
 });
 

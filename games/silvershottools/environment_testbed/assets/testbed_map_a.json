@@ -1,13 +1,66 @@
 {
-  "switches": {
-    "SW_room": { "startOn": false }
-  },
   "spawns": {
-    "SPAWN_a": { "objects": ["butcher_knife", "book_a"]},
-    "SPAWN_b": { "objects": ["butcher_knife", "book_a"]},
-    "SPAWN_c": { "objects": ["butcher_knife", "book_a"]},
-    "SPAWN_d": { "objects": ["butcher_knife", "book_a"]},
-    "SPAWN_e": { "objects": ["shovel"]},
-    "SPAWN_f": { "objects": ["revolver"]}
+    "SPAWN_a": {
+      "objects": ["butcher_knife", "book_a"]
+    },
+    "SPAWN_b": {
+      "objects": ["butcher_knife", "book_a"]
+    },
+    "SPAWN_c": {
+      "objects": ["butcher_knife", "book_a"]
+    },
+    "SPAWN_d": {
+      "objects": ["butcher_knife", "book_a"]
+    },
+    "SPAWN_e": {
+      "objects": ["shovel"]
+    },
+    "SPAWN_f": {
+      "objects": ["revolver"]
+    },
+    "SPAWN_g": {
+      "objects": ["shotgun"]
+    },
+    "SPAWN_desk_drawer_tr": {
+      "objects": ["revolver"]
+    },
+    "SPAWN_desk_top": {
+      "objects": ["flashlight"]
+    }
+  },
+  "doors": {
+    "DOOR_a": {
+      "openAngle": 1.5708,
+      "speed": 3.1416
+    }
+  },
+  "drawers": {
+    "DRAWER_desk_tr": {
+      "axis": "-x",
+      "slideDistance": 0.65,
+      "speed": 1.0
+    },
+    "DRAWER_desk_br": {
+      "axis": "-x",
+      "slideDistance": 0.65,
+      "speed": 1.0
+    }
+  },
+  "lights": {
+    "LIGHT_a": {
+      "range": 22,
+      "flickerMin": 0.8,
+      "flickerChangeMin": 0.05,
+      "flickerChangeMax": 0.3,
+      "flickerSpeed": 10
+    },
+    "LIGHT_room_a": {
+      "on": false,
+      "range": 22,
+      "flickerMin": 0.8,
+      "flickerChangeMin": 0.05,
+      "flickerChangeMax": 0.3,
+      "flickerSpeed": 10
+    }
   }
 }

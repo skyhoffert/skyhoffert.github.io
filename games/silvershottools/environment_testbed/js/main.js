@@ -11,6 +11,7 @@ import { scene, camera, renderer } from "./scene.js";
 
 import { updateLightFlicker } from "./map.js";
 import { updateDoors } from "./door.js";
+import { updateDrawers } from "./drawer.js";
 
 import { updateMovement } from "./movement.js";
 import { yaw, pitch } from "./pointerlock.js";
@@ -22,6 +23,7 @@ import { debugViewOn, updateDebugView } from "./debug.js";
 import { activeInteractable, updateInteractables } from "./interaction.js";
 import { startInventoryPickup } from "./inventory.js";
 import "./settings-ui.js";
+import "./wieldDebug.js";
 import "./menu.js";
 
 // F activates non-holdable interactables (doors, switches) directly, but on a holdable prop
@@ -46,6 +48,7 @@ function animate(t) {
   updateMovement(dt);
   applyLean(dt); // re-apply this frame's lean offset now that movement's used the real position
   updateDoors(dt);
+  updateDrawers(dt);
   updateLightFlicker(dt);
   applyHeldForces();
   stepPhysics(dt);

@@ -46,8 +46,12 @@ const wallRayOrigin = new THREE.Vector3();
 const wallRayDir = new THREE.Vector3();
 
 // How far the player can actually move along a single world axis (+/-X or +/-Z) before a
-// COLL_ mesh gets in the way, checked at a couple of heights so both low obstacles and
-// full walls block. `axisIsX` picks which axis `delta` is along.
+// COLL_ mesh gets in the way, checked at a handful of heights (playerStats.wallCheckHeightsStand/
+// Crouch) so both low obstacles and full walls block. A thin horizontal obstacle (a desktop, a
+// shelf) only occupies a narrow slice of that range, so it's only ever actually caught if one of
+// the configured heights happens to land inside it - hence those arrays being densely sampled
+// rather than just a couple of representative heights. `axisIsX` picks which axis `delta` is
+// along.
 function clampAxisMove(delta, axisIsX, feetY, checkHeights) {
   if (delta === 0) return 0;
   const sign = Math.sign(delta);
@@ -108,7 +112,7 @@ export function updateMovement(dt) {
     camera.position.z += clampAxisMove(moveDir.z, false, feetY, checkHeights);
   }
 
-  if (keys.has("Space") && grounded) {
+  if (keys.has("Space") && grounded && !crouching) {
     verticalVelocity = playerStats.jumpSpeed;
     grounded = false;
   }

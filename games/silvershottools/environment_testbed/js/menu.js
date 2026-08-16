@@ -3,19 +3,21 @@
 // world, built fresh by loadWorld() below.
 
 import { GLTFLoader } from "../../vendor/loaders/GLTFLoader.js";
-import { fetchJson } from "./util.js";
+import { fetchJson, cacheBust } from "./util.js";
 import { requestLock, resetLook } from "./pointerlock.js";
 import { setupMap, resetMapState } from "./map.js";
 import { buildObjectLibrary, spawnObjects, resetSpawnedObjects } from "./objects.js";
 import { resetPhysicsWorld, syncGravity } from "./physics.js";
 import { resetInteractables } from "./interaction.js";
 import { resetDoors } from "./door.js";
+import { resetDrawers } from "./drawer.js";
 import { resetHold } from "./hold.js";
 import { resetInventory, setupInventoryGrid } from "./inventory.js";
 import { resetPlayer } from "./movement.js";
 import { setPlayerStats } from "./playerConfig.js";
 import { setWorldStats } from "./worldConfig.js";
 import { syncAmbientLight } from "./scene.js";
+import { applyShadowQuality } from "./graphicsSettings.js";
 import { resetLean } from "./lean.js";
 import { stopAmbiance } from "./audio.js";
 import { MAP_URL, OBJECTS_URL, CONFIG_URL, WEAPONS_URL, PLAYER_STATS_URL, WORLD_URL } from "./constants.js";
@@ -28,16 +30,15 @@ const mainMenuButton = document.getElementById("mainMenuButton");
 function loadWorld() {
   const loader = new GLTFLoader();
   return Promise.all([
-    loader.loadAsync(MAP_URL),
-    loader.loadAsync(OBJECTS_URL),
+    loader.loadAsync(cacheBust(MAP_URL)),
+    loader.loadAsync(cacheBust(OBJECTS_URL)),
     fetchJson(CONFIG_URL),
     fetchJson(WEAPONS_URL),
     fetchJson(PLAYER_STATS_URL),
     fetchJson(WORLD_URL),
   ]).then(([mapGltf, objectsGltf, config, weapons, playerStats, worldStats]) => {
-    // worldStats/playerStats first - setupMap()/setupDoor() (via worldStats.lightRange,
-    // doorOpenAngle, ...) and resetPlayer() (via playerStats.eyeHeight) below both depend on
-    // these already being loaded.
+    // worldStats/playerStats first - syncGravity()/syncAmbientLight() and resetPlayer() (via
+    // playerStats.eyeHeight) below both depend on these already being loaded.
     setWorldStats(worldStats);
     setPlayerStats(playerStats);
     syncGravity(); // re-applies worldStats.gravity to the cannon-es world built at module-init time with just its default
@@ -45,7 +46,8 @@ function loadWorld() {
     setupInventoryGrid(); // (re)builds the main inventory grid at its now-current playerStats.inventory size
 
     buildObjectLibrary(objectsGltf.scene, weapons);
-    setupMap(mapGltf, config.switches || {});
+    setupMap(mapGltf, config);
+    applyShadowQuality(); // (re)applies the current shadow setting to this fresh map's lights - setupMap() just built them at THREE's own defaults
     spawnObjects(mapGltf.scene, config.spawns || {});
     resetPlayer(); // puts the player at spawn using the just-loaded stats
   });
@@ -75,6 +77,7 @@ mainMenuButton.addEventListener("click", () => {
   resetHold();
   resetInteractables();
   resetDoors();
+  resetDrawers();
   resetPhysicsWorld();
   resetSpawnedObjects();
   resetMapState();

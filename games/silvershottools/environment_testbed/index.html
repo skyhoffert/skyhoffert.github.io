@@ -16,7 +16,7 @@
 <div id="toolbar">
   <a href="../index.html">&laquo;</a>
   <span class="title">Environment Testbed</span>
-  <span class="hint">click to look around &middot; WASD/arrows = move &middot; shift = run &middot; space = jump &middot; c = crouch &middot; f = interact &middot; q/e = lean &middot; hold click/right-click = hold item (left/right hand) &middot; ctrl = rotate held &middot; i = inventory (drag to move, r = rotate) &middot; v = collision view &middot; Esc = release mouse</span>
+  <span class="hint">click to look around &middot; WASD/arrows = move &middot; shift = run &middot; space = jump &middot; c = crouch &middot; f = interact &middot; q/e = lean &middot; hold click/right-click = hold item (left/right hand) &middot; ctrl = rotate held &middot; i = inventory (drag to move, r = rotate) &middot; v = collision view &middot; p = wield pose tuning &middot; Esc = release mouse</span>
 </div>
 
 <div id="viewport">
@@ -48,6 +48,7 @@
     </div>
     <div id="dragPreview"></div>
   </div>
+  <div id="wieldDebug"></div>
   <div id="settings">
     <div id="settingsPanel">
       <h2>Settings</h2>
@@ -62,6 +63,15 @@
       <label class="settingRow">
         <span>Sound Effects Volume</span>
         <input type="range" id="sfxVolumeSlider" min="0" max="100" step="1">
+      </label>
+      <label class="settingRow">
+        <span>Shadow Quality</span>
+        <select id="shadowQualitySelect">
+          <option value="off">Off</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
       </label>
       <button id="settingsCloseBtn" type="button">Close</button>
     </div>

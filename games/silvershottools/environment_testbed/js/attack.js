@@ -2,7 +2,8 @@
 // with it, per its weapons.json stats (see objects.js's weaponStatsFor()) - a "melee" item gets
 // a timed swing-and-cooldown animation using its own cooldownTime/swingTime/swingArc/swingLunge
 // (no hit detection yet), a "gun" flashes "BANG" on screen on its own cooldownTime (no
-// ammo/reload modeling yet - see showBang()), and a "prop" does nothing (can't be attacked
+// ammo/reload modeling yet - see showBang()), a "light" flips its light on/off with no cooldown
+// at all (see wield.js's toggleWieldedLight()), and a "prop" does nothing (can't be attacked
 // with). Clicking with an empty hand still does the old pickup/carry click instead (see
 // hold.js's tryPickUp(), which declines to fire while that hand's wielding).
 //
@@ -12,7 +13,7 @@
 
 import * as THREE from "three";
 import { canvas } from "./dom.js";
-import { getWielded, getWieldedStats } from "./wield.js";
+import { getWielded, getWieldedStats, toggleWieldedLight } from "./wield.js";
 import { BANG_TEXT_TIME } from "./constants.js";
 
 const bangEl = document.getElementById("bangText");
@@ -48,6 +49,13 @@ function tryAttack(handId) {
   const slotId = getWielded("twoHand") ? "twoHand" : handId;
   const stats = getWieldedStats(slotId);
   if (!stats || stats.type === "prop") return; // nothing wielded, or can't be attacked with (e.g. a book)
+
+  // No cooldown gate at all - unlike a swing/shot, toggling a light on/off should never be
+  // rate-limited, and there's no per-slot "busy" animation state for it to conflict with either.
+  if (stats.type === "light") {
+    toggleWieldedLight(slotId);
+    return;
+  }
 
   const state = states[slotId];
   if (state.cooldownT > 0) return;

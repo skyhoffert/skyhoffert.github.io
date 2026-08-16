@@ -92,20 +92,29 @@ function shapeDebugString(shape) {
   return "unknown shape";
 }
 
+const scratchPos = new THREE.Vector3();
+const scratchQuat = new THREE.Quaternion();
+const scratchScale = new THREE.Vector3();
+const UNIT_SCALE = new THREE.Vector3(1, 1, 1);
+
+// A reference-frame inverse matrix for colliderToShape(), deliberately excluding obj's own
+// scale (unlike a plain matrixWorld inverse, or the identity matrix used for static map
+// colliders): cannon-es shapes carry no scale of their own, so a collision child's size/offset
+// needs to come out in world-sized units. Inverting obj's *full* world matrix (scale included)
+// would cancel that scale back out of the child's computed scale too, leaving shapes sized in
+// raw pre-export-scale units instead - invisible for anything whose root happens to export at
+// scale 1, but wildly wrong (and physics-exploding for a dynamic prop) for anything baked down
+// by some other factor. Shared by buildPropBody() below and door.js/drawer.js's own kinematic
+// bodies. Expects obj.matrixWorld to already be current (updateMatrixWorld() already called).
+export function worldInverseNoScale(obj) {
+  obj.matrixWorld.decompose(scratchPos, scratchQuat, scratchScale);
+  return new THREE.Matrix4().compose(scratchPos, scratchQuat, UNIT_SCALE).invert();
+}
+
 export function buildPropBody(instance) {
   console.log(`Building physics body for "${instance.name}":`);
   instance.updateMatrixWorld(true);
-  // Deliberately excludes the instance's own scale (unlike the identity matrix used for static
-  // map colliders below): cannon-es shapes carry no scale of their own, so a collision child's
-  // size/offset needs to come out in world-sized units. Inverting the instance's *full* world
-  // matrix here would cancel that scale back out, leaving shapes sized in the mesh's raw
-  // pre-export-scale units instead - invisible for props whose root happens to export at scale
-  // 1, but wildly wrong (and physics-exploding) for any prop baked down by some other factor.
-  const instancePos = new THREE.Vector3();
-  const instanceQuat = new THREE.Quaternion();
-  const instanceScale = new THREE.Vector3();
-  instance.matrixWorld.decompose(instancePos, instanceQuat, instanceScale);
-  const instanceWorldInverse = new THREE.Matrix4().compose(instancePos, instanceQuat, new THREE.Vector3(1, 1, 1)).invert();
+  const instanceWorldInverse = worldInverseNoScale(instance);
 
   const body = new CANNON.Body({ mass: PROP_MASS });
   let hasShape = false;
@@ -157,6 +166,26 @@ export function buildStaticColliderBody(mesh) {
   const body = new CANNON.Body({ mass: 0 });
   body.addShape(result.shape, result.position, result.quaternion);
   world.addBody(body);
+}
+
+// Wakes every currently-sleeping dynamic body within radius of position - world.allowSleep
+// (above) means a prop stops being simulated at all after resting still for a bit, and a
+// kinematic surface (a door/drawer) moving underneath a sleeping body doesn't count as a
+// disturbance on its own, so it never notices. Called by door.js/drawer.js whenever one's
+// toggled, since either could have something resting on/in it that needs to actually respond
+// once it starts moving - rather than tracking exactly what's sitting on which door/drawer,
+// this just wakes anything nearby, which is cheap enough for the handful of props a scene like
+// this ever has (anything woken but irrelevant just settles back to sleep a moment later).
+// position just needs x/y/z (a THREE.Vector3 or CANNON.Vec3 both work).
+export function wakeNearbyBodies(position, radius) {
+  const radiusSq = radius * radius;
+  world.bodies.forEach((body) => {
+    if (body.mass <= 0) return;
+    const dx = body.position.x - position.x;
+    const dy = body.position.y - position.y;
+    const dz = body.position.z - position.z;
+    if (dx * dx + dy * dy + dz * dz <= radiusSq) body.wakeUp();
+  });
 }
 
 // Steps the world (real rigid-body dynamics - falling, tumbling, resting contact on the map's

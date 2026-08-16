@@ -3,7 +3,6 @@
 
 import { canvas, overlay, viewport } from "./dom.js";
 import { listener, tryStartAmbiance } from "./audio.js";
-import { physicsObjects } from "./physics.js";
 import { ctrlDown, heldLeft, heldRight, rotateHeldBody } from "./hold.js";
 import { playerStats } from "./playerConfig.js";
 
@@ -38,8 +37,8 @@ document.addEventListener("mousemove", (evt) => {
   // (world-space yaw + a tilt around the camera's current right axis) instead of the camera,
   // so looking around and rotating items don't fight each other. Both hands rotate together.
   if (ctrlDown && (heldLeft || heldRight)) {
-    if (heldLeft) rotateHeldBody(physicsObjects.get(heldLeft.object), evt.movementX, evt.movementY);
-    if (heldRight) rotateHeldBody(physicsObjects.get(heldRight.object), evt.movementX, evt.movementY);
+    if (heldLeft) rotateHeldBody(heldLeft, evt.movementX, evt.movementY);
+    if (heldRight) rotateHeldBody(heldRight, evt.movementX, evt.movementY);
     return;
   }
 

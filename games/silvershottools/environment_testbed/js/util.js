@@ -16,11 +16,24 @@ export function isDescendantOf(obj, ancestor) {
   return false;
 }
 
+// no-store, not just a cache-busting query string - these config files (player.json,
+// weapons.json, world.json, the map's own JSON sidecar) are meant to be tuned and reloaded
+// during play (see menu.js's loadWorld(), re-run every time Play is pressed), so a stale cached
+// copy surviving a reload would silently make edits look like they did nothing.
 export function fetchJson(url) {
-  return fetch(url).then((res) => {
+  return fetch(url, { cache: "no-store" }).then((res) => {
     if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
     return res.json();
   });
+}
+
+// Appends a load-time-unique query string, forcing a fresh fetch regardless of cache headers -
+// for URLs handed to GLTFLoader (menu.js's MAP_URL/OBJECTS_URL), which has no equivalent of
+// fetchJson()'s { cache: "no-store" } option exposed. A genuinely different URL every call is
+// the one cache-busting trick that can't be defeated by any server/proxy caching config, unlike
+// a fetch option a misconfigured server could still ignore.
+export function cacheBust(url) {
+  return `${url}?t=${Date.now()}`;
 }
 
 // Frees GPU buffers/textures under root - three.js doesn't do this automatically when an

@@ -7,8 +7,8 @@
   "crouchSpeedMult": 0.5,
   "crouchTransitionSpeed": 6,
   "radius": 0.4,
-  "wallCheckHeightsStand": [0.3, 1.4],
-  "wallCheckHeightsCrouch": [0.3, 0.8],
+  "wallCheckHeightsStand": [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4],
+  "wallCheckHeightsCrouch": [0.2, 0.4, 0.6, 0.8, 1.0],
   "groundProbeUp": 0.5,
   "groundProbeDown": 5,
   "leanDistance": 0.5,
@@ -17,23 +17,25 @@
   "leanClearance": 0.15,
   "lookSensitivity": 0.0022,
   "pitchLimit": 1.5608,
-  "interactRadius": 2.2,
+  "interactRadius": 1.4,
   "dropReach": 2,
   "inventory": {
     "columns": 2,
     "rows": 2
   },
   "hold": {
-    "distance": 1,
+    "distance": 0.75,
     "sideOffset": 0.2,
     "rotateSensitivity": 0.008,
     "springStiffness": 450,
     "springDamping": 42,
-    "maxForce": 900
+    "maxForce": 900,
+    "angularDamping": 0.99,
+    "rotFollowSpeed": 6
   },
   "wield": {
     "distance": 0.35,
-    "sideOffset": 0.25,
+    "sideOffset": 0.15,
     "downOffset": 0.25,
     "rotationX": 0,
     "rotationY": 1.5708,
@@ -41,9 +43,20 @@
     "twoHand": {
       "distance": 0.5,
       "downOffset": 0.3,
+      "sideOffset": 0,
       "rotationX": 0,
       "rotationY": 3.1416,
-      "rotationZ": 1.5708
+      "rotationZ": 1.5708,
+      "tiltAngle": 0.3
+    },
+    "twoHandGun": {
+      "distance": 0.4,
+      "downOffset": 0.24,
+      "sideOffset": 0.13,
+      "rotationX": 0,
+      "rotationY": 1.59840734641021,
+      "rotationZ": 0,
+      "tiltAngle": 0
     }
   }
 }

@@ -23,8 +23,19 @@ window.addEventListener("keyup", (evt) => {
 // Right-click is a real control now (holding with the right hand), not a context-menu trigger.
 canvas.addEventListener("contextmenu", (evt) => evt.preventDefault());
 
-export let heldLeft = null; // { object } carried on left-click, or null
-export let heldRight = null; // { object } carried on right-click, or null
+export let heldLeft = null; // { object, rotOffset } carried on left-click, or null
+export let heldRight = null; // { object, rotOffset } carried on right-click, or null
+
+const DEFAULT_ANGULAR_DAMPING = 0.01; // cannon-es Body's own default - restored on drop so a throw still tumbles normally
+
+const captureBodyQuat = new THREE.Quaternion();
+
+// held.rotOffset such that bodyQuat == camera.quaternion * rotOffset - i.e. "the item's current
+// orientation, expressed relative to the camera" - see applyHoldRotation()/rotateHeldBody().
+function captureRotOffset(held, body) {
+  captureBodyQuat.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+  held.rotOffset.copy(camera.quaternion).invert().multiply(captureBodyQuat);
+}
 
 document.addEventListener("mousedown", (evt) => {
   if (evt.button === 0) tryPickUp("left");
@@ -54,17 +65,35 @@ function tryPickUp(hand) {
 // both are true (tryPickUp itself, and inventory.js's drag-out-into-a-free-hand flow) use this
 // so the actual pickup logic only lives in one place.
 export function pickUpObject(hand, obj) {
-  if (hand === "left") heldLeft = { object: obj };
-  else heldRight = { object: obj };
+  const held = { object: obj, rotOffset: new THREE.Quaternion() };
+  if (hand === "left") heldLeft = held;
+  else heldRight = held;
 
   const phys = physicsObjects.get(obj);
-  if (phys) phys.body.wakeUp(); // stays in the world and fully dynamic the whole time it's held
+  if (phys) {
+    phys.body.wakeUp(); // stays in the world and fully dynamic the whole time it's held
+    // Stops any twirl left over from before pickup (falling, thrown, bumped, ...) instead of
+    // carrying it straight into your hand, and keeps suppressing new spin picked up from
+    // bumping into things while carried - see dropHand() for the other half of this.
+    phys.body.angularVelocity.set(0, 0, 0);
+    phys.body.angularDamping = playerStats.hold.angularDamping;
+    // How the item's oriented relative to the camera right now - applyHoldRotation() turns it
+    // back toward this SAME relative orientation as you look around, rather than some fixed
+    // world-space orientation, so it turns along with you instead of staying put in place.
+    captureRotOffset(held, phys.body);
+  }
   interactPromptEl.classList.remove("visible");
 }
 
 function dropHand(hand) {
   // The body already has whatever velocity/angular velocity the hold spring left it with -
-  // that's the throw. Nothing else to do.
+  // that's the throw. Only the angular damping pickUpObject() bumped up needs undoing, so a
+  // thrown/dropped item can tumble normally again instead of staying artificially stiff.
+  const held = hand === "left" ? heldLeft : heldRight;
+  if (held) {
+    const phys = physicsObjects.get(held.object);
+    if (phys) phys.body.angularDamping = DEFAULT_ANGULAR_DAMPING;
+  }
   if (hand === "left") heldLeft = null;
   else heldRight = null;
 }
@@ -78,6 +107,8 @@ const holdRight = new THREE.Vector3();
 const holdRotDelta = new THREE.Quaternion();
 const holdCurrentQuat = new THREE.Quaternion();
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
+const holdRotTarget = new THREE.Quaternion();
+const holdRotError = new THREE.Quaternion();
 
 // Spring-damper pulling the held body's geometric center toward a point out in front of the
 // camera (offset left/right of center per hand), rather than pinning its position directly -
@@ -111,6 +142,29 @@ function applyHoldForce(body, centerOffset, sideOffset) {
   body.force.z += holdForce.z;
 }
 
+// Turns the held body toward rotOffset "reprojected" through the camera's current orientation -
+// i.e. wherever it'd be sitting if it had stayed fixed relative to the camera since it was
+// captured (pickup, or the last ctrl-rotate - see rotateHeldBody()) - by directly driving
+// angularVelocity rather than applying torque. Torque would have to be scaled by the body's
+// rotational inertia to produce a sane angular acceleration, and these props are small enough
+// that their inertia is tiny - even a modest torque against it spins the body up explosively
+// instead of settling. Setting velocity sidesteps mass/inertia entirely.
+//
+// The quaternion error's vector part (x, y, z) already points roughly along the axis needed to
+// rotate current -> target, scaled with the angle - standard small-angle quaternion approach,
+// avoiding a full axis-angle decomposition. Flipping to the shortest path when w < 0 avoids it
+// ever winding the "long way" around for a >180° error.
+function applyHoldRotation(body, rotOffset) {
+  holdRotTarget.copy(camera.quaternion).multiply(rotOffset);
+  holdCurrentQuat.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+  holdRotError.copy(holdRotTarget).multiply(holdCurrentQuat.invert());
+  if (holdRotError.w < 0) holdRotError.set(-holdRotError.x, -holdRotError.y, -holdRotError.z, -holdRotError.w);
+
+  body.angularVelocity.x = holdRotError.x * 2 * playerStats.hold.rotFollowSpeed;
+  body.angularVelocity.y = holdRotError.y * 2 * playerStats.hold.rotFollowSpeed;
+  body.angularVelocity.z = holdRotError.z * 2 * playerStats.hold.rotFollowSpeed;
+}
+
 // See menu.js's return-to-main-menu flow. The held bodies themselves are torn down by
 // physics.js's resetPhysicsWorld() - this just forgets the hands were holding anything.
 export function resetHold() {
@@ -119,22 +173,32 @@ export function resetHold() {
   ctrlDown = false;
 }
 
-// Applies the hold spring to whichever hand(s) are currently full. Must run before
-// physics.js's stepPhysics() each frame - see main.js's animate().
+// Applies the hold spring (position) and rotation follow (see applyHoldRotation()) to whichever
+// hand(s) are currently full. Must run before physics.js's stepPhysics() each frame - see
+// main.js's animate().
 export function applyHeldForces() {
   if (heldLeft) {
     const phys = physicsObjects.get(heldLeft.object);
-    if (phys) applyHoldForce(phys.body, phys.centerOffset, -playerStats.hold.sideOffset);
+    if (phys) {
+      applyHoldForce(phys.body, phys.centerOffset, -playerStats.hold.sideOffset);
+      applyHoldRotation(phys.body, heldLeft.rotOffset);
+    }
   }
   if (heldRight) {
     const phys = physicsObjects.get(heldRight.object);
-    if (phys) applyHoldForce(phys.body, phys.centerOffset, playerStats.hold.sideOffset);
+    if (phys) {
+      applyHoldForce(phys.body, phys.centerOffset, playerStats.hold.sideOffset);
+      applyHoldRotation(phys.body, heldRight.rotOffset);
+    }
   }
 }
 
 // Direct rotation control (used while ctrl is held, see pointerlock.js's mousemove handler)
-// rather than torque, so it stays precise/responsive instead of fighting physical spin.
-export function rotateHeldBody(phys, movementX, movementY) {
+// rather than torque, so it stays precise/responsive instead of fighting physical spin. held is
+// heldLeft/heldRight itself (not just its .object) so its rotOffset can be recaptured below.
+export function rotateHeldBody(held, movementX, movementY) {
+  if (!held) return;
+  const phys = physicsObjects.get(held.object);
   if (!phys) return;
   const body = phys.body;
   holdRight.set(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -145,4 +209,8 @@ export function rotateHeldBody(phys, movementX, movementY) {
   holdCurrentQuat.premultiply(holdRotDelta);
   body.quaternion.set(holdCurrentQuat.x, holdCurrentQuat.y, holdCurrentQuat.z, holdCurrentQuat.w);
   body.angularVelocity.set(0, 0, 0); // don't let leftover spin fight the direct rotation control
+  // Otherwise applyHoldRotation() would immediately start pulling it back toward the orientation
+  // captured at pickup (or the last ctrl-rotate) - recapturing here makes THIS the new target,
+  // so it holds wherever you just manually rotated it to instead of undoing it.
+  captureRotOffset(held, body);
 }

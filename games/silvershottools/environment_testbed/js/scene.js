@@ -15,8 +15,8 @@ camera.position.set(0, 1.7, 0);
 scene.add(camera);
 
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.BasicShadowMap; // cheapest shadow filtering (hard edges, no PCF)
+// shadowMap.enabled/.type are set by graphicsSettings.js's applyShadowQuality() instead of
+// here - see its own comment for why.
 // Without this the renderer defaults to NoToneMapping, so the map's real-world-unit glTF
 // lights just clip to white instead of rolling off the way Blender's view transform does.
 renderer.toneMapping = THREE.ACESFilmicToneMapping;

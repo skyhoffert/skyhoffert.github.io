@@ -1,12 +1,5 @@
 {
   "gravity": -20,
   "worldBound": 200,
-  "lightRange": 22,
-  "ambientLightIntensity": 0.04,
-  "lightFlickerMin": 0.8,
-  "lightFlickerChangeMin": 0.05,
-  "lightFlickerChangeMax": 0.3,
-  "lightFlickerSpeed": 10,
-  "doorOpenAngle": 1.5708,
-  "doorSpeed": 3.1416
+  "ambientLightIntensity": 0.04
 }

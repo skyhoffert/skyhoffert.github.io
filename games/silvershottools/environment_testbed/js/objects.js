@@ -79,6 +79,8 @@ const OBJECT_EMOJI = {
   book_a: "\u{1F4D6}", // 📖
   shovel: "\u{26CF}\u{FE0F}", // ⛏️
   revolver: "\u{1F52B}", // 🔫
+  shotgun: "\u{1F52B}", // 🔫 - no distinct shotgun emoji in Unicode, same as revolver
+  flashlight: "\u{1F526}", // 🔦
 };
 const DEFAULT_OBJECT_EMOJI = "\u{1F4E6}"; // 📦
 
@@ -91,6 +93,7 @@ export function objectEmoji(name) {
 // every object before inventory.js grew multi-cell items.
 const OBJECT_SIZE = {
   shovel: { w: 1, h: 2 }, // tall enough that it has to rotate to 2x1 to fit across both hand slots
+  shotgun: { w: 1, h: 2 }, // same deal - a two-handed gun
 };
 const DEFAULT_OBJECT_SIZE = { w: 1, h: 1 };
 
@@ -107,11 +110,16 @@ export function objectSize(name) {
 // - "melee": swings on a timer - cooldownTime/swingTime/swingArc/swingLunge.
 // - "gun": fired on a timer - cooldownTime, plus ammoCapacity (not consumed anywhere yet - see
 //   attack.js's tryAttack(), which currently just flashes "BANG").
+// - "light": toggled on/off (no cooldown) - range, applied to whatever THREE.Light is found
+//   under the instance (see wield.js's equipSlot()) as its .distance, since an exported
+//   KHR_lights_punctual light has no such falloff limit by default (same issue map.js's own
+//   lights have - see its setupMap()) and would otherwise dimly light the whole level.
 // Anything a weapon's own entry doesn't specify falls back to these - keeps weapons.json
 // entries short (most props won't even have one) without a weapon silently ending up with a
 // zero/undefined swingTime etc. if a field's forgotten.
 const DEFAULT_MELEE_STATS = { cooldownTime: ATTACK_COOLDOWN_TIME, swingTime: ATTACK_SWING_TIME, swingArc: ATTACK_SWING_ARC, swingLunge: ATTACK_SWING_LUNGE };
 const DEFAULT_GUN_STATS = { cooldownTime: ATTACK_COOLDOWN_TIME, ammoCapacity: 6 };
+const DEFAULT_LIGHT_STATS = { range: 8 };
 const DEFAULT_TYPE = "prop";
 
 // The full stats object for a weapon (type plus whatever fields apply to it, defaults filled
@@ -121,7 +129,7 @@ export function weaponStatsFor(name) {
   const entry = weaponStats[name.slice(OBJECT_PREFIX.length)];
   const type = (entry && entry.type) || DEFAULT_TYPE;
   if (type === "prop") return { type };
-  const defaults = type === "gun" ? DEFAULT_GUN_STATS : DEFAULT_MELEE_STATS;
+  const defaults = type === "gun" ? DEFAULT_GUN_STATS : type === "light" ? DEFAULT_LIGHT_STATS : DEFAULT_MELEE_STATS;
   return { ...defaults, ...entry, type };
 }
 
@@ -133,9 +141,47 @@ export function cloneObjectTemplate(fullName) {
   return template ? template.clone(true) : null;
 }
 
-// Wires up a freshly-spawned instance: shadows on its visible geometry, a cannon-es rigid
-// body built from its COLL_BOX_/COLL_SPHERE_/COLL_CYLINDER_ children, and registers it as a
-// holdable interactable.
+// Clamps range, starts off, and fixes up aim direction for every point/spot light a
+// freshly-cloned instance carries, returning the last one found (this codebase only ever puts
+// one light on an item, so "last" is "the" light) for a caller that needs to hang onto it - see
+// wield.js's equipSlot(), which stores it to toggle on/off later. Starts off regardless of
+// whatever Blender/GLTFLoader exported (on, at whatever intensity) - a flashlight shouldn't
+// already be lit before anyone's turned it on, whether it's just been equipped or is still
+// sitting out in the world (e.g. spawned via a SPAWN_ marker) waiting to be picked up.
+//
+// Two clone(true) gotchas this papers over, both only visible once an instance actually rotates
+// (equipped and swung, or physically tumbled/kicked - not just sitting statically where it
+// spawned, which is why this can look fine until then):
+// - Blender doesn't export a glTF light range, so a point/spot light's distance falls off to
+//   zero only asymptotically by default - without clamping it, it dimly lights (and shadows)
+//   the whole map instead of just nearby (same issue map.js's own map lights have).
+// - A spot/directional light's .target is a *separate* property, not a normal scene-graph
+//   child - clone(true) clones ordinary children (so the light's own position/rotation always
+//   correctly follows the model), but SpotLight.copy() clones .target as a freestanding object
+//   never re-parented into the new hierarchy, so the beam's aim direction (computed from
+//   light.position -> target.position) stays wherever the target happened to end up instead of
+//   rotating with the model. Fixed by re-parenting target directly under the light itself,
+//   pointing local -Z (glTF's own punctual-light convention), so its world position - and thus
+//   the beam's aim - is always rigidly locked to the light's own transform.
+export function configureInstanceLights(instance) {
+  let found = null;
+  instance.traverse((child) => {
+    if (!child.isLight) return;
+    found = child;
+    child.visible = false;
+    const range = weaponStatsFor(instance.name).range;
+    if (typeof range === "number" && (child.isPointLight || child.isSpotLight)) child.distance = range;
+    if (child.target) {
+      child.target.position.set(0, 0, -1);
+      child.add(child.target);
+    }
+  });
+  return found;
+}
+
+// Wires up a freshly-spawned instance: shadows on its visible geometry, its light(s) configured
+// (see configureInstanceLights() above), a cannon-es rigid body built from its
+// COLL_BOX_/COLL_SPHERE_/COLL_CYLINDER_ children, and registers it as a holdable interactable.
 function setupPhysicsObject(instance) {
   instance.traverse((child) => {
     if (child.isMesh && !child.name.startsWith(COLLISION_PREFIX)) {
@@ -143,6 +189,7 @@ function setupPhysicsObject(instance) {
       child.receiveShadow = true;
     }
   });
+  configureInstanceLights(instance);
 
   const body = buildPropBody(instance);
   world.addBody(body);

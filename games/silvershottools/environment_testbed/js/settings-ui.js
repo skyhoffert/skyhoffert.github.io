@@ -1,7 +1,9 @@
 // Settings screen (opened from the inventory panel): master/music/sfx volume sliders backed
-// by settings.js's audioSettings, persisted to a cookie on close.
+// by settings.js's audioSettings, plus a shadow quality dropdown backed by graphicsSettings.js's
+// videoSettings - both persisted to their own cookies on close.
 
 import { audioSettings, applyAllVolumes, saveAudioSettingsToCookie } from "./settings.js";
+import { videoSettings, applyShadowQuality, saveVideoSettingsToCookie } from "./graphicsSettings.js";
 import { inventoryOpen, setInventoryOpen } from "./inventory.js";
 import { requestLock } from "./pointerlock.js";
 
@@ -11,10 +13,12 @@ const settingsCloseBtn = document.getElementById("settingsCloseBtn");
 const masterVolumeSlider = document.getElementById("masterVolumeSlider");
 const musicVolumeSlider = document.getElementById("musicVolumeSlider");
 const sfxVolumeSlider = document.getElementById("sfxVolumeSlider");
+const shadowQualitySelect = document.getElementById("shadowQualitySelect");
 
 masterVolumeSlider.value = Math.round(audioSettings.master * 100);
 musicVolumeSlider.value = Math.round(audioSettings.music * 100);
 sfxVolumeSlider.value = Math.round(audioSettings.sfx * 100);
+shadowQualitySelect.value = videoSettings.shadowQuality;
 
 function bindVolumeSlider(slider, key) {
   slider.addEventListener("input", () => {
@@ -26,6 +30,13 @@ bindVolumeSlider(masterVolumeSlider, "master");
 bindVolumeSlider(musicVolumeSlider, "music");
 bindVolumeSlider(sfxVolumeSlider, "sfx");
 
+// Applied immediately (not just on close) - the whole point is being able to compare shadow
+// levels live against how the scene is actually rendering right now, without a reload.
+shadowQualitySelect.addEventListener("change", () => {
+  videoSettings.shadowQuality = shadowQualitySelect.value;
+  applyShadowQuality();
+});
+
 settingsButton.addEventListener("click", () => {
   setInventoryOpen(false); // covers it, not stacked on top of it
   settingsEl.classList.add("open");
@@ -34,6 +45,7 @@ settingsButton.addEventListener("click", () => {
 function closeSettings() {
   settingsEl.classList.remove("open");
   saveAudioSettingsToCookie();
+  saveVideoSettingsToCookie();
   // Deliberately not re-requesting pointer lock here - same reasoning as the inventory's Esc
   // handling below (browsers block requestPointerLock() calls made directly off a keydown).
 }
