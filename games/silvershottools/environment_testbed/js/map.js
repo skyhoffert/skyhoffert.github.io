@@ -1,6 +1,6 @@
 // Loads and wires up the map (testbed_map_a.glb): static/player collision, doors, drawers,
-// light switches, and per-light flicker state. See objects.js for the separate object library/
-// spawning that populates the map with holdable props.
+// locks, light switches, and per-light flicker state. See objects.js for the separate object
+// library/spawning that populates the map with holdable props.
 
 import * as THREE from "three";
 import { scene } from "./scene.js";
@@ -11,9 +11,11 @@ import { listener, audioLoader, playOneShot } from "./audio.js";
 import { registerSound, unregisterSound } from "./settings.js";
 import { setupDoor } from "./door.js";
 import { setupDrawer } from "./drawer.js";
+import { setupLock } from "./lock.js";
 import {
   DOOR_PREFIX,
   DRAWER_PREFIX,
+  LOCK_PREFIX,
   COLLISION_PREFIX,
   SWITCH_PREFIX,
   LIGHT_GROUP_PREFIX,
@@ -67,12 +69,13 @@ function wireSwitches(switches) {
   });
 }
 
-// config is the map's JSON sidecar (see menu.js's loadWorld()) - doors/drawers/lights are all
-// keyed by object name, each entry optional and itself allowed to omit any field, falling back
-// to the matching DOOR_*/DRAWER_*/LIGHT_* constant (see setupDoor()/setupDrawer()/the per-light
-// setup below and updateLightFlicker()) for anything not customized there. Switches have no
-// config of their own - see wireSwitches().
-export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig = {}, lights: lightConfig = {} } = {}) {
+// config is the map's JSON sidecar (see menu.js's loadWorld()) - doors/drawers/lights/locks are
+// all keyed by object name, each entry optional and itself allowed to omit any field, falling
+// back to the matching DOOR_*/DRAWER_*/LIGHT_* constant (see setupDoor()/setupDrawer()/the
+// per-light setup below and updateLightFlicker()) for anything not customized there - locks are
+// the one exception, since "door"/"key" have no sensible constants.js default (see setupLock()).
+// Switches have no config of their own - see wireSwitches().
+export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig = {}, lights: lightConfig = {}, locks: lockConfig = {} } = {}) {
   // Needed before reading any mesh's matrixWorld below (e.g. for baking static collision
   // geometry into world space) - nothing has been rendered yet, so it isn't current otherwise.
   gltf.scene.updateMatrixWorld(true);
@@ -91,9 +94,19 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
   // door/drawer (see door.js/drawer.js).
   const doorObjs = [];
   const drawerObjs = [];
+  const lockObjs = [];
   gltf.scene.traverse((obj) => {
     if (obj.name.startsWith(DOOR_PREFIX)) doorObjs.push(obj);
     else if (obj.name.startsWith(DRAWER_PREFIX)) drawerObjs.push(obj);
+    else if (obj.name.startsWith(LOCK_PREFIX)) {
+      // A lock is a click/raycast target only - the visible keyhole/padlock is modeled as part
+      // of the door/furniture itself, same reasoning as hiding COLL_ authoring geometry below.
+      // Left in the scene graph (not removed) so it keeps updating its matrixWorld and stays
+      // raycastable - interaction.js's crosshair raycast already runs against invisible COLL_
+      // meshes the exact same way (see typedCollisionMeshes, populated further down).
+      obj.visible = false;
+      lockObjs.push(obj);
+    }
   });
   const doorColliders = new Map(); // door object -> its COLL_ children
   doorObjs.forEach((d) => doorColliders.set(d, []));
@@ -133,10 +146,12 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
       mapLights.push(obj);
       // Per-light config from the map's JSON sidecar, keyed by object name - any field it
       // omits (or omitting the entry entirely) falls back to the matching LIGHT_* constant, so
-      // a light only needs an entry at all for whatever it wants to customize.
+      // a light only needs an entry at all for whatever it wants to customize. "shadow" is the
+      // one exception (no LIGHT_* constant - see below), defaulting to true.
       const cfg = lightConfig[obj.name] || {};
       const shadowNear = cfg.shadowNear ?? LIGHT_SHADOW_NEAR;
       const shadowFar = cfg.shadowFar ?? LIGHT_SHADOW_FAR;
+      const castsShadow = cfg.shadow ?? true;
 
       // Logical on/off (its own starting state, cfg.on - a switch just toggles whatever this
       // already is, see wireSwitches()) is kept separate from the displayed intensity, which
@@ -160,22 +175,32 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
         // - bias in particular has to scale with mapSize (a coarser map has bigger texels, so
         // needs a bigger offset to avoid self-shadowing acne), so it lives with mapSize in one
         // place rather than a fixed guess here that only suited one specific resolution.
-        obj.castShadow = true;
-        obj.shadow.camera.near = shadowNear;
-        obj.shadow.camera.far = shadowFar;
+        obj.castShadow = castsShadow;
+        if (castsShadow) {
+          obj.shadow.camera.near = shadowNear;
+          obj.shadow.camera.far = shadowFar;
+        }
         // Blender doesn't export a glTF light range, so without this point/spot lights fall
-        // off to zero only asymptotically and end up lighting (and shadowing) the whole map.
-        // Also why shadowFar (not a separate "range") drives distance too: three.js re-forces
-        // a point light's shadow camera far to light.distance every frame regardless of what's
-        // set above, so for point lights that's the only value that actually sticks; reusing it
-        // for spot lights as well just keeps a single knob instead of two that overlap in
-        // practice for point lights and would drift into confusing states for spot lights.
+        // off to zero only asymptotically and end up lighting (and shadowing) the whole map -
+        // unconditional on castsShadow above since this governs the light's actual illumination
+        // falloff, not just its shadow camera's far plane. Also why shadowFar (not a separate
+        // "range") drives distance too: three.js re-forces a point light's shadow camera far to
+        // light.distance every frame regardless of what's set above, so for point lights that's
+        // the only value that actually sticks; reusing it for spot lights as well just keeps a
+        // single knob instead of two that overlap in practice for point lights and would drift
+        // into confusing states for spot lights.
         if (obj.isPointLight || obj.isSpotLight) obj.distance = shadowFar;
       }
     }
   });
   scene.add(gltf.scene);
   mapRoot = gltf.scene;
+
+  // Locks wired up before doors: a lock mesh sitting exactly flush with its door's own surface
+  // (zero depth offset) ties with it on interaction.js's raycast-distance arbitration - ties go
+  // to whichever registered first, so locks need to get there first for that tie to resolve in
+  // the (small, specific) lock's favor rather than the (large, generic) door's.
+  lockObjs.forEach((lockObj) => setupLock(lockObj, lockConfig[lockObj.name] || {}));
 
   if (doorObjs.length > 0) {
     doorObjs.forEach((doorObj) => setupDoor(doorObj, doorColliders.get(doorObj), doorConfig[doorObj.name] || {}));

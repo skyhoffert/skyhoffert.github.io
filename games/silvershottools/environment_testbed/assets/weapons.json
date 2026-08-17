@@ -25,6 +25,6 @@
   },
   "flashlight": {
     "type": "light",
-    "range": 16
+    "range": 20
   }
 }

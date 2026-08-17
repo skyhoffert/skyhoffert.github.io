@@ -1,9 +1,23 @@
 // Inventory (I to toggle). A 2D grid of cells (see createGrid()) - the hand paperdoll is its
-// own fixed 2x1 grid (handL/handR), separate from the main grid, whose size comes from
-// player.json (playerStats.inventory.columns/rows - see setupInventoryGrid(), clamped to a max
-// of 8x8). An item occupies a w x h rectangle of cells (most are 1x1; see
-// objects.js's objectSize()) and can be rotated with R while it's being dragged - dropping a
-// rotated item so it spans both hand cells at once equips it two-handed (see wield.js).
+// own fixed 2x1 grid (handL/handR), with a fixed 1x2 sling slot and fixed 1x1 holster slot
+// beside it, all separate from the main grid (whose size comes from player.json's
+// playerStats.inventory.columns/rows - see setupInventoryGrid(), clamped to a max of 8x8). An
+// item occupies a w x h rectangle of cells (most are 1x1; see objects.js's objectSize()) and can
+// be rotated with R while it's being dragged - dropping a rotated item so it spans both hand
+// cells at once equips it two-handed (see wield.js).
+//
+// Each grid has its own accepts(fullName) filter (see createGrid()) gating what can land there
+// on top of the usual spatial fit: the hand grid takes anything (that's what makes it "wielded"),
+// the sling takes only two-handed (non-1x1) items - a shoulder-sling stash for a shotgun/shovel
+// you're not currently wielding - the holster takes only one-handed weapons, gun or melee (see
+// isHolsterable()) - a knife or revolver you're not currently wielding, but not a book/key/
+// flashlight - and the main grid takes only 1x1 items generally; a two-handed item can only ever
+// be wielded or slung, never tucked into the general grid, and any weapon can just as well sit
+// unholstered in the main grid instead (the holster's just a second, smaller option for one).
+// Checked everywhere a spatial fit is (canPlace()/evaluateTarget()), including for whichever
+// placements a swap would displace into another grid (packIntoRegion()) - a swap that would dump
+// a two-handed item into the main grid (or a non-weapon into the holster) is invalid the same
+// way one that doesn't spatially fit is.
 //
 // Pressing F on a holdable prop (see startInventoryPickup, called from main.js's F handler)
 // opens the inventory and arms a "pending pickup" - the same floating size preview and ghost
@@ -26,7 +40,7 @@ import { world, physicsObjects } from "./physics.js";
 import { interactables, clearActiveInteractableIf } from "./interaction.js";
 import { typedCollisionMeshes } from "./map.js";
 import { heldLeft, heldRight } from "./hold.js";
-import { objectDisplayName, objectEmoji, objectSize, dropObjectOnSurface } from "./objects.js";
+import { objectDisplayName, objectEmoji, objectSize, weaponStatsFor, dropObjectOnSurface } from "./objects.js";
 import { syncHands } from "./wield.js";
 import { requestLock } from "./pointerlock.js";
 import { canvas, interactPromptEl } from "./dom.js";
@@ -36,7 +50,28 @@ export const inventoryEl = document.getElementById("inventory");
 const inventoryPanelEl = document.getElementById("inventoryPanel");
 const inventoryGridEl = document.getElementById("inventoryGrid");
 const handSlotsEl = document.getElementById("handSlots");
+const slingSlotEl = document.getElementById("slingSlot");
+const holsterSlotEl = document.getElementById("holsterSlot");
 const dragPreviewEl = document.getElementById("dragPreview");
+
+// A "two-handed" item, for grid-acceptance purposes, is simply anything that isn't 1x1 in its
+// base (unrotated) footprint - rotation only swaps w/h, never changes cell count, so checking
+// the base size here (rather than whatever footprint a drag happens to be previewing) is
+// rotation-independent, same footprint objectSize() itself always returns.
+function isTwoHanded(fullName) {
+  const size = objectSize(fullName);
+  return size.w !== 1 || size.h !== 1;
+}
+
+// The holster is a side-holstered *weapon* slot - a one-handed gun or melee item, per
+// weapons.json's own type (see objects.js's weaponStatsFor()). Excludes a "prop" (the book, the
+// key) and, deliberately, a "light" item too (the flashlight) - clipped to your belt reads fine
+// for a knife or revolver, not for a lamp.
+function isHolsterable(fullName) {
+  if (isTwoHanded(fullName)) return false;
+  const type = weaponStatsFor(fullName).type;
+  return type === "gun" || type === "melee";
+}
 
 const MAX_INVENTORY_DIM = 8;
 
@@ -57,7 +92,10 @@ function footprintForDir(baseW, baseH, dir) {
 // where a drag would land, positioned via the same grid-column/row-span trick as a placement's
 // own element - see renderPlacement(). Sets its own column count (cells are otherwise sized by
 // the shared .invSlot CSS's fixed 48px, so nothing else needs to know how wide the grid is).
-function createGrid(containerEl, cols, rows) {
+// accepts(fullName) gates what's allowed to land in this grid at all, on top of the usual
+// spatial fit - defaults to accepting anything, for grids (the main grid's own 1x1-only filter,
+// the sling's two-handed-only filter) that don't otherwise restrict what fits.
+function createGrid(containerEl, cols, rows, accepts = () => true) {
   containerEl.replaceChildren();
   containerEl.style.gridTemplateColumns = `repeat(${cols}, 48px)`;
   for (let row = 0; row < rows; row++) {
@@ -72,7 +110,7 @@ function createGrid(containerEl, cols, rows) {
   const ghostEl = document.createElement("div");
   ghostEl.className = "invGhost";
   containerEl.appendChild(ghostEl);
-  return { containerEl, cols, rows, cells: new Array(cols * rows).fill(null), ghostEl };
+  return { containerEl, cols, rows, cells: new Array(cols * rows).fill(null), ghostEl, accepts };
 }
 
 function bindGridEvents(grid) {
@@ -92,7 +130,14 @@ function bindGridEvents(grid) {
 let mainGrid = null; // built by setupInventoryGrid() once player.json has loaded - see below
 const handGrid = createGrid(handSlotsEl, 2, 1); // always fixed 2x1, not player.json-configurable
 bindGridEvents(handGrid);
-const grids = [handGrid]; // setupInventoryGrid() adds mainGrid once it exists
+// Fixed 1x2 shoulder-sling slot - a stash spot for a two-handed item you're not currently
+// wielding, since the main grid (below) no longer takes those at all.
+const slingGrid = createGrid(slingSlotEl, 1, 2, isTwoHanded);
+bindGridEvents(slingGrid);
+// Fixed 1x1 holster slot - a one-handed weapon (gun or melee) you're not currently wielding.
+const holsterGrid = createGrid(holsterSlotEl, 1, 1, isHolsterable);
+bindGridEvents(holsterGrid);
+const grids = [handGrid, slingGrid, holsterGrid]; // setupInventoryGrid() adds mainGrid once it exists
 
 // (Re)builds the main grid at its currently-configured size (playerStats.inventory.columns/
 // rows, from player.json - clamped to a sane MAX_INVENTORY_DIM per side regardless of what's
@@ -100,11 +145,13 @@ const grids = [handGrid]; // setupInventoryGrid() adds mainGrid once it exists
 // gameplay starts, same as buildObjectLibrary()/setupMap()/etc. - and safe to call again on a
 // later Play click if the configured size changed in the meantime, since resetInventory()
 // (menu.js's return-to-main-menu flow) already clears out anything placed in the old one first.
+// Only takes 1x1 items - a two-handed item (shovel, shotgun, ...) can only ever be wielded (the
+// hand grid) or stashed in the sling (slingGrid above), never tucked into the general grid.
 export function setupInventoryGrid() {
   if (mainGrid) grids.splice(grids.indexOf(mainGrid), 1);
   const cols = Math.max(1, Math.min(MAX_INVENTORY_DIM, Math.round(playerStats.inventory.columns)));
   const rows = Math.max(1, Math.min(MAX_INVENTORY_DIM, Math.round(playerStats.inventory.rows)));
-  mainGrid = createGrid(inventoryGridEl, cols, rows);
+  mainGrid = createGrid(inventoryGridEl, cols, rows, (fullName) => !isTwoHanded(fullName));
   grids.push(mainGrid);
   bindGridEvents(mainGrid);
 }
@@ -121,8 +168,10 @@ function forEachCell(col, row, w, h, fn) {
 
 // ignore lets a placement's own cells count as empty, for checking whether it still fits
 // somewhere that includes (all or part of) where it already is - e.g. rotating in place.
-function canPlace(grid, col, row, w, h, ignore) {
+// itemName gates against grid.accepts() (see createGrid()) on top of the spatial fit below.
+function canPlace(grid, col, row, w, h, ignore, itemName) {
   if (col < 0 || row < 0 || col + w > grid.cols || row + h > grid.rows) return false;
+  if (!grid.accepts(itemName)) return false;
   let ok = true;
   forEachCell(col, row, w, h, (c, r) => {
     const occupant = grid.cells[cellIndex(grid, c, r)];
@@ -150,10 +199,15 @@ function occupantsIn(grid, col, row, w, h, ignore) {
 // might occasionally still technically exist for some pathological arrangement, but "no swap"
 // is a safe, visible failure mode either way (the ghost just shows red). Returns an array of
 // { placement, col, row } (absolute grid coordinates, one entry per item in `items`), or null
-// if no arrangement fits everything.
-function packIntoRegion(items, regionCol, regionRow, regionW, regionH) {
+// if no arrangement fits everything. destGrid is the grid these items would actually end up
+// living in (source's grid, per evaluateTarget() below) - if even one of them isn't something
+// destGrid.accepts() (e.g. a two-handed item displaced into a main grid that only takes 1x1s),
+// the whole packing fails, same as if it simply didn't fit spatially.
+function packIntoRegion(items, regionCol, regionRow, regionW, regionH, destGrid) {
+  const itemsArr = [...items];
+  if (itemsArr.some((p) => !destGrid.accepts(p.item.name))) return null;
   const occupied = new Array(regionW * regionH).fill(false);
-  const sorted = [...items].sort((a, b) => b.w * b.h - a.w * a.h);
+  const sorted = itemsArr.sort((a, b) => b.w * b.h - a.w * a.h);
   const placements = [];
   for (const p of sorted) {
     let spot = null;
@@ -183,16 +237,18 @@ function packIntoRegion(items, regionCol, regionRow, regionW, regionH) {
 // entirely empty, or whatever it's occupied by (one item, or several smaller ones) can all be
 // packed into source's own vacated footprint instead (packIntoRegion() above), which makes it a
 // swap. Shared by the ghost preview and the actual drop so they can never disagree - a case the
-// preview draws green always agrees with what dropping there will actually do.
-function evaluateTarget(grid, col, row, w, h, source) {
+// preview draws green always agrees with what dropping there will actually do. itemName gates
+// against grid.accepts() the same way canPlace() does, before any of the occupant/packing logic.
+function evaluateTarget(grid, col, row, w, h, source, itemName) {
   if (col < 0 || row < 0 || col + w > grid.cols || row + h > grid.rows) return { ok: false, swapPack: null };
+  if (!grid.accepts(itemName)) return { ok: false, swapPack: null };
   const occupants = occupantsIn(grid, col, row, w, h, source);
   if (occupants.size === 0) return { ok: true, swapPack: null };
   // A pending pickup (source is null - see previewInfo()) is coming from outside the grid
   // entirely, so there's nowhere sensible to relocate whatever's displaced - only an empty
   // target works.
   if (!source) return { ok: false, swapPack: null };
-  const packing = packIntoRegion(occupants, source.col, source.row, source.w, source.h);
+  const packing = packIntoRegion(occupants, source.col, source.row, source.w, source.h, source.grid);
   return packing ? { ok: true, swapPack: packing } : { ok: false, swapPack: null };
 }
 
@@ -340,7 +396,7 @@ function tryPlacePendingPickup(grid, col, row) {
   const { w, h } = footprintForDir(size.w, size.h, previewDir); // match whatever orientation the preview was showing
   const anchorCol = Math.min(col, grid.cols - w);
   const anchorRow = Math.min(row, grid.rows - h);
-  if (anchorCol < 0 || anchorRow < 0 || !canPlace(grid, anchorCol, anchorRow, w, h, null)) return;
+  if (anchorCol < 0 || anchorRow < 0 || !canPlace(grid, anchorCol, anchorRow, w, h, null, obj.name)) return;
 
   const phys = physicsObjects.get(obj);
   if (phys) {
@@ -407,7 +463,7 @@ function previewInfo() {
     const obj = pendingPickup.object;
     const size = objectSize(obj.name);
     return {
-      item: { emoji: objectEmoji(obj.name), displayName: objectDisplayName(obj.name) },
+      item: { name: obj.name, emoji: objectEmoji(obj.name), displayName: objectDisplayName(obj.name) },
       baseW: size.w,
       baseH: size.h,
       ignore: null,
@@ -451,7 +507,7 @@ function updateDragPreview(x, y) {
     const row = Math.min(cell.row, grid.rows - h);
     if (col < 0 || row < 0) break; // doesn't fit in this grid at all in this orientation
 
-    const result = evaluateTarget(grid, col, row, w, h, info.ignore);
+    const result = evaluateTarget(grid, col, row, w, h, info.ignore, info.item.name);
     grid.ghostEl.style.gridColumn = `${col + 1} / span ${w}`;
     grid.ghostEl.style.gridRow = `${row + 1} / span ${h}`;
     grid.ghostEl.classList.toggle("invalid", !result.ok);

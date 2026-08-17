@@ -33,6 +33,16 @@
     <button id="mainMenuButton" type="button" title="Return to main menu">Menu</button>
     <button id="settingsButton" type="button" title="Settings">&#9881;</button>
     <div id="inventoryPanel">
+      <div id="leftAccessories">
+        <div id="slingGroup" class="invGroup">
+          <span class="invGroupLabel">Sling</span>
+          <div id="slingSlot"></div>
+        </div>
+        <div id="holsterGroup" class="invGroup">
+          <span class="invGroupLabel">Holster</span>
+          <div id="holsterSlot"></div>
+        </div>
+      </div>
       <div id="paperdoll">
         <svg id="playerSilhouette" viewBox="0 0 100 220" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="28" r="22" />
@@ -44,7 +54,10 @@
         </svg>
         <div id="handSlots"></div>
       </div>
-      <div id="inventoryGrid"></div>
+      <div id="inventoryGroup" class="invGroup">
+        <span class="invGroupLabel">Inventory</span>
+        <div id="inventoryGrid"></div>
+      </div>
     </div>
     <div id="dragPreview"></div>
   </div>

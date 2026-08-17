@@ -35,7 +35,19 @@
   "doors": {
     "DOOR_a": {
       "openAngle": 1.5708,
-      "speed": 3.1416
+      "speed": 1.8,
+      "locked": false
+    },
+    "DOOR_armoire_door": {
+      "openAngle": 3.0,
+      "speed": 1.2,
+      "locked": true
+    }
+  },
+  "locks": {
+    "LOCK_armoire": {
+      "door": "DOOR_armoire_door",
+      "key": "key_armoire"
     }
   },
   "drawers": {
@@ -52,6 +64,7 @@
   },
   "lights": {
     "LIGHT_a": {
+      "on": true,
       "shadowNear": 1,
       "shadowFar": 22,
       "flickerMin": 0.8,
@@ -60,6 +73,7 @@
       "flickerSpeed": 10
     },
     "LIGHT_b": {
+      "on": true,
       "shadowNear": 1,
       "shadowFar": 22,
       "flickerMin": 0.8,
@@ -74,6 +88,15 @@
       "flickerMin": 0.8,
       "flickerChangeMin": 0.05,
       "flickerChangeMax": 0.3,
+      "flickerSpeed": 10
+    },
+    "LIGHT_desklamp": {
+      "on": true,
+      "shadow": false,
+      "shadowFar": 5,
+      "flickerMin": 0.8,
+      "flickerChangeMin": 0.3,
+      "flickerChangeMax": 0.9,
       "flickerSpeed": 10
     }
   }

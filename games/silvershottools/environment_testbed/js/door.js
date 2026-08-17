@@ -4,6 +4,12 @@
 // are found - one setupDoor() call per door object, each with its own openAngle/speed from the
 // map's JSON sidecar (falling back to constants.js's DOOR_OPEN_ANGLE/DOOR_SPEED for whatever it
 // doesn't customize).
+//
+// A door can optionally start locked (doorCfg.locked) - while locked, F does nothing (see
+// toggleDoor() below). Nothing in this module ever clears .locked itself; that's lock.js's job -
+// a paired LOCK_ object (see its own module comment) unlocks this door by name once the player
+// clicks it while wielding the right key. Once cleared, a door behaves exactly like one that was
+// never locked - there's no re-lock mechanic.
 
 import * as THREE from "three";
 import * as CANNON from "../../vendor/cannon-es.js";
@@ -13,7 +19,7 @@ import { listener, audioLoader, playOneShot } from "./audio.js";
 import { registerSound, unregisterSound } from "./settings.js";
 import { DOOR_SOUND_REF_DISTANCE, DOOR_OPEN_ANGLE, DOOR_SPEED } from "./constants.js";
 
-let doors = []; // [{ object, closedAngle, openAngle, speed, target, isOpen, settled, body, openSound, closeSound }]
+let doors = []; // [{ object, closedAngle, openAngle, speed, target, isOpen, settled, body, openSound, closeSound, locked }]
 
 // Scratch vectors for reading a door's *world* position/rotation - cannon-es only understands
 // world space, but a DOOR_ object's own .position/.quaternion are local to whatever it's
@@ -24,6 +30,7 @@ const doorWorldPos = new THREE.Vector3();
 const doorWorldQuat = new THREE.Quaternion();
 
 function toggleDoor(door) {
+  if (door.locked) return; // still locked - only unlockDoor() (called by lock.js) can clear this
   door.isOpen = !door.isOpen;
   door.target = door.isOpen ? door.openAngle : door.closedAngle;
   door.settled = false;
@@ -34,8 +41,8 @@ function toggleDoor(door) {
 
 // Called once per DOOR_-prefixed object from map.js's setupMap(), with that door's object, its
 // (possibly empty) COLL_ children found during the map traversal, and its config from the map's
-// JSON sidecar ({ openAngle?, speed? }, keyed by object name) - either field it omits (or
-// omitting the config entirely) falls back to the matching DOOR_* constant, so a door only
+// JSON sidecar ({ openAngle?, speed?, locked? }, keyed by object name) - openAngle/speed each
+// fall back to the matching DOOR_* constant if omitted; locked defaults to false, so a door only
 // needs an entry at all for whatever it wants to customize.
 export function setupDoor(doorObj, doorColliders, doorCfg) {
   // Positional audio can only ever have one parent, so each door needs its own open/close
@@ -63,11 +70,12 @@ export function setupDoor(doorObj, doorColliders, doorCfg) {
     body: null,
     openSound,
     closeSound,
+    locked: !!doorCfg.locked,
   };
   doors.push(door);
 
   registerInteractable(doorObj, {
-    promptText: () => (door.isOpen ? "[F] Close door" : "[F] Open door"),
+    promptText: () => (door.locked ? "[F] Locked" : door.isOpen ? "[F] Close door" : "[F] Open door"),
     onActivate: () => toggleDoor(door),
   });
 
@@ -96,6 +104,19 @@ export function setupDoor(doorObj, doorColliders, doorCfg) {
       console.warn(`"${doorObj.name}" had COLL_ children but none produced a usable shape.`);
     }
   }
+}
+
+// Called by lock.js's tryUnlock() once it's confirmed the player clicked this door's paired
+// LOCK_ object while wielding the exact key it asks for - clears .locked so a plain F now opens
+// the door normally. A no-op (beyond the warning) if doorName doesn't match any known door - e.g.
+// a lock's "door" field in the map's JSON sidecar typo'd or pointing at a door that was renamed.
+export function unlockDoor(doorName) {
+  const door = doors.find((d) => d.object.name === doorName);
+  if (!door) {
+    console.warn(`unlockDoor: no door named "${doorName}" (check the lock's "door" field in the map's JSON sidecar).`);
+    return;
+  }
+  door.locked = false;
 }
 
 // See menu.js's return-to-main-menu flow. setupDoor() builds fresh ones on the next load.

@@ -10,6 +10,7 @@
 // than a tunable stat.
 export const DOOR_PREFIX = "DOOR_"; // e.g. "DOOR_a" - any number of doors, each becomes its own independent open/close state machine (see door.js)
 export const DRAWER_PREFIX = "DRAWER_"; // e.g. "DRAWER_desk_tr" - the sliding equivalent of DOOR_ (see drawer.js)
+export const LOCK_PREFIX = "LOCK_"; // e.g. "LOCK_armoire" - a clickable lock mechanism paired with a door + required key via the map's JSON sidecar (see lock.js)
 export const SWITCH_PREFIX = "SW_"; // e.g. "SW_room" controls every light matching L_room_*
 export const LIGHT_GROUP_PREFIX = "LIGHT_";
 export const COLLISION_PREFIX = "COLL_";

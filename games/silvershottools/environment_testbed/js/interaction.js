@@ -37,10 +37,15 @@ const WALL_BLOCK_MARGIN = 0.15; // meters
 
 // Proximity (distance to the object's actual geometry, not just its origin) plus a crosshair
 // raycast, so something only becomes interactable once the player is both close to it and
-// actually looking at it. When more than one qualifies, the nearest one wins.
+// actually looking at it. When more than one qualifies (e.g. a lock mesh sitting right on/in a
+// door's own surface - see lock.js), whichever's raycast hit is physically nearest along the
+// sightline wins, not whichever has the smaller bounding box or was registered first - that's
+// the one actually "under the crosshair" first, which a small object embedded in/on a much
+// bigger one (its bounding box swallows the small one's location entirely, reading ~0 distance
+// there too) would otherwise never win against.
 export function updateInteractables() {
   activeInteractable = null;
-  let bestDist = playerStats.interactRadius;
+  let bestDist = Infinity; // hits are already capped at playerStats.interactRadius below (interactRaycaster.far), so this just needs to start higher than that
 
   // Whatever real physical surface (if any) is directly ahead, blocking line of sight - an
   // interactable behind it (e.g. a switch on the far side of a wall) shouldn't be reachable
@@ -56,15 +61,18 @@ export function updateInteractables() {
   const wallDist = wallHits.length > 0 ? wallHits[0].distance : Infinity;
 
   for (const it of interactables) {
+    // Cheap bounding-box reject first - avoids a full raycast against every single registered
+    // interactable in the map every frame, most of which aren't anywhere near the crosshair.
+    // Only a reject filter now, not the priority ordering below (see the comment above).
     interactBox.setFromObject(it.object);
-    const dist = interactBox.distanceToPoint(camera.position);
-    if (dist >= bestDist) continue;
+    if (interactBox.distanceToPoint(camera.position) >= playerStats.interactRadius) continue;
 
     const hits = interactRaycaster.intersectObject(it.object, true);
     if (hits.length === 0 || hits[0].distance > wallDist + WALL_BLOCK_MARGIN) continue;
+    if (hits[0].distance >= bestDist) continue;
 
     activeInteractable = it;
-    bestDist = dist;
+    bestDist = hits[0].distance;
   }
 
   const showPrompt = activeInteractable && document.pointerLockElement === canvas;

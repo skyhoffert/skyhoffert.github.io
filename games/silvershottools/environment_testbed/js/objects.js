@@ -81,6 +81,7 @@ const OBJECT_EMOJI = {
   revolver: "\u{1F52B}", // 🔫
   shotgun: "\u{1F52B}", // 🔫 - no distinct shotgun emoji in Unicode, same as revolver
   flashlight: "\u{1F526}", // 🔦
+  key_armoire: "\u{1F511}", // 🔑
 };
 const DEFAULT_OBJECT_EMOJI = "\u{1F4E6}"; // 📦
 

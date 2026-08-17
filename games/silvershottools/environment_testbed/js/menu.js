@@ -11,6 +11,7 @@ import { resetPhysicsWorld, syncGravity } from "./physics.js";
 import { resetInteractables } from "./interaction.js";
 import { resetDoors } from "./door.js";
 import { resetDrawers } from "./drawer.js";
+import { resetLocks } from "./lock.js";
 import { resetHold } from "./hold.js";
 import { resetInventory, setupInventoryGrid } from "./inventory.js";
 import { resetPlayer } from "./movement.js";
@@ -78,6 +79,7 @@ mainMenuButton.addEventListener("click", () => {
   resetInteractables();
   resetDoors();
   resetDrawers();
+  resetLocks();
   resetPhysicsWorld();
   resetSpawnedObjects();
   resetMapState();

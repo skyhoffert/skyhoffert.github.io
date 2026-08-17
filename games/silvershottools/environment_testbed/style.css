@@ -252,6 +252,54 @@ body {
   gap: 6px;
 }
 
+/* Stacks the sling and holster groups in one column to the left of #paperdoll - a flex sibling
+   of #paperdoll (not nested/absolutely-positioned inside it like #handSlots is) so neither can
+   ever overlap #paperdoll or #inventoryGrid regardless of #inventoryPanel's layout. Centered
+   vertically (#inventoryPanel's own align-items is flex-start) so the pair, as a whole, lines up
+   with the paperdoll's chest-height hands rather than hugging the top. */
+#leftAccessories {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-self: center;
+}
+
+/* Wraps a single slot grid with its own heading (see .invGroupLabel below). */
+.invGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invGroupLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+}
+
+#slingGroup .invGroupLabel,
+#holsterGroup .invGroupLabel {
+  text-align: center; /* centers over the narrow single-column slot below it */
+}
+
+/* Fixed 1x2 shoulder-sling slot. Only takes two-handed items - see inventory.js's
+   createGrid()/isTwoHanded(). */
+#slingSlot {
+  display: grid;
+  grid-auto-rows: 48px;
+  gap: 6px;
+}
+
+/* Fixed 1x1 holster slot. Only takes one-handed weapons (gun or melee, not props like the book
+   or key, nor a "light"-type item like the flashlight) - see inventory.js's
+   createGrid()/isHolsterable(). */
+#holsterSlot {
+  display: grid;
+  grid-auto-rows: 48px;
+  gap: 6px;
+}
+
 #inventoryGrid {
   display: grid;
   grid-auto-rows: 48px;
