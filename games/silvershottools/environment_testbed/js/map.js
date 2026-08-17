@@ -18,7 +18,8 @@ import {
   SWITCH_PREFIX,
   LIGHT_GROUP_PREFIX,
   SWITCH_SOUND_REF_DISTANCE,
-  LIGHT_RANGE,
+  LIGHT_SHADOW_NEAR,
+  LIGHT_SHADOW_FAR,
   LIGHT_FLICKER_MIN,
   LIGHT_FLICKER_CHANGE_MIN,
   LIGHT_FLICKER_CHANGE_MAX,
@@ -134,7 +135,8 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
       // omits (or omitting the entry entirely) falls back to the matching LIGHT_* constant, so
       // a light only needs an entry at all for whatever it wants to customize.
       const cfg = lightConfig[obj.name] || {};
-      const range = cfg.range ?? LIGHT_RANGE;
+      const shadowNear = cfg.shadowNear ?? LIGHT_SHADOW_NEAR;
+      const shadowFar = cfg.shadowFar ?? LIGHT_SHADOW_FAR;
 
       // Logical on/off (its own starting state, cfg.on - a switch just toggles whatever this
       // already is, see wireSwitches()) is kept separate from the displayed intensity, which
@@ -153,20 +155,22 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
       obj.userData.flickerSpeed = cfg.flickerSpeed ?? LIGHT_FLICKER_SPEED;
       if (obj.shadow) {
         // GLTFLoader creates lights from KHR_lights_punctual with shadows off by default.
-        // mapSize is set separately by graphicsSettings.js's applyShadowQuality(), called again
-        // once setupMap() returns - see menu.js's loadWorld().
+        // mapSize/bias/normalBias are set separately by graphicsSettings.js's
+        // applyShadowQuality(), called again once setupMap() returns (see menu.js's loadWorld())
+        // - bias in particular has to scale with mapSize (a coarser map has bigger texels, so
+        // needs a bigger offset to avoid self-shadowing acne), so it lives with mapSize in one
+        // place rather than a fixed guess here that only suited one specific resolution.
         obj.castShadow = true;
-        // normalBias (offsets along the surface normal) instead of a large plain bias avoids
-        // shadow acne without peter-panning the shadow off thin walls and letting light leak
-        // through them.
-        obj.shadow.bias = -0.0002;
-        obj.shadow.normalBias = 0.05;
-        obj.shadow.camera.near = 0.1;
-        obj.shadow.camera.far = range;
-        // Blender doesn't export a glTF light range, so without this point/spot lights
-        // fall off to zero only asymptotically and end up lighting (and shadowing) the
-        // whole map.
-        if (obj.isPointLight || obj.isSpotLight) obj.distance = range;
+        obj.shadow.camera.near = shadowNear;
+        obj.shadow.camera.far = shadowFar;
+        // Blender doesn't export a glTF light range, so without this point/spot lights fall
+        // off to zero only asymptotically and end up lighting (and shadowing) the whole map.
+        // Also why shadowFar (not a separate "range") drives distance too: three.js re-forces
+        // a point light's shadow camera far to light.distance every frame regardless of what's
+        // set above, so for point lights that's the only value that actually sticks; reusing it
+        // for spot lights as well just keeps a single knob instead of two that overlap in
+        // practice for point lights and would drift into confusing states for spot lights.
+        if (obj.isPointLight || obj.isSpotLight) obj.distance = shadowFar;
       }
     }
   });

@@ -14,6 +14,7 @@ import { updateDoors } from "./door.js";
 import { updateDrawers } from "./drawer.js";
 
 import { updateMovement } from "./movement.js";
+import { updateFootsteps } from "./footsteps.js";
 import { yaw, pitch } from "./pointerlock.js";
 import { retractLean, applyLean, leanRoll } from "./lean.js";
 import { stepPhysics } from "./physics.js";
@@ -46,6 +47,7 @@ function animate(t) {
 
   retractLean(); // undo last frame's visual lean offset before movement's checks run against camera.position
   updateMovement(dt);
+  updateFootsteps(dt); // reads movement's just-updated currentFootstepMode()
   applyLean(dt); // re-apply this frame's lean offset now that movement's used the real position
   updateDoors(dt);
   updateDrawers(dt);

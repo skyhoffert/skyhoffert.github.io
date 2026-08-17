@@ -26,7 +26,12 @@ export const DOOR_SPEED = Math.PI; // radians/sec
 export const DRAWER_AXIS = "-z"; // which local axis a drawer slides along to open - "x"/"y"/"z", optionally "-" prefixed for the opposite direction
 export const DRAWER_SLIDE_DISTANCE = 0.35; // meters, how far along that axis a drawer pulls open
 export const DRAWER_SPEED = 1.0; // meters/sec
-export const LIGHT_RANGE = 22; // meters, clamps how far a point/spot light (and its shadow) reaches
+// meters, clamps how far a point/spot light itself reaches and (see map.js's setupMap()) its
+// shadow camera's far plane - the two can't be set independently for a point light (three.js
+// forces its shadow camera's far to match light.distance every frame), so one value has to do
+// both jobs there; a spot light's shadow far is free to differ, but shares this same fallback.
+export const LIGHT_SHADOW_FAR = 22;
+export const LIGHT_SHADOW_NEAR = 0.1; // meters, shadow camera's near plane
 export const LIGHT_FLICKER_MIN = 0.8; // dimmest a flicker pulls a light down to, as a fraction of its base intensity
 export const LIGHT_FLICKER_CHANGE_MIN = 0.05; // seconds between picking a new random flicker target
 export const LIGHT_FLICKER_CHANGE_MAX = 0.3;
@@ -70,6 +75,13 @@ export const PLAYER_STATS_URL = "assets/player.json";
 // World/environment stats (gravity, world bound, light behavior, door timing, interact
 // radius, ...) - see worldConfig.js's setWorldStats(). Loaded the same way.
 export const WORLD_URL = "assets/world.json";
+
+// Internal render height, in pixels, for the game's low-res look - see scene.js's resize().
+// Width is derived each resize from the viewport's current aspect ratio (not a fixed pair like
+// 480x270) so the rendered image always fills the viewport without stretching; the "low res"
+// part comes from this being far below the viewport's actual CSS pixel height, then style.css's
+// image-rendering: pixelated upscaling it with blocky nearest-neighbor sampling instead of a blur.
+export const RENDER_HEIGHT = 360;
 
 export const DEBUG_COLOR_STATIC = 0x00ff66;
 export const DEBUG_COLOR_DYNAMIC = 0xff8800;

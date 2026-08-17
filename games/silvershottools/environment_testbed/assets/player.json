@@ -19,6 +19,14 @@
   "pitchLimit": 1.5608,
   "interactRadius": 1.4,
   "dropReach": 2,
+  "footsteps": {
+    "walkInterval": 0.46,
+    "runInterval": 0.32,
+    "crouchInterval": 0.56,
+    "walkVolume": 0.26,
+    "runVolume": 0.32,
+    "crouchVolume": 0.2
+  },
   "inventory": {
     "columns": 2,
     "rows": 2

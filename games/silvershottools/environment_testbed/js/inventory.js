@@ -56,10 +56,10 @@ function footprintForDir(baseW, baseH, dir) {
 // than 1x1). cellEls are purely decorative (grid lines / empty-cell hover); ghostEl previews
 // where a drag would land, positioned via the same grid-column/row-span trick as a placement's
 // own element - see renderPlacement(). Sets its own column count (cells are otherwise sized by
-// the shared .invSlot CSS's fixed 40px, so nothing else needs to know how wide the grid is).
+// the shared .invSlot CSS's fixed 48px, so nothing else needs to know how wide the grid is).
 function createGrid(containerEl, cols, rows) {
   containerEl.replaceChildren();
-  containerEl.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+  containerEl.style.gridTemplateColumns = `repeat(${cols}, 48px)`;
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const cellEl = document.createElement("div");

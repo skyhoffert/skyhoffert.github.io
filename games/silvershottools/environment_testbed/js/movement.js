@@ -26,6 +26,11 @@ const moveDir = new THREE.Vector3();
 let verticalVelocity = 0;
 let grounded = true;
 let currentEyeHeight = playerStats.eyeHeight; // smoothly lerps toward playerStats.eyeHeight/crouchEyeHeight
+let footstepMode = null; // null | "walk" | "run" | "crouch" - see footsteps.js's updateFootsteps()
+
+export function currentFootstepMode() {
+  return footstepMode;
+}
 
 const groundRaycaster = new THREE.Raycaster();
 const groundRayOrigin = new THREE.Vector3();
@@ -78,6 +83,9 @@ export function resetPlayer() {
 }
 
 export function updateMovement(dt) {
+  // Reset up front (not just left stale) so losing pointer lock mid-stride - e.g. opening the
+  // inventory - silences footsteps immediately instead of leaving currentFootstepMode() stuck set.
+  footstepMode = null;
   if (document.pointerLockElement !== canvas) return;
 
   // Ground-snapping below (which runs every frame, not just while actively falling) settles
@@ -100,9 +108,8 @@ export function updateMovement(dt) {
   if (keys.has("KeyD") || keys.has("ArrowRight")) moveDir.add(right);
   if (keys.has("KeyA") || keys.has("ArrowLeft")) moveDir.sub(right);
 
-  const speed =
-    playerStats.walkSpeed *
-    (crouching ? playerStats.crouchSpeedMult : keys.has("ShiftLeft") || keys.has("ShiftRight") ? playerStats.runMult : 1);
+  const running = keys.has("ShiftLeft") || keys.has("ShiftRight");
+  const speed = playerStats.walkSpeed * (crouching ? playerStats.crouchSpeedMult : running ? playerStats.runMult : 1);
 
   if (moveDir.lengthSq() > 0) {
     moveDir.normalize().multiplyScalar(speed * dt);
@@ -129,6 +136,12 @@ export function updateMovement(dt) {
   } else {
     grounded = false;
   }
+
+  // moveDir is still whatever direction/magnitude the input produced this frame (see above) -
+  // checking it here rather than clampAxisMove()'s actual applied delta means footsteps keep
+  // playing while holding a move key into a wall, same as most games.
+  if (grounded && moveDir.lengthSq() > 0) footstepMode = crouching ? "crouch" : running ? "run" : "walk";
+  else footstepMode = null;
 
   camera.position.x = Math.max(-worldStats.worldBound, Math.min(worldStats.worldBound, camera.position.x));
   camera.position.z = Math.max(-worldStats.worldBound, Math.min(worldStats.worldBound, camera.position.z));

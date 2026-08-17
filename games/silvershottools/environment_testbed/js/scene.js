@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { worldStats } from "./worldConfig.js";
 import { viewport, canvas } from "./dom.js";
+import { RENDER_HEIGHT } from "./constants.js";
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
@@ -14,7 +15,9 @@ camera.position.set(0, 1.7, 0);
 // wielded items to it and have them actually render.
 scene.add(camera);
 
-export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// antialias off: pointless at RENDER_HEIGHT's low internal resolution (see resize() below) -
+// it'd just get blurred back out by the CSS upscale anyway, for a real perf cost.
+export const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
 // shadowMap.enabled/.type are set by graphicsSettings.js's applyShadowQuality() instead of
 // here - see its own comment for why.
 // Without this the renderer defaults to NoToneMapping, so the map's real-world-unit glTF
@@ -36,11 +39,16 @@ export function syncAmbientLight() {
 }
 
 function resize() {
-  const w = viewport.clientWidth;
-  const h = viewport.clientHeight;
+  // Renders at a fixed RENDER_HEIGHT (not the viewport's actual CSS pixel size, and ignoring
+  // devicePixelRatio entirely) with width derived from the viewport's current aspect ratio, so
+  // the image always fills it without stretching - style.css's #scene rule then upscales that
+  // low-res buffer to the full display size with blocky nearest-neighbor sampling.
+  const aspect = viewport.clientWidth / viewport.clientHeight;
+  const h = RENDER_HEIGHT;
+  const w = Math.round(h * aspect);
+  renderer.setPixelRatio(1);
   renderer.setSize(w, h, false);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  camera.aspect = w / h;
+  camera.aspect = aspect;
   camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(viewport);

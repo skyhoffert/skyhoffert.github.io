@@ -30,6 +30,16 @@ export const playerStats = {
   pitchLimit: Math.PI / 2 - 0.01, // radians - clamps how far up/down the camera can look, just under straight up/down
   interactRadius: 1.6, // meters - how far the player can reach to interact with something (see interaction.js)
   dropReach: 8, // meters - how far a drag-out-of-inventory drop (see inventory.js's ejectItemToWorld()) can raycast to find somewhere to land
+  // footsteps.js: seconds between footstep sounds and volume (0-1, scaled by the sfx/master
+  // settings sliders same as any other sfx), one of each per movement.js's currentFootstepMode().
+  footsteps: {
+    walkInterval: 0.42,
+    runInterval: 0.28,
+    crouchInterval: 0.6,
+    walkVolume: 0.6,
+    runVolume: 0.85,
+    crouchVolume: 0.2,
+  },
   // inventory.js's main grid size (the hand paperdoll is always its own fixed 2x1, separate
   // from this). Clamped to a max of 8x8 there, regardless of what's requested here.
   inventory: {

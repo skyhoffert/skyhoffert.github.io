@@ -10,13 +10,14 @@
       "objects": ["butcher_knife", "book_a"]
     },
     "SPAWN_d": {
+      "_comment": "deleted, was used for testing right by spawn.",
       "objects": ["butcher_knife", "book_a"]
     },
     "SPAWN_e": {
       "objects": ["shovel"]
     },
     "SPAWN_f": {
-      "objects": ["revolver"]
+      "objects": ["book_a"]
     },
     "SPAWN_g": {
       "objects": ["shotgun"]
@@ -26,6 +27,9 @@
     },
     "SPAWN_desk_top": {
       "objects": ["flashlight"]
+    },
+    "SPAWN_desk_top_b": {
+      "objects": ["key_armoire"]
     }
   },
   "doors": {
@@ -48,7 +52,16 @@
   },
   "lights": {
     "LIGHT_a": {
-      "range": 22,
+      "shadowNear": 1,
+      "shadowFar": 22,
+      "flickerMin": 0.8,
+      "flickerChangeMin": 0.05,
+      "flickerChangeMax": 0.3,
+      "flickerSpeed": 10
+    },
+    "LIGHT_b": {
+      "shadowNear": 1,
+      "shadowFar": 22,
       "flickerMin": 0.8,
       "flickerChangeMin": 0.05,
       "flickerChangeMax": 0.3,
@@ -56,7 +69,8 @@
     },
     "LIGHT_room_a": {
       "on": false,
-      "range": 22,
+      "shadowNear": 1,
+      "shadowFar": 19,
       "flickerMin": 0.8,
       "flickerChangeMin": 0.05,
       "flickerChangeMax": 0.3,

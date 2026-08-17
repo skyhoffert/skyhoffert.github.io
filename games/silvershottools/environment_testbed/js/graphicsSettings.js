@@ -18,11 +18,20 @@ import { mapLights } from "./map.js";
 // in this build at all, so requesting it just logs a console warning and silently falls back to
 // plain PCFShadowMap anyway; asking for PCFShadowMap directly gets the same result without the
 // warning.
+// mapSize values sized for constants.js's RENDER_HEIGHT (the game's internal render resolution,
+// upscaled with blocky pixelation - see scene.js's resize()), not a full-res display - a shadow
+// map far sharper than the pixelated output it ends up in is wasted GPU cost.
+//
+// normalBias/bias scale inversely with mapSize (a coarser map has bigger texels, so needs a
+// bigger offset along the surface normal to avoid the depth-comparison flipping in and out as it
+// samples - without this a low mapSize shows up as banding/"zebra stripe" acne across flat
+// surfaces like walls) - each roughly doubles as mapSize quarters, tuned by eye at each tier
+// rather than one fixed value carried across all of them.
 const SHADOW_PRESETS = {
   off: { enabled: false },
-  low: { enabled: true, mapSize: 256, type: THREE.BasicShadowMap },
-  medium: { enabled: true, mapSize: 1024, type: THREE.PCFShadowMap },
-  high: { enabled: true, mapSize: 2048, type: THREE.PCFShadowMap },
+  low: { enabled: true, mapSize: 32, type: THREE.BasicShadowMap, normalBias: 0.3, bias: -0.0012 },
+  medium: { enabled: true, mapSize: 128, type: THREE.PCFShadowMap, normalBias: 0.14, bias: -0.0006 },
+  high: { enabled: true, mapSize: 256, type: THREE.PCFShadowMap, normalBias: 0.1, bias: -0.0004 },
 };
 const DEFAULT_SHADOW_QUALITY = "medium";
 
@@ -59,6 +68,8 @@ export function applyShadowQuality() {
   mapLights.forEach((light) => {
     if (!light.shadow) return;
     light.shadow.mapSize.set(preset.mapSize, preset.mapSize);
+    light.shadow.bias = preset.bias;
+    light.shadow.normalBias = preset.normalBias;
     if (light.shadow.map) {
       light.shadow.map.dispose();
       light.shadow.map = null;
