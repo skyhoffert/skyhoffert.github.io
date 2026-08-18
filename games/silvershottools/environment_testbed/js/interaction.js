@@ -20,6 +20,16 @@ export function clearActiveInteractableIf(it) {
   if (activeInteractable === it) activeInteractable = null;
 }
 
+// Permanently forgets one interactable, e.g. a solved combo lock that's just been removed from
+// the world (see comboLock.js's solveLock()) - unlike resetInteractables(), this only drops this
+// one entry rather than clearing the whole registry, and is safe to call mid-session.
+export function unregisterInteractable(object) {
+  const idx = interactables.findIndex((it) => it.object === object);
+  if (idx === -1) return;
+  if (activeInteractable === interactables[idx]) activeInteractable = null;
+  interactables.splice(idx, 1);
+}
+
 // See menu.js's return-to-main-menu flow. The objects themselves (doors, props, switches)
 // are torn down by whatever module owns them - this just forgets they were ever registered.
 export function resetInteractables() {

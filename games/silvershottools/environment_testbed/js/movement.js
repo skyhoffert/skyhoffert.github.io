@@ -7,6 +7,7 @@ import { collisionMeshes } from "./map.js";
 import { yaw } from "./pointerlock.js";
 import { playerStats } from "./playerConfig.js";
 import { worldStats } from "./worldConfig.js";
+import { puzzleActive } from "./puzzle.js";
 
 const keys = new Set();
 window.addEventListener("keydown", (evt) => keys.add(evt.code));
@@ -86,7 +87,7 @@ export function updateMovement(dt) {
   // Reset up front (not just left stale) so losing pointer lock mid-stride - e.g. opening the
   // inventory - silences footsteps immediately instead of leaving currentFootstepMode() stuck set.
   footstepMode = null;
-  if (document.pointerLockElement !== canvas) return;
+  if (document.pointerLockElement !== canvas || puzzleActive) return; // standing still while focused on a puzzle - see puzzle.js
 
   // Ground-snapping below (which runs every frame, not just while actively falling) settles
   // camera.position.y to feet+currentEyeHeight each frame, so smoothly stepping this value

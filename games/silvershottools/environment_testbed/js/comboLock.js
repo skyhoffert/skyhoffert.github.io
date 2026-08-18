@@ -1,0 +1,259 @@
+// Combination locks: any object prefixed "COMBOLOCK_" (see constants.js's COMBOLOCK_PREFIX)
+// becomes a focus-mode puzzle - pressing F on it (like a door/switch/drawer) enters puzzle.js's
+// focus mode instead of doing anything by itself, and from then on the scroll wheel turns
+// whichever of its own "DIAL_" children (any number - a lock's dial count is however many it has,
+// not a fixed constant) is under the crosshair, one digit (0-9) per notch. Every dial change
+// re-checks the combo (see the map's JSON sidecar, keyed by object name), so there's no separate
+// "confirm" step - lining every dial up with cfg.combo is what unlocks it, exactly like a real
+// combination padlock. Once solved, the paired door and/or drawer (cfg.door/cfg.drawer -
+// door.js's unlockDoor()/drawer.js's unlockDrawer(), at least one expected) unlocks, and the lock
+// object itself is torn down and removed from the world - there's nothing left to click. F (see
+// main.js) or Escape (see puzzle.js) back out early without solving.
+//
+// Each dial's *target* rotation is tracked unwrapped (can grow past a full turn, or go negative)
+// rather than wrapped to [0, 2*PI) - scrolling past digit 9 back to 0 should read as the dial
+// clicking one more notch forward, not spinning almost all the way back around, and an unwrapped
+// target plus updateComboLocks()'s door.js-style per-frame easing (always chasing a target at
+// most one notch away) gets that for free.
+//
+// While focused, the whole lock object is pulled out of the world and placed at a fixed point in
+// world space right in front of wherever the camera was looking the instant focus began (see
+// focusLock()) - close, centered, and scaled up so its dials actually read - then handed back to
+// wherever it was (same parent, same local position/rotation/scale) the moment focus ends (see
+// unfocusLock()), solved or not. It's a one-time snapshot, not a live attachment to the camera
+// (unlike wield.js's camera.add(instance) for held items) - the object itself doesn't move again
+// until unfocusLock(), so the player can turn their head afterward to look at whichever dial they
+// actually want, rather than it staying pinned dead-center no matter which way they look. That
+// means a COMBOLOCK_ object needs to be modeled facing its own local -Z at whatever its neutral
+// (identity local rotation) pose is - focusLock() matches the camera's orientation at that
+// instant rather than preserving whatever angle it happened to be sitting at in the world, so it
+// always presents face-on to the player at the moment they focus it.
+//
+// A COMBOLOCK_ object is a real visible prop (unlike LOCK_'s invisible click target - see
+// lock.js's module comment) - don't give it a COLL_ child for clip-prevention, since there's no
+// way yet to tear down a static physics body once this object's removed on solve (see
+// solveLock() below); it'd leave an invisible wall behind.
+
+import * as THREE from "three";
+import { scene, camera } from "./scene.js";
+import { registerInteractable, unregisterInteractable } from "./interaction.js";
+import { enterPuzzle, exitPuzzle } from "./puzzle.js";
+import { unlockDoor } from "./door.js";
+import { unlockDrawer } from "./drawer.js";
+import { listener, audioLoader, playOneShot } from "./audio.js";
+import { registerSound, unregisterSound } from "./settings.js";
+import { disposeObject3D } from "./util.js";
+import { playerStats } from "./playerConfig.js";
+import {
+  SWITCH_SOUND_REF_DISTANCE,
+  COMBOLOCK_DIAL_PREFIX,
+  COMBOLOCK_DIAL_AXIS,
+  COMBOLOCK_DIAL_SPEED,
+  COMBOLOCK_FOCUS_DISTANCE,
+  COMBOLOCK_FOCUS_DROP,
+  COMBOLOCK_FOCUS_SCALE,
+} from "./constants.js";
+
+const DIGIT_ANGLE = (Math.PI * 2) / 10; // radians per digit - 10 digits (0-9) around a full turn
+
+let comboLocks = []; // [{ object, axisKey, speed, dials, combo, doorName, drawerName, clickSound, unlockSound, solved }]
+let activeLock = null; // whichever lock is currently focused (see puzzle.js), or null
+
+const dialRaycaster = new THREE.Raycaster();
+const dialForward = new THREE.Vector3();
+
+// Scratch for focusLock()'s one-time snapshot of the camera's current orientation - reused, not
+// per-call, since focusLock() is never reentrant with itself.
+const focusQuat = new THREE.Quaternion();
+const focusForward = new THREE.Vector3();
+const focusUp = new THREE.Vector3();
+const focusWorldScale = new THREE.Vector3();
+
+// Which of activeLock's own dials (if any) is directly under the crosshair right now - scoped to
+// just this lock's own dial meshes, not the global interactables list, since once focused the
+// player's aiming at a sub-part of one object rather than picking a new interactable.
+function hoveredDial(lock) {
+  camera.getWorldDirection(dialForward);
+  dialRaycaster.set(camera.position, dialForward);
+  dialRaycaster.far = playerStats.interactRadius;
+  const hits = dialRaycaster.intersectObjects(
+    lock.dials.map((d) => d.mesh),
+    false // each DIAL_ mesh is expected to carry its own geometry directly, not on some nested child
+  );
+  if (hits.length === 0) return null;
+  return lock.dials.find((d) => d.mesh === hits[0].object);
+}
+
+// Pulls lock.object out of wherever it's sitting in the map and places it at a fixed point in
+// front of the camera's current position/orientation, close/centered/scaled up - see the module
+// comment. lock.saved* remembers where it actually belongs so unfocusLock() can put it back
+// exactly.
+function focusLock(lock) {
+  lock.savedParent = lock.object.parent;
+  lock.savedPosition.copy(lock.object.position);
+  lock.savedQuaternion.copy(lock.object.quaternion);
+  lock.savedScale.copy(lock.object.scale);
+  // The object's *world* scale, not its own local .scale - it may sit under a parent (furniture,
+  // an export-scale root, ...) that isn't itself scale 1, and reparenting to the scene root below
+  // drops that inherited scale, so local scale alone would come out wrong-sized once focused.
+  // Same gotcha physics.js's worldInverseNoScale() calls out for door/drawer colliders. Reads
+  // lock.object.matrixWorld, which is already current - nothing's moved it since the last render.
+  lock.object.getWorldScale(focusWorldScale);
+
+  // One-time snapshot of the camera's current position/orientation - see the module comment on
+  // why this isn't a live camera.add() like wield.js's held items.
+  camera.getWorldQuaternion(focusQuat);
+  camera.getWorldDirection(focusForward);
+  focusUp.set(0, 1, 0).applyQuaternion(focusQuat);
+
+  scene.add(lock.object); // reparented to the scene root, not camera - local === world from here
+  lock.object.position
+    .copy(camera.position)
+    .addScaledVector(focusForward, COMBOLOCK_FOCUS_DISTANCE)
+    .addScaledVector(focusUp, -COMBOLOCK_FOCUS_DROP);
+  lock.object.quaternion.copy(focusQuat);
+  lock.object.scale.copy(focusWorldScale).multiplyScalar(COMBOLOCK_FOCUS_SCALE);
+  // Forces matrixWorld current right away rather than waiting for the next render() - without
+  // this, a wheel event arriving before that render (unlikely, but possible) would raycast
+  // against this object's stale pre-focus matrixWorld. Same reasoning as door.js/drawer.js's own
+  // updateMatrixWorld(true) call right after positioning, just for a raycast instead of physics.
+  lock.object.updateMatrixWorld(true);
+}
+
+function unfocusLock(lock) {
+  lock.savedParent.add(lock.object); // detaches from the scene root automatically, same as above
+  lock.object.position.copy(lock.savedPosition);
+  lock.object.quaternion.copy(lock.savedQuaternion);
+  lock.object.scale.copy(lock.savedScale);
+}
+
+function beginComboLock(lock) {
+  if (lock.solved) return; // shouldn't happen - solveLock() removes the object from the world
+  activeLock = lock;
+  focusLock(lock);
+  enterPuzzle(() => {
+    unfocusLock(lock);
+    activeLock = null;
+  });
+}
+
+function solveLock(lock) {
+  lock.solved = true;
+  if (lock.doorName) unlockDoor(lock.doorName);
+  if (lock.drawerName) unlockDrawer(lock.drawerName);
+  playOneShot(lock.unlockSound);
+  exitPuzzle();
+  unregisterInteractable(lock.object);
+  lock.object.removeFromParent();
+  disposeObject3D(lock.object);
+}
+
+function checkSolved(lock) {
+  const matches = lock.dials.every((dial, i) => dial.digit === lock.combo[i]);
+  if (matches) solveLock(lock);
+}
+
+document.addEventListener(
+  "wheel",
+  (evt) => {
+    if (!activeLock) return; // only ever set while puzzle.js's focus mode is active - see beginComboLock()
+    const dial = hoveredDial(activeLock);
+    if (!dial) return;
+    evt.preventDefault();
+
+    const dir = evt.deltaY > 0 ? 1 : -1;
+    dial.digit = ((dial.digit + dir) % 10 + 10) % 10;
+    dial.rotation += dir * DIGIT_ANGLE;
+    playOneShot(activeLock.clickSound);
+    checkSolved(activeLock);
+  },
+  { passive: false }
+);
+
+// Called once per COMBOLOCK_-prefixed object from map.js's setupMap(), with its config from the
+// map's JSON sidecar ({ combo: [n, n, ...], door?, drawer?, axis?, dialSpeed? }, keyed by object
+// name) - combo's length is expected to match however many DIAL_ children this object actually
+// has; axis/dialSpeed fall back to constants.js's COMBOLOCK_DIAL_AXIS/COMBOLOCK_DIAL_SPEED, same
+// as door/drawer's own per-instance overrides.
+export function setupComboLock(lockObj, cfg) {
+  const dialObjs = [];
+  lockObj.traverse((child) => {
+    if (child !== lockObj && child.name.startsWith(COMBOLOCK_DIAL_PREFIX)) dialObjs.push(child);
+  });
+  dialObjs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+  if (dialObjs.length === 0) {
+    console.warn(`"${lockObj.name}" has no "${COMBOLOCK_DIAL_PREFIX}" children - it has no dials to turn.`);
+  }
+  if (!Array.isArray(cfg.combo) || cfg.combo.length !== dialObjs.length) {
+    console.warn(`"${lockObj.name}"'s combo (map's JSON sidecar) has ${Array.isArray(cfg.combo) ? cfg.combo.length : 0} digit(s) but it has ${dialObjs.length} dial(s) - they'll never line up.`);
+  }
+  if (!cfg.door && !cfg.drawer) {
+    console.warn(`"${lockObj.name}" has no "door" or "drawer" in the map's JSON sidecar - solving it won't unlock anything.`);
+  }
+
+  const axisKey = String(cfg.axis ?? COMBOLOCK_DIAL_AXIS).replace(/^-/, "");
+  const dials = dialObjs.map((mesh) => ({ mesh, digit: 0, rotation: 0 }));
+
+  // Reuses the switch's click sound for a dial notch and the lock's clunk for solving - a
+  // combination lock turning over reads close enough to those existing assets that there's no
+  // need for dedicated ones yet.
+  const clickSound = new THREE.PositionalAudio(listener);
+  const unlockSound = new THREE.PositionalAudio(listener);
+  [clickSound, unlockSound].forEach((sound) => {
+    sound.setRefDistance(SWITCH_SOUND_REF_DISTANCE);
+    registerSound(sound, "sfx", 1);
+  });
+  audioLoader.load("assets/sounds/click.wav", (buffer) => clickSound.setBuffer(buffer));
+  audioLoader.load("assets/sounds/clunk.wav", (buffer) => unlockSound.setBuffer(buffer));
+  lockObj.add(clickSound);
+  lockObj.add(unlockSound);
+
+  const lock = {
+    object: lockObj,
+    axisKey,
+    speed: cfg.dialSpeed ?? COMBOLOCK_DIAL_SPEED,
+    dials,
+    combo: Array.isArray(cfg.combo) ? cfg.combo : [],
+    doorName: cfg.door || null,
+    drawerName: cfg.drawer || null,
+    clickSound,
+    unlockSound,
+    solved: false,
+    // Where lock.object actually lives in the map - captured fresh each time focusLock() pulls
+    // it onto the camera, restored by unfocusLock(). Preallocated (not reassigned) so
+    // focus/unfocus never needs to allocate.
+    savedParent: null,
+    savedPosition: new THREE.Vector3(),
+    savedQuaternion: new THREE.Quaternion(),
+    savedScale: new THREE.Vector3(),
+  };
+  comboLocks.push(lock);
+
+  registerInteractable(lockObj, {
+    promptText: () => "[F] Try combination",
+    onActivate: () => beginComboLock(lock),
+  });
+}
+
+// See menu.js's return-to-main-menu flow. setupComboLock() builds fresh ones on the next load.
+export function resetComboLocks() {
+  comboLocks.forEach((lock) => {
+    unregisterSound(lock.clickSound);
+    unregisterSound(lock.unlockSound);
+  });
+  comboLocks = [];
+  activeLock = null;
+}
+
+export function updateComboLocks(dt) {
+  comboLocks.forEach((lock) => {
+    if (lock.solved) return; // object's already been removed from the scene - nothing left to animate
+    lock.dials.forEach((dial) => {
+      const diff = dial.rotation - dial.mesh.rotation[lock.axisKey];
+      if (Math.abs(diff) > 0.001) {
+        dial.mesh.rotation[lock.axisKey] += Math.sign(diff) * Math.min(Math.abs(diff), lock.speed * dt);
+      }
+    });
+  });
+}

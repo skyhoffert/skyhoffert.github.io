@@ -50,6 +50,12 @@
       "key": "key_armoire"
     }
   },
+  "comboLocks": {
+    "COMBOLOCK_desk_br": {
+      "combo": [4, 8, 7],
+      "drawer": "DRAWER_desk_br"
+    }
+  },
   "drawers": {
     "DRAWER_desk_tr": {
       "axis": "-x",
@@ -59,7 +65,8 @@
     "DRAWER_desk_br": {
       "axis": "-x",
       "slideDistance": 0.65,
-      "speed": 1.0
+      "speed": 1.0,
+      "locked": true
     }
   },
   "lights": {

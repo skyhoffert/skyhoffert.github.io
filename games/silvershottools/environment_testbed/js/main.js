@@ -12,6 +12,8 @@ import { scene, camera, renderer } from "./scene.js";
 import { updateLightFlicker } from "./map.js";
 import { updateDoors } from "./door.js";
 import { updateDrawers } from "./drawer.js";
+import { updateComboLocks } from "./comboLock.js";
+import { puzzleActive, exitPuzzle } from "./puzzle.js";
 
 import { updateMovement } from "./movement.js";
 import { updateFootsteps } from "./footsteps.js";
@@ -29,10 +31,16 @@ import "./menu.js";
 
 // F activates non-holdable interactables (doors, switches) directly, but on a holdable prop
 // it starts an inventory pickup instead - hand-carrying a prop is still done with the mouse
-// buttons (see hold.js).
+// buttons (see hold.js). While focused on a puzzle (see puzzle.js), F means the opposite -
+// "stop interacting" - same key, just toggled, like wieldDebug.js's P.
 window.addEventListener("keydown", (evt) => {
   if (evt.code !== "KeyF" || evt.repeat) return;
-  if (document.pointerLockElement !== canvas || !activeInteractable) return;
+  if (document.pointerLockElement !== canvas) return;
+  if (puzzleActive) {
+    exitPuzzle();
+    return;
+  }
+  if (!activeInteractable) return;
   if (activeInteractable.holdable) startInventoryPickup(activeInteractable);
   else activeInteractable.onActivate();
 });
@@ -51,12 +59,15 @@ function animate(t) {
   applyLean(dt); // re-apply this frame's lean offset now that movement's used the real position
   updateDoors(dt);
   updateDrawers(dt);
+  updateComboLocks(dt);
   updateLightFlicker(dt);
   applyHeldForces();
   stepPhysics(dt);
   updateAttacks(dt);
   if (debugViewOn) updateDebugView();
-  if (!heldLeft || !heldRight) updateInteractables(); // at least one hand still free to grab something
+  // Not while focused on a puzzle (see puzzle.js) - the crosshair should stay fixed on whatever's
+  // focused instead of re-targeting other interactables as the player looks around a dial.
+  if (!puzzleActive && (!heldLeft || !heldRight)) updateInteractables(); // at least one hand still free to grab something
   camera.rotation.set(pitch, yaw, leanRoll, "YXZ");
 
   renderer.render(scene, camera);

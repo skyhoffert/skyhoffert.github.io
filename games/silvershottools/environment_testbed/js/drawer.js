@@ -7,6 +7,11 @@
 // customize) - unlike a door's hinge, which axis a drawer should even slide along varies with
 // how it happened to be modeled/oriented in Blender, so it's per-instance config rather than a
 // single hardcoded axis.
+//
+// A drawer can optionally start locked (drawerCfg.locked), same idea as door.js's own locked
+// door - F does nothing while locked. Nothing in this module ever clears it itself; that's
+// lock.js's or comboLock.js's job, whichever's paired with this drawer by name (see
+// unlockDrawer() below) - once cleared, a drawer behaves exactly like one that was never locked.
 
 import * as THREE from "three";
 import * as CANNON from "../../vendor/cannon-es.js";
@@ -40,6 +45,7 @@ function resolveAxis(axisStr) {
 }
 
 function toggleDrawer(drawer) {
+  if (drawer.locked) return; // still locked - only unlockDrawer() (called by lock.js/comboLock.js) can clear this
   drawer.isOpen = !drawer.isOpen;
   drawer.target = drawer.isOpen ? drawer.openValue : drawer.closedValue;
   drawer.settled = false;
@@ -86,11 +92,12 @@ export function setupDrawer(drawerObj, drawerColliders, drawerCfg) {
     body: null,
     openSound,
     closeSound,
+    locked: !!drawerCfg.locked,
   };
   drawers.push(drawer);
 
   registerInteractable(drawerObj, {
-    promptText: () => (drawer.isOpen ? "[F] Close drawer" : "[F] Open drawer"),
+    promptText: () => (drawer.locked ? "[F] Locked" : drawer.isOpen ? "[F] Close drawer" : "[F] Open drawer"),
     onActivate: () => toggleDrawer(drawer),
   });
 
@@ -119,6 +126,18 @@ export function setupDrawer(drawerObj, drawerColliders, drawerCfg) {
       console.warn(`"${drawerObj.name}" had COLL_ children but none produced a usable shape.`);
     }
   }
+}
+
+// Called by lock.js's tryUnlock() or comboLock.js's solveLock() once a paired lock/combo is
+// satisfied - clears .locked so a plain F now opens the drawer normally. A no-op (beyond the
+// warning) if drawerName doesn't match any known drawer - same reasoning as door.js's unlockDoor().
+export function unlockDrawer(drawerName) {
+  const drawer = drawers.find((d) => d.object.name === drawerName);
+  if (!drawer) {
+    console.warn(`unlockDrawer: no drawer named "${drawerName}" (check the lock's "drawer" field in the map's JSON sidecar).`);
+    return;
+  }
+  drawer.locked = false;
 }
 
 // See menu.js's return-to-main-menu flow. setupDrawer() builds fresh ones on the next load.

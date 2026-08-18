@@ -12,10 +12,12 @@ import { registerSound, unregisterSound } from "./settings.js";
 import { setupDoor } from "./door.js";
 import { setupDrawer } from "./drawer.js";
 import { setupLock } from "./lock.js";
+import { setupComboLock } from "./comboLock.js";
 import {
   DOOR_PREFIX,
   DRAWER_PREFIX,
   LOCK_PREFIX,
+  COMBOLOCK_PREFIX,
   COLLISION_PREFIX,
   SWITCH_PREFIX,
   LIGHT_GROUP_PREFIX,
@@ -69,13 +71,17 @@ function wireSwitches(switches) {
   });
 }
 
-// config is the map's JSON sidecar (see menu.js's loadWorld()) - doors/drawers/lights/locks are
-// all keyed by object name, each entry optional and itself allowed to omit any field, falling
-// back to the matching DOOR_*/DRAWER_*/LIGHT_* constant (see setupDoor()/setupDrawer()/the
-// per-light setup below and updateLightFlicker()) for anything not customized there - locks are
-// the one exception, since "door"/"key" have no sensible constants.js default (see setupLock()).
-// Switches have no config of their own - see wireSwitches().
-export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig = {}, lights: lightConfig = {}, locks: lockConfig = {} } = {}) {
+// config is the map's JSON sidecar (see menu.js's loadWorld()) - doors/drawers/lights/locks/
+// comboLocks are all keyed by object name, each entry optional and itself allowed to omit any
+// field, falling back to the matching DOOR_*/DRAWER_*/LIGHT_*/COMBOLOCK_* constant (see
+// setupDoor()/setupDrawer()/the per-light setup below/updateLightFlicker()/setupComboLock()) for
+// anything not customized there - locks are the one exception, since "door"/"key" have no
+// sensible constants.js default (see setupLock()). Switches have no config of their own - see
+// wireSwitches().
+export function setupMap(
+  gltf,
+  { doors: doorConfig = {}, drawers: drawerConfig = {}, lights: lightConfig = {}, locks: lockConfig = {}, comboLocks: comboLockConfig = {} } = {}
+) {
   // Needed before reading any mesh's matrixWorld below (e.g. for baking static collision
   // geometry into world space) - nothing has been rendered yet, so it isn't current otherwise.
   gltf.scene.updateMatrixWorld(true);
@@ -95,6 +101,7 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
   const doorObjs = [];
   const drawerObjs = [];
   const lockObjs = [];
+  const comboLockObjs = [];
   gltf.scene.traverse((obj) => {
     if (obj.name.startsWith(DOOR_PREFIX)) doorObjs.push(obj);
     else if (obj.name.startsWith(DRAWER_PREFIX)) drawerObjs.push(obj);
@@ -106,6 +113,10 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
       // meshes the exact same way (see typedCollisionMeshes, populated further down).
       obj.visible = false;
       lockObjs.push(obj);
+    } else if (obj.name.startsWith(COMBOLOCK_PREFIX)) {
+      // Unlike LOCK_, a combo lock IS the visible prop (its own dials), so it stays visible -
+      // see comboLock.js's module comment.
+      comboLockObjs.push(obj);
     }
   });
   const doorColliders = new Map(); // door object -> its COLL_ children
@@ -201,6 +212,7 @@ export function setupMap(gltf, { doors: doorConfig = {}, drawers: drawerConfig =
   // to whichever registered first, so locks need to get there first for that tie to resolve in
   // the (small, specific) lock's favor rather than the (large, generic) door's.
   lockObjs.forEach((lockObj) => setupLock(lockObj, lockConfig[lockObj.name] || {}));
+  comboLockObjs.forEach((lockObj) => setupComboLock(lockObj, comboLockConfig[lockObj.name] || {}));
 
   if (doorObjs.length > 0) {
     doorObjs.forEach((doorObj) => setupDoor(doorObj, doorColliders.get(doorObj), doorConfig[doorObj.name] || {}));

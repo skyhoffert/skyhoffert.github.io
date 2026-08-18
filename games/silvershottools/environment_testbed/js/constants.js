@@ -11,6 +11,8 @@
 export const DOOR_PREFIX = "DOOR_"; // e.g. "DOOR_a" - any number of doors, each becomes its own independent open/close state machine (see door.js)
 export const DRAWER_PREFIX = "DRAWER_"; // e.g. "DRAWER_desk_tr" - the sliding equivalent of DOOR_ (see drawer.js)
 export const LOCK_PREFIX = "LOCK_"; // e.g. "LOCK_armoire" - a clickable lock mechanism paired with a door + required key via the map's JSON sidecar (see lock.js)
+export const COMBOLOCK_PREFIX = "COMBOLOCK_"; // e.g. "COMBOLOCK_desk_br" - a focus-mode dial-combination puzzle paired with a door/drawer via the map's JSON sidecar (see comboLock.js)
+export const COMBOLOCK_DIAL_PREFIX = "DIAL_"; // children of a COMBOLOCK_ object, one per digit - however many exist is however many dials that lock has
 export const SWITCH_PREFIX = "SW_"; // e.g. "SW_room" controls every light matching L_room_*
 export const LIGHT_GROUP_PREFIX = "LIGHT_";
 export const COLLISION_PREFIX = "COLL_";
@@ -27,6 +29,11 @@ export const DOOR_SPEED = Math.PI; // radians/sec
 export const DRAWER_AXIS = "-z"; // which local axis a drawer slides along to open - "x"/"y"/"z", optionally "-" prefixed for the opposite direction
 export const DRAWER_SLIDE_DISTANCE = 0.35; // meters, how far along that axis a drawer pulls open
 export const DRAWER_SPEED = 1.0; // meters/sec
+export const COMBOLOCK_DIAL_AXIS = "x"; // which local axis a combo lock's dials spin about to show their digit - "x"/"y"/"z"
+export const COMBOLOCK_DIAL_SPEED = 14; // radians/sec each dial eases toward its current target rotation
+export const COMBOLOCK_FOCUS_DISTANCE = 0.8; // meters in front of the camera a combo lock is placed when focused (see comboLock.js's focusLock()) - a snapshot at the moment of focus, not a live offset, so the player can look around it afterward
+export const COMBOLOCK_FOCUS_DROP = 0.12; // meters below dead-center at that same moment, so it doesn't sit right on top of the crosshair
+export const COMBOLOCK_FOCUS_SCALE = 4; // multiplier over the lock's own modeled scale while focused, so its dials actually read at that distance
 // meters, clamps how far a point/spot light itself reaches and (see map.js's setupMap()) its
 // shadow camera's far plane - the two can't be set independently for a point light (three.js
 // forces its shadow camera's far to match light.distance every frame), so one value has to do

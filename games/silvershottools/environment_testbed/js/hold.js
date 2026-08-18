@@ -11,6 +11,7 @@ import { activeInteractable } from "./interaction.js";
 import { isHandBusy } from "./wield.js";
 import { worldStats } from "./worldConfig.js";
 import { playerStats } from "./playerConfig.js";
+import { puzzleActive } from "./puzzle.js";
 
 export let ctrlDown = false;
 window.addEventListener("keydown", (evt) => {
@@ -47,7 +48,7 @@ document.addEventListener("mouseup", (evt) => {
 });
 
 function tryPickUp(hand) {
-  if (document.pointerLockElement !== canvas) return;
+  if (document.pointerLockElement !== canvas || puzzleActive) return; // hands are busy with a puzzle - see puzzle.js
   // That hand's wielding something from the inventory (see wield.js) - clicking it attacks
   // instead (see attack.js), rather than reaching out to grab a world prop.
   if (isHandBusy(hand === "left" ? "handL" : "handR")) return;

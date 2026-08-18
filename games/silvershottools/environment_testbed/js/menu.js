@@ -12,6 +12,8 @@ import { resetInteractables } from "./interaction.js";
 import { resetDoors } from "./door.js";
 import { resetDrawers } from "./drawer.js";
 import { resetLocks } from "./lock.js";
+import { resetComboLocks } from "./comboLock.js";
+import { resetPuzzle } from "./puzzle.js";
 import { resetHold } from "./hold.js";
 import { resetInventory, setupInventoryGrid } from "./inventory.js";
 import { resetPlayer } from "./movement.js";
@@ -80,6 +82,8 @@ mainMenuButton.addEventListener("click", () => {
   resetDoors();
   resetDrawers();
   resetLocks();
+  resetComboLocks();
+  resetPuzzle();
   resetPhysicsWorld();
   resetSpawnedObjects();
   resetMapState();

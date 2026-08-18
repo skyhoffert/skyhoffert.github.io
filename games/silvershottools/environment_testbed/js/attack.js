@@ -14,6 +14,7 @@
 import * as THREE from "three";
 import { canvas } from "./dom.js";
 import { getWielded, getWieldedStats, toggleWieldedLight } from "./wield.js";
+import { puzzleActive } from "./puzzle.js";
 import { BANG_TEXT_TIME } from "./constants.js";
 
 const bangEl = document.getElementById("bangText");
@@ -45,7 +46,7 @@ const LOCAL_FORWARD = new THREE.Vector3(0, 0, -1); // "forward" in the item's ca
 const swingQuat = new THREE.Quaternion();
 
 function tryAttack(handId) {
-  if (document.pointerLockElement !== canvas) return;
+  if (document.pointerLockElement !== canvas || puzzleActive) return; // hands are busy with a puzzle - see puzzle.js
   const slotId = getWielded("twoHand") ? "twoHand" : handId;
   const stats = getWieldedStats(slotId);
   if (!stats || stats.type === "prop") return; // nothing wielded, or can't be attacked with (e.g. a book)
