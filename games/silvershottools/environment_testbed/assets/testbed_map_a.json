@@ -22,6 +22,9 @@
     "SPAWN_g": {
       "objects": ["shotgun"]
     },
+    "SPAWN_h": {
+      "creatures": ["rat"]
+    },
     "SPAWN_desk_drawer_brb": {
       "objects": ["revolver"]
     },
@@ -102,12 +105,13 @@
     },
     "LIGHT_desklamp": {
       "on": true,
-      "shadow": false,
-      "shadowFar": 5,
-      "flickerMin": 0.8,
-      "flickerChangeMin": 0.3,
-      "flickerChangeMax": 0.9,
-      "flickerSpeed": 10
+      "shadow": true,
+      "shadowNear": 1,
+      "shadowFar": 8,
+      "flickerMin": 0.2,
+      "flickerChangeMin": 0.04,
+      "flickerChangeMax": 0.2,
+      "flickerSpeed": 3
     }
   }
 }

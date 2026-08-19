@@ -18,6 +18,7 @@ export const SWITCH_PREFIX = "SW_"; // e.g. "SW_room" controls every light match
 export const LIGHT_GROUP_PREFIX = "LIGHT_";
 export const COLLISION_PREFIX = "COLL_";
 export const OBJECT_PREFIX = "OBJ_"; // holdable physics props, e.g. "OBJ_knife", from objects.glb
+export const CREATURE_PREFIX = "CREATURE_"; // animated/skinned creature roots, e.g. "CREATURE_rat", from creatures.glb
 export const SPAWN_PREFIX = "SPAWN_"; // empties in the map that instantiate objects from the library
 
 // Fallback defaults for whatever a door/light doesn't specify in the map's own JSON sidecar
@@ -65,11 +66,33 @@ export const ATTACK_SWING_LUNGE = 0.1; // meters the wielded item pushes forward
 
 export const BANG_TEXT_TIME = 0.25; // seconds the "BANG" flash (see attack.js's showBang()) stays on screen per gun-type attack
 
+// Clip name every creature is expected to have and starts playing on spawn (see creatures.js's
+// spawnCreatures()) - a creature missing it just stands there un-animated rather than erroring.
+export const CREATURE_IDLE_CLIP = "idle";
+// Clip name a creature plays once through when the player interacts with it (F - see
+// interaction.js), then blends back to CREATURE_IDLE_CLIP - a creature missing it just isn't
+// interactable at all (see creatures.js's spawnCreatures()). "rat"'s is its "snif" clip.
+export const CREATURE_INTERACT_CLIP = "snif";
+export const CREATURE_ANIM_BLEND_TIME = 0.2; // seconds, cross-fade duration between idle and the interact clip in both directions
+
 export const COLL_BOX_PREFIX = COLLISION_PREFIX + "BOX_";
 export const COLL_SPHERE_PREFIX = COLLISION_PREFIX + "SPHERE_";
 export const COLL_CYLINDER_PREFIX = COLLISION_PREFIX + "CYLINDER_";
 export const CYLINDER_SEGMENTS = 12;
 export const PROP_MASS = 1; // kg-ish, uniform for every physics prop for now
+// cannon-es's own per-body defaults (linear/angularDamping 0.01) barely damp anything - a round
+// shape (COLL_SPHERE_/CYLINDER_) resting on a flat collider is especially prone to a small
+// persistent creep from the contact solver that never fully decays. Pushing damping well above
+// default at least shrinks it; it doesn't reliably kill it outright (see physics.js's
+// buildPropBody()/stepPhysics() for why cannon-es's own built-in sleep check can't be trusted to
+// ever catch a body still creeping like this, and what drives sleep instead).
+export const PROP_LINEAR_DAMPING = 0.3;
+export const PROP_ANGULAR_DAMPING = 0.4; // higher than linear - angular (rolling/tipping) creep is the more visible half of this for round props
+// physics.js's stepPhysics() forces a prop fully asleep once its LINEAR speed alone (not
+// cannon-es's own default combined linear+angular check - see buildPropBody()'s comment) has
+// stayed under this for PROP_SETTLE_TIME straight.
+export const PROP_SETTLE_LINEAR_SPEED = 0.08; // m/s
+export const PROP_SETTLE_TIME = 0.4; // seconds
 export const WAKE_RADIUS = 1; // meters - see physics.js's wakeNearbyBodies(), called from door.js/drawer.js on toggle
 
 export const AMBIANCE_VOLUME = 0.4;
@@ -85,6 +108,7 @@ export const SETTINGS_COOKIE_DAYS = 365;
 
 export const MAP_URL = "assets/testbed_map_a.glb";
 export const OBJECTS_URL = "assets/objects.glb";
+export const CREATURES_URL = "assets/creatures.glb";
 // All scene configuration (switch start states, spawn pools, ...) that used to live in
 // Blender custom properties now lives here instead - much faster to iterate on than
 // round-tripping through Blender's custom-property UI and a re-export every time.

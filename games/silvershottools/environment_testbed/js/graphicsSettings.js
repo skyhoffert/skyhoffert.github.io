@@ -31,7 +31,7 @@ const SHADOW_PRESETS = {
   off: { enabled: false },
   low: { enabled: true, mapSize: 32, type: THREE.BasicShadowMap, normalBias: 0.3, bias: -0.0012 },
   medium: { enabled: true, mapSize: 128, type: THREE.PCFShadowMap, normalBias: 0.14, bias: -0.0006 },
-  high: { enabled: true, mapSize: 256, type: THREE.PCFShadowMap, normalBias: 0.1, bias: -0.0004 },
+  high: { enabled: true, mapSize: 512, type: THREE.PCFShadowMap, normalBias: 0.1, bias: -0.0004 },
 };
 const DEFAULT_SHADOW_QUALITY = "medium";
 

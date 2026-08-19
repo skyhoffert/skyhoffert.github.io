@@ -9,11 +9,12 @@
 // Each grid has its own accepts(fullName) filter (see createGrid()) gating what can land there
 // on top of the usual spatial fit: the hand grid takes anything (that's what makes it "wielded"),
 // the sling takes only two-handed (non-1x1) items - a shoulder-sling stash for a shotgun/shovel
-// you're not currently wielding - the holster takes only one-handed weapons, gun or melee (see
-// isHolsterable()) - a knife or revolver you're not currently wielding, but not a book/key/
-// flashlight - and the main grid takes only 1x1 items generally; a two-handed item can only ever
-// be wielded or slung, never tucked into the general grid, and any weapon can just as well sit
-// unholstered in the main grid instead (the holster's just a second, smaller option for one).
+// you're not currently wielding - the holster takes only one-handed weapons, gun or melee, plus
+// the flashlight (see isHolsterable()) - a knife, revolver, or flashlight you're not currently
+// wielding, but not a book/key - and the main grid takes only 1x1 items generally; a two-handed
+// item can only ever be wielded or slung, never tucked into the general grid, and any weapon can
+// just as well sit unholstered in the main grid instead (the holster's just a second, smaller
+// option for one).
 // Checked everywhere a spatial fit is (canPlace()/evaluateTarget()), including for whichever
 // placements a swap would displace into another grid (packIntoRegion()) - a swap that would dump
 // a two-handed item into the main grid (or a non-weapon into the holster) is invalid the same
@@ -63,14 +64,13 @@ function isTwoHanded(fullName) {
   return size.w !== 1 || size.h !== 1;
 }
 
-// The holster is a side-holstered *weapon* slot - a one-handed gun or melee item, per
-// weapons.json's own type (see objects.js's weaponStatsFor()). Excludes a "prop" (the book, the
-// key) and, deliberately, a "light" item too (the flashlight) - clipped to your belt reads fine
-// for a knife or revolver, not for a lamp.
+// The holster is a side-holstered slot for a one-handed gun, melee item, or the flashlight, per
+// weapons.json's own type (see objects.js's weaponStatsFor()). Still excludes a "prop" (the
+// book, the key) - those aren't clippable to a belt the way a knife, revolver, or flashlight is.
 function isHolsterable(fullName) {
   if (isTwoHanded(fullName)) return false;
   const type = weaponStatsFor(fullName).type;
-  return type === "gun" || type === "melee";
+  return type === "gun" || type === "melee" || type === "light";
 }
 
 const MAX_INVENTORY_DIM = 8;

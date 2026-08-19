@@ -15,6 +15,10 @@ import {
   COLL_CYLINDER_PREFIX,
   CYLINDER_SEGMENTS,
   PROP_MASS,
+  PROP_LINEAR_DAMPING,
+  PROP_ANGULAR_DAMPING,
+  PROP_SETTLE_LINEAR_SPEED,
+  PROP_SETTLE_TIME,
 } from "./constants.js";
 
 // Built with whatever worldStats.gravity currently is - at this point (module-init time,
@@ -106,7 +110,18 @@ export function buildPropBody(instance) {
   instance.updateMatrixWorld(true);
   const instanceWorldInverse = worldInverseNoScale(instance);
 
-  const body = new CANNON.Body({ mass: PROP_MASS });
+  const body = new CANNON.Body({
+    mass: PROP_MASS,
+    linearDamping: PROP_LINEAR_DAMPING,
+    angularDamping: PROP_ANGULAR_DAMPING,
+    // cannon-es's built-in sleepTick() judges "asleep" by combined linear+angular speed against
+    // one shared threshold - a round collider's persistent contact-solver creep (see
+    // constants.js's PROP_* comments) can keep angular speed elevated more or less indefinitely,
+    // so that combined check may simply never pass, not just flicker right at the edge of it.
+    // Disabling it here doesn't lose anything: stepPhysics() drives sleep itself instead, off
+    // linear speed alone, which isn't subject to the same problem.
+    allowSleep: false,
+  });
   let hasShape = false;
 
   instance.traverse((child) => {
@@ -190,7 +205,24 @@ export function resetPhysicsWorld() {
 export function stepPhysics(dt) {
   world.step(1 / 60, dt, 3);
   for (const [obj, phys] of physicsObjects) {
-    obj.position.set(phys.body.position.x, phys.body.position.y, phys.body.position.z);
-    obj.quaternion.set(phys.body.quaternion.x, phys.body.quaternion.y, phys.body.quaternion.z, phys.body.quaternion.w);
+    const body = phys.body;
+    // Drives sleep manually (buildPropBody() disables cannon-es's own allowSleep for exactly
+    // this reason) off LINEAR speed alone, ignoring angular entirely - a round collider resting
+    // on a flat one can carry a small persistent rotational creep from the contact solver that
+    // never really settles, but its *linear* speed does genuinely drop near zero and stay there
+    // once it's actually at rest, so this isn't fooled by the same creep that defeats a combined
+    // linear+angular threshold. body.sleep() forcibly zeroes angular velocity too and fully
+    // excludes the body from integration/solving (see cannon-es's Body.integrate()), so once
+    // forced asleep here the creep has nothing left to run on, however it was caused.
+    if (body.sleepState !== CANNON.Body.SLEEPING) {
+      if (body.velocity.lengthSquared() < PROP_SETTLE_LINEAR_SPEED ** 2) {
+        phys.settleTimer += dt;
+        if (phys.settleTimer >= PROP_SETTLE_TIME) body.sleep();
+      } else {
+        phys.settleTimer = 0;
+      }
+    }
+    obj.position.set(body.position.x, body.position.y, body.position.z);
+    obj.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
   }
 }

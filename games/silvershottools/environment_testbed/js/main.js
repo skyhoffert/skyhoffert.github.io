@@ -13,6 +13,7 @@ import { updateLightFlicker } from "./map.js";
 import { updateDoors } from "./door.js";
 import { updateDrawers } from "./drawer.js";
 import { updateComboLocks } from "./comboLock.js";
+import { updateCreatures } from "./creatures.js";
 import { puzzleActive, exitPuzzle } from "./puzzle.js";
 
 import { updateMovement } from "./movement.js";
@@ -61,6 +62,7 @@ function animate(t) {
   updateDrawers(dt);
   updateComboLocks(dt);
   updateLightFlicker(dt);
+  updateCreatures(dt);
   applyHeldForces();
   stepPhysics(dt);
   updateAttacks(dt);

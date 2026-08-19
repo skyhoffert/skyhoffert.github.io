@@ -204,8 +204,12 @@ export function isHandBusy(handId) {
 // Flips a "light"-type wielded item's light on/off - see objects.js's weaponStatsFor() and
 // attack.js's tryAttack(), which calls this instead of swinging/firing for that type. A no-op
 // if nothing's wielded in that slot, or what's there isn't a "light" (no light was found to
-// store on .userData.light at equip time - see equipSlot()).
+// store on .userData.light at equip time - see equipSlot()). Toggles intensity (0 <->
+// userData.baseIntensity), not .visible - see configureInstanceLights()'s own comment for why
+// that distinction actually matters here (avoiding a first-toggle shader recompile stall).
 export function toggleWieldedLight(slotId) {
   const instance = wielded[slotId];
-  if (instance && instance.userData.light) instance.userData.light.visible = !instance.userData.light.visible;
+  const light = instance && instance.userData.light;
+  if (!light) return;
+  light.intensity = light.intensity > 0 ? 0 : light.userData.baseIntensity;
 }

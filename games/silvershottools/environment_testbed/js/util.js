@@ -8,6 +8,12 @@ export function shuffleInPlace(arr) {
   return arr;
 }
 
+// count distinct random elements of arr, without mutating it - see objects.js's/creatures.js's
+// spawn functions, picking "count" distinct names out of a SPAWN_ marker's candidate pool.
+export function shuffleAndTake(arr, count) {
+  return shuffleInPlace(arr.slice()).slice(0, count);
+}
+
 export function isDescendantOf(obj, ancestor) {
   if (!ancestor) return false;
   for (let p = obj; p; p = p.parent) {

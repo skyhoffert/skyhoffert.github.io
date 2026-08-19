@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { scene } from "./scene.js";
 import { world, physicsObjects, buildPropBody } from "./physics.js";
 import { registerInteractable } from "./interaction.js";
-import { shuffleInPlace, disposeObject3D } from "./util.js";
+import { shuffleAndTake, disposeObject3D } from "./util.js";
 import {
   OBJECT_PREFIX,
   SPAWN_PREFIX,
@@ -150,6 +150,19 @@ export function cloneObjectTemplate(fullName) {
 // already be lit before anyone's turned it on, whether it's just been equipped or is still
 // sitting out in the world (e.g. spawned via a SPAWN_ marker) waiting to be picked up.
 //
+// "Off" here means intensity 0 with userData.baseIntensity stashed for wield.js's
+// toggleWieldedLight() to restore - not child.visible = false, even though the light is
+// invisible either way. A THREE.Light's shader contribution is baked into every currently-lit
+// material's compiled program by *count* (however many point/spot lights are visible right now,
+// regardless of intensity) - so a light that flips .visible true for the first time forces a
+// fresh shader variant for everything that program touches, a real (if one-time) stall, right at
+// the moment the player first turns it on. Leaving it always visible and just zeroing its
+// intensity keeps it counted from the instant it's cloned, so that variant's already compiled
+// (see menu.js's loadWorld(), which calls renderer.compileAsync() right after every spawn - this
+// is what lets that warm-up actually cover the "on" state too) well before anyone flips it on.
+// map.js's own map lights already worked this way (see updateLightFlicker()) for unrelated
+// reasons (flicker) - this just brings a wielded item's light in line with the same convention.
+//
 // Two clone(true) gotchas this papers over, both only visible once an instance actually rotates
 // (equipped and swung, or physically tumbled/kicked - not just sitting statically where it
 // spawned, which is why this can look fine until then):
@@ -169,7 +182,8 @@ export function configureInstanceLights(instance) {
   instance.traverse((child) => {
     if (!child.isLight) return;
     found = child;
-    child.visible = false;
+    child.userData.baseIntensity = child.intensity;
+    child.intensity = 0;
     const range = weaponStatsFor(instance.name).range;
     if (typeof range === "number" && (child.isPointLight || child.isSpotLight)) child.distance = range;
     if (child.target) {
@@ -194,17 +208,15 @@ function setupPhysicsObject(instance) {
 
   const body = buildPropBody(instance);
   world.addBody(body);
-  physicsObjects.set(instance, { body, centerOffset: computeLocalCenterOffset(instance) });
+  // settleTimer: seconds this body's linear speed has continuously stayed under
+  // PROP_SETTLE_LINEAR_SPEED - see physics.js's stepPhysics(), which drives its actual sleeping.
+  physicsObjects.set(instance, { body, centerOffset: computeLocalCenterOffset(instance), settleTimer: 0 });
 
   const displayName = objectDisplayName(instance.name);
   registerInteractable(instance, {
     promptText: () => `[Click] Hold ${displayName} - [F] Pick up`,
     holdable: true,
   });
-}
-
-function shuffleAndTake(arr, count) {
-  return shuffleInPlace(arr.slice()).slice(0, count);
 }
 
 const spawnedInstances = []; // every instance spawnObjects() has added to the scene, for reset
@@ -221,12 +233,16 @@ export function spawnObjects(mapScene, spawnConfig) {
   markers.forEach((marker) => {
     // Config keyed by marker name, from the map's JSON sidecar: { objects: string[], count?: number }.
     // "objects" is the pool of candidate object names (bare, no OBJ_ prefix) to randomly pick
-    // "count" distinct ones from (defaults to 1).
+    // "count" distinct ones from (defaults to 1). A marker can carry other spawn kinds too (e.g.
+    // "creatures" - see creatures.js's spawnCreatures(), called the same way from menu.js) - only
+    // a marker missing a config entry entirely is actually worth flagging here, not one that
+    // simply isn't configured for *this* kind of spawn.
     const cfg = spawnConfig[marker.name];
-    if (!cfg || !Array.isArray(cfg.objects) || cfg.objects.length === 0) {
-      console.warn(`${marker.name} has no spawn config (expected an "objects" array).`);
+    if (!cfg) {
+      console.warn(`${marker.name} has no spawn config.`);
       return;
     }
+    if (!Array.isArray(cfg.objects) || cfg.objects.length === 0) return;
     const count = Number.isFinite(cfg.count) && cfg.count > 0 ? Math.floor(cfg.count) : 1;
 
     marker.getWorldPosition(spawnWorldPos);
