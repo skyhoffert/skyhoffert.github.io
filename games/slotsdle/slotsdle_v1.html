@@ -844,12 +844,32 @@
         async function fetchScoreboardRows(kind) {
             if (kind == 'user') {
                 const UUID = ensureUuid();
-                const nickname = await dbGetNicknameForUUID(UUID);
+                const currentNickname = await dbGetNicknameForUUID(UUID);
+
+                if (!currentNickname) {
+                    return [];
+                }
+
+                const { data: playerRows, error: playerError, status: playerStatus } = await db
+                    .from('players_v1')
+                    .select('uuid')
+                    .eq('nickname', currentNickname);
+
+                if (playerStatus !== 200 || playerError) {
+                    console.error('Error querying players for nickname:', playerError);
+                    return [];
+                }
+
+                const matchingUuids = (playerRows || []).map(p => p.uuid);
+
+                if (matchingUuids.length === 0) {
+                    return [];
+                }
 
                 const { data, error, status } = await db
                     .from('scores_v1')
                     .select('score')
-                    .eq('uuid', UUID)
+                    .in('uuid', matchingUuids)
                     .order('score', {ascending: false})
                     .limit(10);
 
@@ -866,7 +886,7 @@
                 let scores = [];
 
                 for (d in data) {
-                    scores.push({'nickname':nickname, 'score':data[d].score});
+                    scores.push({'nickname':currentNickname, 'score':data[d].score});
                 }
 
                 while (scores.length < 10) {
