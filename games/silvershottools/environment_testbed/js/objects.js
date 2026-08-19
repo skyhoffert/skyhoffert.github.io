@@ -244,9 +244,6 @@ export function spawnObjects(mapScene, spawnConfig) {
       scene.add(instance);
       setupPhysicsObject(instance);
       spawnedInstances.push(instance);
-      console.log(
-        `Spawned "${instance.name}" at ${marker.name} (${spawnWorldPos.x.toFixed(2)}, ${spawnWorldPos.y.toFixed(2)}, ${spawnWorldPos.z.toFixed(2)})`
-      );
     });
   });
 }

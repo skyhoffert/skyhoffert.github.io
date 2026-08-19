@@ -22,14 +22,17 @@
     "SPAWN_g": {
       "objects": ["shotgun"]
     },
-    "SPAWN_desk_drawer_tr": {
+    "SPAWN_desk_drawer_brb": {
       "objects": ["revolver"]
     },
     "SPAWN_desk_top": {
       "objects": ["flashlight"]
     },
-    "SPAWN_desk_top_b": {
+    "SPAWN_desk_drawer_brf": {
       "objects": ["key_armoire"]
+    },
+    "SPAWN_desk_drawer_tr": {
+      "objects": ["combo_code"]
     }
   },
   "doors": {
@@ -51,7 +54,7 @@
     }
   },
   "comboLocks": {
-    "COMBOLOCK_desk_br": {
+    "COMBOLOCK_desk_drawer_br": {
       "combo": [4, 8, 7],
       "drawer": "DRAWER_desk_br"
     }

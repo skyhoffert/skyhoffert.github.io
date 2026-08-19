@@ -13,6 +13,7 @@ export const DRAWER_PREFIX = "DRAWER_"; // e.g. "DRAWER_desk_tr" - the sliding e
 export const LOCK_PREFIX = "LOCK_"; // e.g. "LOCK_armoire" - a clickable lock mechanism paired with a door + required key via the map's JSON sidecar (see lock.js)
 export const COMBOLOCK_PREFIX = "COMBOLOCK_"; // e.g. "COMBOLOCK_desk_br" - a focus-mode dial-combination puzzle paired with a door/drawer via the map's JSON sidecar (see comboLock.js)
 export const COMBOLOCK_DIAL_PREFIX = "DIAL_"; // children of a COMBOLOCK_ object, one per digit - however many exist is however many dials that lock has
+export const COMBOLOCK_PIN_NAME = "PIN"; // exact-name (not prefix) child of a COMBOLOCK_ object - the little bolt that plays a slide/rotate/shrink retract animation once solved (see comboLock.js's startSolve()); optional, a lock with none just disappears instantly when solved
 export const SWITCH_PREFIX = "SW_"; // e.g. "SW_room" controls every light matching L_room_*
 export const LIGHT_GROUP_PREFIX = "LIGHT_";
 export const COLLISION_PREFIX = "COLL_";
@@ -26,13 +27,25 @@ export const SPAWN_PREFIX = "SPAWN_"; // empties in the map that instantiate obj
 // left out (or a door/light with no entry there at all).
 export const DOOR_OPEN_ANGLE = Math.PI / 2; // radians, relative to the modeled closed angle
 export const DOOR_SPEED = Math.PI; // radians/sec
+export const DOOR_SOUND_VOLUME = 1; // 0-1 - door.js's open/close sounds, also reused as-is by drawer.js (same sound files)
 export const DRAWER_AXIS = "-z"; // which local axis a drawer slides along to open - "x"/"y"/"z", optionally "-" prefixed for the opposite direction
 export const DRAWER_SLIDE_DISTANCE = 0.35; // meters, how far along that axis a drawer pulls open
 export const DRAWER_SPEED = 1.0; // meters/sec
+export const LOCK_UNLOCK_VOLUME = 1; // 0-1 - lock.js's unlock sound (a LOCK_ object, e.g. the armoire's key lock)
 export const COMBOLOCK_DIAL_AXIS = "x"; // which local axis a combo lock's dials spin about to show their digit - "x"/"y"/"z"
 export const COMBOLOCK_DIAL_SPEED = 14; // radians/sec each dial eases toward its current target rotation
+export const COMBOLOCK_CLICK_VOLUME = 0.35; // 0-1 - plays on every dial notch, so it's kept well below COMBOLOCK_UNLOCK_VOLUME
+export const COMBOLOCK_UNLOCK_VOLUME = 1; // 0-1 - plays once, when the lock is solved
 export const COMBOLOCK_FOCUS_DISTANCE = 0.8; // meters in front of the camera a combo lock is placed when focused (see comboLock.js's focusLock()) - a snapshot at the moment of focus, not a live offset, so the player can look around it afterward
 export const COMBOLOCK_FOCUS_DROP = 0.12; // meters below dead-center at that same moment, so it doesn't sit right on top of the crosshair
+export const COMBOLOCK_FOCUS_SIDE = 0.1; // meters to the side (camera-right) at that same moment, so the lock's dials land centered in view rather than the lock object's own (off-center) origin - flip the sign if it goes the wrong way
+export const COMBOLOCK_PIN_SLIDE_AXIS = "x"; // which local axis (optionally "-" prefixed) the PIN child slides along when the lock is solved - Blender's own local axes carry straight through unchanged since the pin isn't a scene-root object, same reasoning as COMBOLOCK_DIAL_AXIS
+export const COMBOLOCK_PIN_SLIDE_DISTANCE = 0.1; // meters
+export const COMBOLOCK_PIN_SLIDE_SPEED = 0.15; // meters/sec - ~0.67s to cover COMBOLOCK_PIN_SLIDE_DISTANCE
+export const COMBOLOCK_PIN_ROTATE_AXIS = "x"; // which local axis the pin spins about, after sliding, when solved
+export const COMBOLOCK_PIN_ROTATE_ANGLE = Math.PI / 2; // radians (90 degrees)
+export const COMBOLOCK_PIN_ROTATE_SPEED = Math.PI * 0.75; // radians/sec - ~0.67s to cover COMBOLOCK_PIN_ROTATE_ANGLE
+export const COMBOLOCK_PIN_SHRINK_DURATION = 0.6; // seconds - after the pin slides+rotates, the *whole lock* (not just the pin) shrinks uniformly toward 0 over this fixed duration (not a fixed speed - its current scale can be tiny, which made a fixed units/sec shrink finish in a couple frames) before being torn down
 export const COMBOLOCK_FOCUS_SCALE = 4; // multiplier over the lock's own modeled scale while focused, so its dials actually read at that distance
 // meters, clamps how far a point/spot light itself reaches and (see map.js's setupMap()) its
 // shadow camera's far plane - the two can't be set independently for a point light (three.js
@@ -62,6 +75,9 @@ export const WAKE_RADIUS = 1; // meters - see physics.js's wakeNearbyBodies(), c
 export const AMBIANCE_VOLUME = 0.4;
 export const DOOR_SOUND_REF_DISTANCE = 3; // meters at which PositionalAudio volume starts falling off
 export const SWITCH_SOUND_REF_DISTANCE = 1.5; // smaller than the door's - a switch click is a quiet, close-up sound
+export const SWITCH_CLICK_VOLUME = 1; // 0-1 - a switch's ordinary toggle click
+export const SWITCH_CREEPY_DELAY = 0.5; // seconds after the click sound, the one-time creepy sting plays following a switch's first-ever turn-on (see map.js's wireSwitches())
+export const SWITCH_CREEPY_VOLUME = 1; // 0-1 - that one-time creepy sting
 
 export const SETTINGS_COOKIE = "environment_testbed_settings";
 export const VIDEO_SETTINGS_COOKIE = "environment_testbed_video_settings"; // see graphicsSettings.js

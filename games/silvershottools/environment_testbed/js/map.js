@@ -22,6 +22,9 @@ import {
   SWITCH_PREFIX,
   LIGHT_GROUP_PREFIX,
   SWITCH_SOUND_REF_DISTANCE,
+  SWITCH_CLICK_VOLUME,
+  SWITCH_CREEPY_DELAY,
+  SWITCH_CREEPY_VOLUME,
   LIGHT_SHADOW_NEAR,
   LIGHT_SHADOW_FAR,
   LIGHT_FLICKER_MIN,
@@ -54,10 +57,21 @@ function wireSwitches(switches) {
 
     const clickSound = new THREE.PositionalAudio(listener);
     clickSound.setRefDistance(SWITCH_SOUND_REF_DISTANCE);
-    registerSound(clickSound, "sfx", 1);
+    registerSound(clickSound, "sfx", SWITCH_CLICK_VOLUME);
     switchSounds.push(clickSound);
     switchObj.add(clickSound);
     audioLoader.load("assets/sounds/click.wav", (buffer) => clickSound.setBuffer(buffer));
+
+    // A creepy sting that follows the very first time this switch turns its group's lights on -
+    // SWITCH_CREEPY_DELAY after the click, and never again after that first time (even if the
+    // lights go off and back on later). Plain THREE.Audio, not PositionalAudio - same as
+    // audio.js's ambiance track, this plays the same everywhere rather than coming from the
+    // switch's location, so it reads as being "in the player's head" instead of the room.
+    const creepySound = new THREE.Audio(listener);
+    registerSound(creepySound, "sfx", SWITCH_CREEPY_VOLUME);
+    switchSounds.push(creepySound);
+    audioLoader.load("assets/sounds/creepy.wav", (buffer) => creepySound.setBuffer(buffer));
+    let creepyPlayed = false;
 
     registerInteractable(switchObj, {
       promptText: () => "[F] Toggle lights",
@@ -66,6 +80,13 @@ function wireSwitches(switches) {
           l.userData.on = !l.userData.on;
         });
         playOneShot(clickSound);
+        // groupLights don't have to stay in sync with each other (see the comment above), but a
+        // single switch flip is judged "turned on" if it left every one of its lights on.
+        const turnedOn = groupLights.length > 0 && groupLights.every((l) => l.userData.on);
+        if (turnedOn && !creepyPlayed) {
+          creepyPlayed = true; // set now, not once the timeout fires, so a rapid re-toggle can't sneak in a second play
+          setTimeout(() => playOneShot(creepySound), SWITCH_CREEPY_DELAY * 1000);
+        }
       },
     });
   });

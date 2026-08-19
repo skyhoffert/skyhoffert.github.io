@@ -20,7 +20,7 @@ import { getWielded } from "./wield.js";
 import { unlockDoor } from "./door.js";
 import { listener, audioLoader, playOneShot } from "./audio.js";
 import { registerSound, unregisterSound } from "./settings.js";
-import { SWITCH_SOUND_REF_DISTANCE, OBJECT_PREFIX } from "./constants.js";
+import { SWITCH_SOUND_REF_DISTANCE, OBJECT_PREFIX, LOCK_UNLOCK_VOLUME } from "./constants.js";
 
 let locks = []; // [{ object, doorName, keyName, unlockSound }]
 
@@ -75,12 +75,10 @@ export function setupLock(lockObj, lockCfg) {
     console.warn(`"${lockObj.name}" has no mesh geometry (itself or nested) - it can never be looked at/clicked. Give it (or a child) an actual mesh, even a small invisible one.`);
   }
 
-  // Reuses the switch's click sound/ref distance - a lock turning over reads close enough to a
-  // switch's click that there's no need for a dedicated asset yet.
   const unlockSound = new THREE.PositionalAudio(listener);
   unlockSound.setRefDistance(SWITCH_SOUND_REF_DISTANCE);
-  registerSound(unlockSound, "sfx", 1);
-  audioLoader.load("assets/sounds/click.wav", (buffer) => unlockSound.setBuffer(buffer));
+  registerSound(unlockSound, "sfx", LOCK_UNLOCK_VOLUME);
+  audioLoader.load("assets/sounds/DmMaj7.wav", (buffer) => unlockSound.setBuffer(buffer));
   lockObj.add(unlockSound);
 
   const lock = { object: lockObj, doorName: lockCfg.door, keyName: lockCfg.key, unlockSound, unlocked: false };

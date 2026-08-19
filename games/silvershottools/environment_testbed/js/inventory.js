@@ -198,11 +198,19 @@ function occupantsIn(grid, col, row, w, h, ignore) {
 // how small this inventory ever gets, and simple to reason about; a packing it fails to find
 // might occasionally still technically exist for some pathological arrangement, but "no swap"
 // is a safe, visible failure mode either way (the ghost just shows red). Returns an array of
-// { placement, col, row } (absolute grid coordinates, one entry per item in `items`), or null
-// if no arrangement fits everything. destGrid is the grid these items would actually end up
-// living in (source's grid, per evaluateTarget() below) - if even one of them isn't something
-// destGrid.accepts() (e.g. a two-handed item displaced into a main grid that only takes 1x1s),
-// the whole packing fails, same as if it simply didn't fit spatially.
+// { placement, col, row, w, h, dir } (absolute grid coordinates plus whatever orientation ended
+// up fitting, one entry per item in `items`), or null if no arrangement fits everything.
+// destGrid is the grid these items would actually end up living in (source's grid, per
+// evaluateTarget() below) - if even one of them isn't something destGrid.accepts() (e.g. a
+// two-handed item displaced into a main grid that only takes 1x1s), the whole packing fails,
+// same as if it simply didn't fit spatially.
+//
+// A non-square item tries its current footprint first, then its 90°-rotated one if that doesn't
+// fit anywhere in the region - the only items this ever applies to are two-handed weapons (see
+// isTwoHanded()), and the hand grid (2x1) / sling grid (1x2) are the only two grids that ever
+// hold one, in orthogonal shapes - without this, swapping the wielded two-hander with the slung
+// one could never succeed, since whichever one gets displaced would need to rotate into its new
+// home and previously never could.
 function packIntoRegion(items, regionCol, regionRow, regionW, regionH, destGrid) {
   const itemsArr = [...items];
   if (itemsArr.some((p) => !destGrid.accepts(p.item.name))) return null;
@@ -210,25 +218,35 @@ function packIntoRegion(items, regionCol, regionRow, regionW, regionH, destGrid)
   const sorted = itemsArr.sort((a, b) => b.w * b.h - a.w * a.h);
   const placements = [];
   for (const p of sorted) {
+    const candidates = [{ w: p.w, h: p.h, dir: p.dir }];
+    if (p.baseW !== p.baseH) candidates.push({ w: p.h, h: p.w, dir: p.dir === 0 || p.dir === 180 ? 90 : 0 });
+
     let spot = null;
-    for (let r = 0; spot === null && r <= regionH - p.h; r++) {
-      for (let c = 0; spot === null && c <= regionW - p.w; c++) {
-        let fits = true;
-        for (let rr = r; fits && rr < r + p.h; rr++) {
-          for (let cc = c; fits && cc < c + p.w; cc++) {
-            if (occupied[rr * regionW + cc]) fits = false;
+    let chosen = null;
+    for (const candidate of candidates) {
+      for (let r = 0; spot === null && r <= regionH - candidate.h; r++) {
+        for (let c = 0; spot === null && c <= regionW - candidate.w; c++) {
+          let fits = true;
+          for (let rr = r; fits && rr < r + candidate.h; rr++) {
+            for (let cc = c; fits && cc < c + candidate.w; cc++) {
+              if (occupied[rr * regionW + cc]) fits = false;
+            }
           }
+          if (fits) spot = { c, r };
         }
-        if (fits) spot = { c, r };
+      }
+      if (spot) {
+        chosen = candidate;
+        break;
       }
     }
     if (!spot) return null;
-    for (let rr = spot.r; rr < spot.r + p.h; rr++) {
-      for (let cc = spot.c; cc < spot.c + p.w; cc++) {
+    for (let rr = spot.r; rr < spot.r + chosen.h; rr++) {
+      for (let cc = spot.c; cc < spot.c + chosen.w; cc++) {
         occupied[rr * regionW + cc] = true;
       }
     }
-    placements.push({ placement: p, col: regionCol + spot.c, row: regionRow + spot.r });
+    placements.push({ placement: p, col: regionCol + spot.c, row: regionRow + spot.r, w: chosen.w, h: chosen.h, dir: chosen.dir });
   }
   return placements;
 }
@@ -601,8 +619,8 @@ function commitDrop(source, target) {
     clearCells(source);
     target.swapPack.forEach(({ placement }) => clearCells(placement));
     placeCells(source, target.grid, target.col, target.row, target.w, target.h, target.dir);
-    target.swapPack.forEach(({ placement, col, row }) => {
-      placeCells(placement, sourceOrigin.grid, col, row, placement.w, placement.h, placement.dir);
+    target.swapPack.forEach(({ placement, col, row, w, h, dir }) => {
+      placeCells(placement, sourceOrigin.grid, col, row, w, h, dir);
     });
   } else {
     movePlacement(source, target.grid, target.col, target.row, target.w, target.h, target.dir);

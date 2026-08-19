@@ -81,17 +81,6 @@ export function colliderToShape(collider, referenceInverseMatrix) {
   return { shape, position, quaternion };
 }
 
-// Builds one dynamic compound body for a spawned prop instance from all of its
-// COLL_BOX_/COLL_SPHERE_/COLL_CYLINDER_ children (there can be more than one).
-function shapeDebugString(shape) {
-  if (shape instanceof CANNON.Box) {
-    return `Box half-extents (${shape.halfExtents.x.toFixed(2)}, ${shape.halfExtents.y.toFixed(2)}, ${shape.halfExtents.z.toFixed(2)})`;
-  }
-  if (shape instanceof CANNON.Sphere) return `Sphere radius ${shape.radius.toFixed(2)}`;
-  if (shape instanceof CANNON.Cylinder) return `Cylinder radius ${shape.radiusTop.toFixed(2)} height ${shape.height.toFixed(2)}`;
-  return "unknown shape";
-}
-
 const scratchPos = new THREE.Vector3();
 const scratchQuat = new THREE.Quaternion();
 const scratchScale = new THREE.Vector3();
@@ -111,8 +100,9 @@ export function worldInverseNoScale(obj) {
   return new THREE.Matrix4().compose(scratchPos, scratchQuat, UNIT_SCALE).invert();
 }
 
+// Builds one dynamic compound body for a spawned prop instance from all of its
+// COLL_BOX_/COLL_SPHERE_/COLL_CYLINDER_ children (there can be more than one).
 export function buildPropBody(instance) {
-  console.log(`Building physics body for "${instance.name}":`);
   instance.updateMatrixWorld(true);
   const instanceWorldInverse = worldInverseNoScale(instance);
 
@@ -128,7 +118,6 @@ export function buildPropBody(instance) {
     }
     body.addShape(result.shape, result.position, result.quaternion);
     hasShape = true;
-    console.log(`  "${child.name}" -> ${shapeDebugString(result.shape)} at (${result.position.x.toFixed(2)}, ${result.position.y.toFixed(2)}, ${result.position.z.toFixed(2)})`);
   });
 
   if (!hasShape) {

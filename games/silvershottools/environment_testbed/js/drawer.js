@@ -19,7 +19,7 @@ import { world, colliderToShape, worldInverseNoScale, wakeNearbyBodies } from ".
 import { registerInteractable } from "./interaction.js";
 import { listener, audioLoader, playOneShot } from "./audio.js";
 import { registerSound, unregisterSound } from "./settings.js";
-import { DOOR_SOUND_REF_DISTANCE, DRAWER_AXIS, DRAWER_SLIDE_DISTANCE, DRAWER_SPEED, WAKE_RADIUS } from "./constants.js";
+import { DOOR_SOUND_REF_DISTANCE, DOOR_SOUND_VOLUME, DRAWER_AXIS, DRAWER_SLIDE_DISTANCE, DRAWER_SPEED, WAKE_RADIUS } from "./constants.js";
 
 let drawers = []; // [{ object, axisKey, closedValue, openValue, speed, target, isOpen, settled, body, openSound, closeSound }]
 
@@ -71,7 +71,7 @@ export function setupDrawer(drawerObj, drawerColliders, drawerCfg) {
   const closeSound = new THREE.PositionalAudio(listener);
   [openSound, closeSound].forEach((sound) => {
     sound.setRefDistance(DOOR_SOUND_REF_DISTANCE);
-    registerSound(sound, "sfx", 1);
+    registerSound(sound, "sfx", DOOR_SOUND_VOLUME);
   });
   audioLoader.load("assets/sounds/door_open.wav", (buffer) => openSound.setBuffer(buffer));
   audioLoader.load("assets/sounds/door_close.wav", (buffer) => closeSound.setBuffer(buffer));

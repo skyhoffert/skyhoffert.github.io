@@ -17,7 +17,7 @@ import { world, colliderToShape, worldInverseNoScale } from "./physics.js";
 import { registerInteractable } from "./interaction.js";
 import { listener, audioLoader, playOneShot } from "./audio.js";
 import { registerSound, unregisterSound } from "./settings.js";
-import { DOOR_SOUND_REF_DISTANCE, DOOR_OPEN_ANGLE, DOOR_SPEED } from "./constants.js";
+import { DOOR_SOUND_REF_DISTANCE, DOOR_OPEN_ANGLE, DOOR_SPEED, DOOR_SOUND_VOLUME } from "./constants.js";
 
 let doors = []; // [{ object, closedAngle, openAngle, speed, target, isOpen, settled, body, openSound, closeSound, locked }]
 
@@ -51,7 +51,7 @@ export function setupDoor(doorObj, doorColliders, doorCfg) {
   const closeSound = new THREE.PositionalAudio(listener);
   [openSound, closeSound].forEach((sound) => {
     sound.setRefDistance(DOOR_SOUND_REF_DISTANCE);
-    registerSound(sound, "sfx", 1);
+    registerSound(sound, "sfx", DOOR_SOUND_VOLUME);
   });
   audioLoader.load("assets/sounds/door_open.wav", (buffer) => openSound.setBuffer(buffer));
   audioLoader.load("assets/sounds/door_close.wav", (buffer) => closeSound.setBuffer(buffer));
