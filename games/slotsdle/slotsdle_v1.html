@@ -95,8 +95,36 @@
             text-align: center;
             width: 320px;
             max-width: 95%;
+            position: relative;
             z-index: 2;
             box-sizing: border-box;
+        }
+
+        .streak-badge {
+            display: none;
+            position: absolute;
+            top: -16px;
+            right: -16px;
+            height: 38px;
+            min-width: 38px;
+            padding: 0 8px;
+            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            background: #34495e;
+            border: 3px solid #d35400;
+            border-radius: 999px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            cursor: default;
+        }
+
+        .streak-badge.loaded {
+            display: flex;
         }
 
         /* --- LEVER MECHANISM --- */
@@ -481,6 +509,10 @@
             .machine-container {
                 width: 100%;
             }
+            .streak-badge {
+                top: -12px;
+                right: -6px;
+            }
             .reel {
                 font-size: 2.2rem;
             }
@@ -498,6 +530,8 @@
 
     <div class="game-wrapper">
         <div class="machine-container">
+
+            <div id="streak-badge" class="streak-badge" title="Daily streak">🔥<span id="streak-count">0</span></div>
 
             <div class="stats-container">
                 <div class="stat-box">Balance: <span id="balance">$50</span></div>
@@ -636,6 +670,7 @@
 
         let uuid = null;
         let nickname = null;
+        let currentStreak = 0;
 
 
         const SUPABASE_URL = 'https://shxtfuxcgkzrchvkhvgl.supabase.co';
@@ -653,6 +688,8 @@
         const lever = document.getElementById('lever');
         const leverArm = document.getElementById('lever-arm');
         const playerNicknameDisplay = document.getElementById('player-nickname');
+        const streakBadge = document.getElementById('streak-badge');
+        const streakCountDisplay = document.getElementById('streak-count');
         const scoreboardOverlay = document.getElementById('scoreboard-overlay');
         const helpOverlay = document.getElementById('help-overlay');
         const scoreboardTabs = Array.from(document.querySelectorAll('.scoreboard-tab'));
@@ -1262,7 +1299,8 @@
             if (!shareText) {
                 let today_date = new Date();
                 let dateString = today_date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                shareText = `🎰 Slotsdle (v1) Results | ${nickname} | ${dateString}\nSpins: ${totalSpins}\n`;
+                const streakText = currentStreak >= 3 ? ` | 🔥${currentStreak}` : '';
+                shareText = `🎰 Slotsdle (v1) Results | ${nickname} | ${dateString}${streakText}\nSpins: ${totalSpins}\n`;
 
                 shareText += historyGrid.join('');
                 shareText += `\nPlay Slotsdle!\nhttps://skyhoffert.com/games/slotsdle/slotsdle_v1.html`;
@@ -1427,7 +1465,36 @@
             }
 
             console.log("Uploaded score", totalSpins);
+            refreshStreak();
             return true;
+        }
+
+        // Streak = consecutive game days (08:00 UTC boundaries) with a score, computed by the get_streak_v1 SQL function.
+        async function dbGetStreak() {
+            const UUID = ensureUuid();
+            const { data, error } = await db.rpc('get_streak_v1', { p_uuid: UUID });
+
+            if (error) {
+                console.error('Error querying streak:', error);
+                return null;
+            }
+
+            console.log("get_streak_v1 returned:", data, "for UUID", UUID);
+            return data ?? 0;
+        }
+
+        async function refreshStreak() {
+            const streak = await dbGetStreak();
+            if (streak === null) return;
+
+            applyStreak(streak);
+        }
+
+        function applyStreak(streak) {
+            currentStreak = streak;
+            streakCountDisplay.textContent = streak;
+            streakBadge.title = `Daily streak: ${streak} day${streak === 1 ? '' : 's'}`;
+            streakBadge.classList.toggle('loaded', streak >= 3);
         }
 
 
@@ -1453,6 +1520,7 @@
             console.log("Device ID:", uuid);
 
             updateNicknameDisplay();
+            refreshStreak();
 
             dbCheckForNickname()
                 .then(result => {
@@ -1527,6 +1595,21 @@
             }
             localStorage.setItem('unique_device_id', uuidValue);
             console.log("UUID manually set to:", uuidValue);
+        }
+
+        // Override the streak locally (not in the db). Updates the badge and any cached share text.
+        function _SetStreak(streak) {
+            applyStreak(streak);
+
+            const cached = getDailyShareText();
+            if (cached) {
+                const lines = cached.split('\n');
+                lines[0] = lines[0].replace(/ \| 🔥\d+$/, '') + (streak >= 3 ? ` | 🔥${streak}` : '');
+                setDailyShareTextCookie(lines.join('\n'));
+                console.log("Updated cached share text:\n" + lines.join('\n'));
+            }
+
+            console.log("Streak manually set to:", streak);
         }
 
 
