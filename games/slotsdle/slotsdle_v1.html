@@ -671,6 +671,7 @@
         let uuid = null;
         let nickname = null;
         let currentStreak = 0;
+        let scoreUploadPromise = null; // Resolves once today's score is uploaded and the streak refreshed
 
 
         const SUPABASE_URL = 'https://shxtfuxcgkzrchvkhvgl.supabase.co';
@@ -826,161 +827,40 @@
             });
         }
 
-        // Function to get the ISO string for the most recent 06:00 UTC boundary
-        function getDailyCutoffISO() {
-            const now = new Date();
-            
-            // Create a Date object set to today's 08:00:00.000 UTC
-            const cutoff = new Date(Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                8, 0, 0, 0
-            ));
-
-            // If current UTC time is before 06:00 UTC, subtract 1 day (24 hours)
-            if (now < cutoff) {
-                cutoff.setUTCDate(cutoff.getUTCDate() - 1);
-            }
-
-            return cutoff.toISOString();
-        }
-
-        // Updated fetch function for the daily leaderboard
-        async function fetchDailyScoreboardRows() {
-            const dailyCutoff = getDailyCutoffISO();
-
-            const { data, error, status } = await db
-                .from('scores_v1')
-                .select('score, uuid')
-                .gte('created_at', dailyCutoff) // Filter entries created since 06:00 UTC
-                .order('score', { ascending: false })
-                .limit(10);
-
-            if (status !== 200 || error) {
-                console.error('Error querying daily scores:', error);
-                return [];
-            }
-
-            if (!data) return [];
-
-            let scores = [];
-            for (const d of data) {
-                const nickname = await dbGetNicknameForUUID(d.uuid);
-                scores.push({ 'nickname': nickname, 'score': d.score });
-            }
-
-            // Pad out the rest of the 10 spots with empty placeholders
+        function padScoreboardRows(rows) {
+            const scores = rows.map(r => ({ 'nickname': r.nickname, 'score': r.score }));
             while (scores.length < 10) {
                 scores.push({ 'nickname': "", 'score': "" });
             }
-
             return scores;
         }
 
-        async function fetchScoreboardRows(kind) {
-            if (kind == 'user') {
-                const UUID = ensureUuid();
-                const currentNickname = await dbGetNicknameForUUID(UUID);
+        // All three boards come from one call to the get_scoreboards_v1 SQL function.
+        async function fetchScoreboards() {
+            const UUID = ensureUuid();
+            const { data, error } = await db.rpc('get_scoreboards_v1', { p_uuid: UUID });
 
-                if (!currentNickname) {
-                    return [];
-                }
-
-                const { data: playerRows, error: playerError, status: playerStatus } = await db
-                    .from('players_v1')
-                    .select('uuid')
-                    .eq('nickname', currentNickname);
-
-                if (playerStatus !== 200 || playerError) {
-                    console.error('Error querying players for nickname:', playerError);
-                    return [];
-                }
-
-                const matchingUuids = (playerRows || []).map(p => p.uuid);
-
-                if (matchingUuids.length === 0) {
-                    return [];
-                }
-
-                const { data, error, status } = await db
-                    .from('scores_v1')
-                    .select('score')
-                    .in('uuid', matchingUuids)
-                    .order('score', {ascending: false})
-                    .limit(10);
-
-                if (status !== 200 || error) {
-                    console.error('Error querying scores:', error);
-                    return [];
-                }
-
-                if (!data) {
-                    console.log("No scores for", UUID);
-                    return [];
-                }
-
-                let scores = [];
-
-                for (d in data) {
-                    scores.push({'nickname':currentNickname, 'score':data[d].score});
-                }
-
-                while (scores.length < 10) {
-                    scores.push({'nickname':"", 'score':""});
-                }
-
-                return scores;
-            } else if (kind == 'daily') {
-              return fetchDailyScoreboardRows();
-            } else if (kind == 'alltime') {
-                const { data, error, status } = await db
-                    .from('scores_v1')
-                    .select('score, uuid')
-                    .order('score', {ascending: false})
-                    .limit(10);
-
-                if (status !== 200 || error) {
-                    console.error('Error querying scores:', error);
-                    return [];
-                }
-
-                if (!data) {
-                    console.log("No scores for", UUID);
-                    return [];
-                }
-
-                let scores = [];
-
-                for (d in data) {
-                    const nickname = await dbGetNicknameForUUID(data[d].uuid);
-                    scores.push({'nickname':nickname, 'score':data[d].score});
-                }
-                
-                while (scores.length < 10) {
-                    scores.push({'nickname':"", 'score':""});
-                }
-
-                return scores;
+            if (error || !data) {
+                console.error('Error querying scoreboards:', error);
+                return { user: [], daily: [], alltime: [] };
             }
 
-            return [];
+            return {
+                // null user board means no nickname yet -> "No scores yet."
+                user: data.user ? padScoreboardRows(data.user) : [],
+                daily: padScoreboardRows(data.daily || []),
+                alltime: padScoreboardRows(data.alltime || [])
+            };
         }
 
         async function refreshScoreboardData(runId) {
-            const userRows = await fetchScoreboardRows('user');
-            const dailyRows = await fetchScoreboardRows('daily');
-            const alltimeRows = await fetchScoreboardRows('alltime');
+            const boards = await fetchScoreboards();
 
             if (runId !== scoreboardRefreshToken || !scoreboardOverlay.classList.contains('active')) {
                 return;
             }
 
-            scoreboardData = {
-                user: userRows,
-                daily: dailyRows,
-                alltime: alltimeRows
-            };
+            scoreboardData = boards;
             scoreboardDataLoaded = true;
             renderAllScoreboardPanels();
         }
@@ -1247,7 +1127,7 @@
                 shareButton.style.display = 'block'; 
                 clearGameState();
                 handleGameOverCompletion();
-                dbUploadScore();
+                scoreUploadPromise = dbUploadScore();
             }
         }
         
@@ -1293,7 +1173,10 @@
             }
         }
 
-        function copyShareHistory() {
+        async function copyShareHistory() {
+            // Wait for the post-run streak refresh so the share text includes today's run
+            if (scoreUploadPromise) await scoreUploadPromise.catch(() => {});
+
             let shareText = getDailyShareText();
 
             if (!shareText) {
@@ -1415,25 +1298,6 @@
             return { found: true, error: false, player: data };
         }
 
-        async function dbGetNicknameForUUID(given_uuid) {
-            const { data, error, status } = await db
-                .from('players_v1')
-                .select('nickname')
-                .eq('uuid', given_uuid)
-                .maybeSingle();
-
-            if (status !== 200 || error) {
-                console.error('Error querying:', error);
-                return null;
-            }
-
-            if (!data) {
-                return null;
-            }
-
-            return data.nickname;
-        }
-
         async function dbUpdateNickname(newNickname) {
             const UUID = ensureUuid();
 
@@ -1465,7 +1329,7 @@
             }
 
             console.log("Uploaded score", totalSpins);
-            refreshStreak();
+            await refreshStreak();
             return true;
         }
 
@@ -1495,6 +1359,14 @@
             streakCountDisplay.textContent = streak;
             streakBadge.title = `Daily streak: ${streak} day${streak === 1 ? '' : 's'}`;
             streakBadge.classList.toggle('loaded', streak >= 3);
+
+            // Keep any cached share text in sync with the latest streak
+            const cached = getDailyShareText();
+            if (cached) {
+                const lines = cached.split('\n');
+                lines[0] = lines[0].replace(/ \| 🔥\d+$/, '') + (streak >= 3 ? ` | 🔥${streak}` : '');
+                setDailyShareTextCookie(lines.join('\n'));
+            }
         }
 
 
@@ -1600,15 +1472,6 @@
         // Override the streak locally (not in the db). Updates the badge and any cached share text.
         function _SetStreak(streak) {
             applyStreak(streak);
-
-            const cached = getDailyShareText();
-            if (cached) {
-                const lines = cached.split('\n');
-                lines[0] = lines[0].replace(/ \| 🔥\d+$/, '') + (streak >= 3 ? ` | 🔥${streak}` : '');
-                setDailyShareTextCookie(lines.join('\n'));
-                console.log("Updated cached share text:\n" + lines.join('\n'));
-            }
-
             console.log("Streak manually set to:", streak);
         }
 

@@ -1,0 +1,45 @@
+create or replace function get_scoreboards_v1(p_uuid text)
+returns jsonb
+language sql
+stable
+as $$
+  with me as (
+    select nickname from players_v1 where uuid::text = p_uuid limit 1
+  ),
+  daily as (
+    -- Scores since the most recent 08:00 UTC rollover, same game day as get_streak_v1
+    select p.nickname, s.score
+    from scores_v1 s
+    left join players_v1 p on p.uuid::text = s.uuid::text
+    where ((s.created_at at time zone 'utc') - interval '8 hours')::date
+        = ((now() at time zone 'utc') - interval '8 hours')::date
+    order by s.score desc
+    limit 10
+  ),
+  alltime as (
+    select p.nickname, s.score
+    from scores_v1 s
+    left join players_v1 p on p.uuid::text = s.uuid::text
+    order by s.score desc
+    limit 10
+  ),
+  mine as (
+    -- Top scores across every device (uuid) sharing this player's nickname
+    select p.nickname, s.score
+    from scores_v1 s
+    join players_v1 p on p.uuid::text = s.uuid::text
+    where p.nickname = (select nickname from me)
+    order by s.score desc
+    limit 10
+  )
+  select jsonb_build_object(
+    'daily',   coalesce((select jsonb_agg(d order by d.score desc) from daily d),   '[]'::jsonb),
+    'alltime', coalesce((select jsonb_agg(a order by a.score desc) from alltime a), '[]'::jsonb),
+    -- null when this uuid has no nickname yet
+    'user',    case when exists (select 1 from me)
+                 then coalesce((select jsonb_agg(m order by m.score desc) from mine m), '[]'::jsonb)
+               end
+  );
+$$;
+
+grant execute on function get_scoreboards_v1(text) to anon;

@@ -1,0 +1,36 @@
+create or replace function get_streak_v1(p_uuid text)
+returns integer
+language sql
+stable
+as $$
+  with player_uuids as (
+    -- Every device (uuid) sharing this uuid's nickname, plus the uuid itself in case it has no player row
+    select p.uuid::text as uuid
+    from players_v1 p
+    where p.nickname = (select nickname from players_v1 where uuid::text = p_uuid limit 1)
+    union
+    select p_uuid
+  ),
+  days as (
+    -- One row per "game day" played; days roll over at 08:00 UTC like the daily leaderboard
+    select distinct ((created_at at time zone 'utc') - interval '8 hours')::date as d
+    from scores_v1
+    where uuid::text in (select uuid from player_uuids)
+  ),
+  islands as (
+    -- Consecutive days share the same (day - row_number) value
+    select d, d - (row_number() over (order by d))::int as grp
+    from days
+  ),
+  latest as (
+    -- Most recent run of days, but only if it reaches today or yesterday
+    select grp
+    from islands
+    where d >= ((now() at time zone 'utc') - interval '8 hours')::date - 1
+    order by d desc
+    limit 1
+  )
+  select coalesce((select count(*) from islands where grp = (select grp from latest)), 0)::int;
+$$;
+
+grant execute on function get_streak_v1(text) to anon;
