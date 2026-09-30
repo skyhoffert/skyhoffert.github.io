@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Three Stars</title>
+    <link rel="icon" href="favicon.svg">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="js/main.js"></script>
+</head>
+<body>
+    <header class="top">
+        <div class="top-inner">
+            <a class="brand" href="#/standings">
+                <span class="brand-stars"><span class="s1">★</span><span class="s2">★</span><span class="s3">★</span></span>
+                <span id="league-name">Three Stars</span>
+            </a>
+            <button id="me-btn" class="me-btn" type="button">Sign in</button>
+            <nav id="nav">
+                <a href="#/standings" data-page="standings">Standings</a>
+                <a href="#/week" data-page="week">Week</a>
+                <a href="#/teams" data-page="teams">Teams</a>
+                <a href="#/history" data-page="history">History</a>
+                <a href="#/players" data-page="players">Players</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="app"></main>
+
+    <footer>
+        1st star <b>30</b> · 2nd <b>20</b> · 3rd <b>10</b> · <b>+5</b> each for the week's goals, points &amp; +/- leader
+    </footer>
+</body>
+</html>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0b2545"/>
+  <g font-family="Arial, sans-serif" font-size="26" text-anchor="middle">
+    <text x="32" y="30" fill="#f5c542">★</text>
+    <text x="17" y="52" fill="#c9d1d9">★</text>
+    <text x="47" y="52" fill="#cd7f32">★</text>
+  </g>
+</svg>
