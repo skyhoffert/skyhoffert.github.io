@@ -33,7 +33,7 @@ $$;
 
 -- ### PROCESSING (called by rollover) ###
 
--- Priority: lowest score of the ended week, then lowest season points, then random.
+-- Priority: lowest score of the ended week, then lowest season SP, then lowest season points, then random.
 -- Round-robin: each round every team (in priority order) gets at most one successful claim.
 -- A claim needs the player to be unrostered and not dropped this run, plus an Out whose slot fits.
 -- Unused claims and Outs are cleared afterwards. Returns claims granted.
@@ -53,7 +53,7 @@ declare
   progress boolean;
   n int := 0;
 begin
-  select array_agg(tm.id order by coalesce(s.total_points, 0), coalesce(ss.total_points, 0), random())
+  select array_agg(tm.id order by coalesce(s.total_points, 0), coalesce(ss.sp, 0), coalesce(ss.total_points, 0), random())
   into prio
   from teams tm
   left join team_week_scores s on s.team_id = tm.id and s.week = p_week - 7
@@ -121,6 +121,7 @@ as $$
     else jsonb_build_object(
       'ok', true,
       'team', team_json(p_team),
+      'dekes', (select dekes from teams where id = p_team),
       'outs', coalesce((
         select jsonb_agg(jsonb_build_object('player_id', x.player_id, 'n', x.n) order by x.n)
         from (select player_id, row_number() over (order by created_at) as n
@@ -130,12 +131,18 @@ as $$
         select jsonb_agg(player_json(p_league, null, x.player_id) || jsonb_build_object('n', x.n) order by x.n)
         from (select player_id, row_number() over (order by created_at) as n
               from waiver_ins where league_id = p_league and team_id = p_team) x
+      ), '[]'::jsonb),
+      'trades', coalesce((
+        select jsonb_agg(trade_json(t.id, p_team) order by t.status, t.created_at)
+        from trades t where t.league_id = p_league and p_team in (t.from_team, t.to_team)
       ), '[]'::jsonb)
     )
   end;
 $$;
 
--- Nickname ('' clears) + Waiver Out toggle for a player on the team's current roster
+-- Nickname ('' clears) + Waiver Out toggle for a player on the team's current roster.
+-- Setting a new nickname costs 1 Deke (08_dekes.sql); clearing one and Waiver Out are free.
+-- All checks run before any write so a rejected save never costs a Deke.
 create or replace function update_roster_player(
   p_league int, p_team int, p_pin text, p_player int, p_nickname text, p_waiver_out boolean
 )
@@ -147,6 +154,8 @@ set search_path = public
 as $$
 declare
   nick text := nullif(trim(coalesce(p_nickname, '')), '');
+  old text;
+  bal int;
 begin
   if not pin_ok(p_league, p_team, p_pin) then
     return jsonb_build_object('ok', false, 'error', 'Wrong PIN.');
@@ -158,6 +167,21 @@ begin
   end if;
   if char_length(nick) > 20 then
     return jsonb_build_object('ok', false, 'error', 'Nickname max 20 characters.');
+  end if;
+  if p_waiver_out and exists (select 1 from trade_players tp join trades t on t.id = tp.trade_id
+                              where t.league_id = p_league and tp.player_id = p_player) then
+    return jsonb_build_object('ok', false, 'error', 'Player is in a trade; can''t Waiver Out.');
+  end if;
+
+  select nickname into old from nicknames where league_id = p_league and team_id = p_team and player_id = p_player;
+  if nick is not null and nick is distinct from old then
+    select dekes into bal from teams where id = p_team for update;
+    if bal < 1 then
+      return jsonb_build_object('ok', false, 'error', 'A new nickname costs 1 Deke. Get some in Customize on your team page.');
+    end if;
+    perform add_dekes(p_team, -1, 'nickname', null,
+      (select trim(coalesce(first_name, '') || ' ' || last_name) from players where id = p_player)
+        || ': ' || coalesce(old, '(none)') || ' -> ' || nick);
   end if;
 
   if nick is null then

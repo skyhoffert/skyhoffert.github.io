@@ -28,7 +28,8 @@ create table if not exists leagues (
   name text not null,
   season int not null,
   first_scoring_week date not null check (extract(isodow from first_scoring_week) = 1),
-  hidden boolean not null default false,
+  hidden boolean not null default true,
+  pass_hash text,
   created_at timestamptz not null default now()
 );
 
@@ -88,6 +89,7 @@ create table if not exists player_game_stats (
   primary key (game_id, player_id)
 );
 create index if not exists player_game_stats_player on player_game_stats(player_id);
+alter table player_game_stats add column if not exists saves int;
 
 
 
@@ -177,10 +179,38 @@ create table if not exists moves (
   team_id int not null references teams(id) on delete cascade,
   player_id int not null references players(id),
   kind text not null check (kind in ('add', 'drop')),
-  source text not null check (source in ('waiver', 'admin')),
+  source text not null,
   created_at timestamptz not null default clock_timestamp()
 );
 create index if not exists moves_league_week on moves(league_id, week);
+alter table moves drop constraint if exists moves_source_check;
+alter table moves add constraint moves_source_check check (source in ('waiver', 'admin', 'trade'));
+
+
+
+-- ### TRADES ###
+
+-- Owner-to-owner. Pending until the receiver accepts (final) or the sender cancels.
+-- Accepted trades apply at rollover before waivers; all rows are cleared every rollover.
+create table if not exists trades (
+  id serial primary key,
+  league_id int not null references leagues(id) on delete cascade,
+  from_team int not null references teams(id) on delete cascade,
+  to_team int not null references teams(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted')),
+  created_at timestamptz not null default clock_timestamp(),
+  accepted_at timestamptz,
+  check (from_team <> to_team)
+);
+
+-- from_team = the team giving the player up
+create table if not exists trade_players (
+  trade_id int not null references trades(id) on delete cascade,
+  player_id int not null references players(id),
+  from_team int not null references teams(id) on delete cascade,
+  primary key (trade_id, player_id)
+);
+create index if not exists trade_players_player on trade_players(player_id);
 
 
 

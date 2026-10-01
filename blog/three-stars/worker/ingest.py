@@ -68,6 +68,7 @@ def ingest_game(g):
         'assists': s['assists'],
         'plus_minus': s['plus_minus'],
         'is_goalie': s['is_goalie'],
+        'saves': s['saves'],
     } for s in stats], 'game_id,player_id')
     db.upsert('game_stars', [{'game_id': gid, **s} for s in stars], 'game_id,star')
 

@@ -37,5 +37,5 @@ export function start(app, onNav) {
     };
     rerun = run;
     window.addEventListener('hashchange', () => run());
-    run();
+    return run();
 }

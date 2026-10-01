@@ -1,17 +1,18 @@
-import { getWeek } from '../api.js';
-import { setLeague, notFound, teamLabel, rosterTable, weekNav, fmtWeek, movesList } from '../render.js';
+import { getWeek, getReactions } from '../api.js';
+import { getMe } from '../session.js';
+import { setLeague, notFound, teamLabel, rosterTable, weekNav, fmtWeek, movesList, spChip, placeClass } from '../render.js';
 
 
 
 // ### PAGE ###
 
-function teamCard(t) {
+function teamCard(t, isFinal) {
     return `
-        <div class="card ${t.is_winner ? 'winner' : ''}">
+        <div class="card ${placeClass(t.sp)}">
             <div class="card-head">
                 <span class="rank">${t.week_rank ?? '–'}</span>
                 ${teamLabel(t.team)}
-                ${t.is_winner ? '<span class="trophy" title="Week winner">🏆</span>' : ''}
+                ${spChip(t.sp, isFinal)}
                 <span class="total">${t.total_points}<small>pts</small></span>
             </div>
             ${rosterTable(t.players)}
@@ -19,17 +20,19 @@ function teamCard(t) {
 }
 
 export async function weekPage(week) {
-    const w = await getWeek(week);
+    const [w, reactions] = await Promise.all([getWeek(week), getReactions()]);
     if (!w.league) return notFound('League');
     setLeague(w.league);
+    // Reactions only live on the current week's moves; they clear at rollover
+    const react = w.nav.week === w.nav.current_week ? { week: w.nav.week, reactions, meId: getMe()?.team.id } : null;
     return `
         <section>
             <h1>Week of ${fmtWeek(w.nav.week)}</h1>
             ${weekNav(w.nav, '#/week/')}
-            <div class="cards">${w.teams.map(teamCard).join('') || '<div class="empty">No teams.</div>'}</div>
+            <div class="cards">${w.teams.map(t => teamCard(t, w.nav.is_final)).join('') || '<div class="empty">No teams.</div>'}</div>
         </section>
         <section>
             <h2>Moves</h2>
-            ${movesList(w.moves) || '<div class="empty">No moves this week.</div>'}
+            ${movesList(w.moves, react) || '<div class="empty">No moves this week.</div>'}
         </section>`;
 }

@@ -14,6 +14,14 @@ alter table nicknames enable row level security;
 alter table waiver_outs enable row level security;
 alter table waiver_ins enable row level security;
 alter table moves enable row level security;
+alter table trades enable row level security;
+alter table trade_players enable row level security;
+alter table deke_ledger enable row level security;
+alter table icon_suggestions enable row level security;
+alter table unmatched_payments enable row level security;
+alter table team_emojis enable row level security;
+alter table reaction_passes enable row level security;
+alter table reactions enable row level security;
 
 -- Also covers views, which would otherwise bypass RLS as owner
 revoke all on all tables in schema public from anon, authenticated;
@@ -34,3 +42,13 @@ grant execute on function get_recent_stars(int, int) to anon, authenticated;
 grant execute on function get_my_team(int, int, text) to anon, authenticated;
 grant execute on function update_roster_player(int, int, text, int, text, boolean) to anon, authenticated;
 grant execute on function set_waiver_in(int, int, text, int, boolean) to anon, authenticated;
+grant execute on function propose_trade(int, int, text, int, int[], int[]) to anon, authenticated;
+grant execute on function respond_trade(int, int, text, int, boolean) to anon, authenticated;
+grant execute on function cancel_trade(int, int, text, int) to anon, authenticated;
+grant execute on function join_league(text, text) to anon, authenticated;
+grant execute on function customize_team(int, int, text, text, text) to anon, authenticated;
+grant execute on function suggest_icon(int, int, text, text) to anon, authenticated;
+grant execute on function get_reactions(int) to anon, authenticated;
+grant execute on function get_my_reactions(int, int, text) to anon, authenticated;
+grant execute on function react(int, int, text, text, text, boolean) to anon, authenticated;
+grant execute on function buy_reaction_item(int, int, text, text) to anon, authenticated;

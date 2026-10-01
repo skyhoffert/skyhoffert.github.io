@@ -33,5 +33,7 @@ export async function loadMine() {
         setMe(null);
         return null;
     }
+    // Team renamed/recolored elsewhere (admin, other device): refresh the saved copy. Equal next time, so no loop.
+    if (JSON.stringify(res.team) !== JSON.stringify(me.team)) setMe({ ...me, team: res.team });
     return res;
 }

@@ -1,5 +1,5 @@
 import { getHistory } from '../api.js';
-import { esc, setLeague, notFound, teamBadge, weekStatus, fmtWeek, movesList } from '../render.js';
+import { esc, setLeague, notFound, teamBadge, weekStatus, fmtWeek, movesList, spChip, placeClass } from '../render.js';
 
 
 
@@ -7,11 +7,12 @@ import { esc, setLeague, notFound, teamBadge, weekStatus, fmtWeek, movesList } f
 
 function weekRow(w) {
     const teams = w.teams.map(t => `
-        <span class="hist-team ${t.is_winner ? 'winner' : ''}">
+        <span class="hist-team ${placeClass(t.sp)}">
+            <small>${t.week_rank}</small>
             ${teamBadge(t.team, 'sm')}
             <span>${esc(t.team.name)}</span>
             <b>${t.total_points}</b>
-            ${t.is_winner ? '🏆' : ''}
+            ${spChip(t.sp, w.is_final)}
         </span>`).join('');
     return `
         <div class="card hist-week">

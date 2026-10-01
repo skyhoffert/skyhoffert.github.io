@@ -100,6 +100,14 @@ def roster_players(abbrev):
     return out
 
 
+def goalie_saves(p):
+    if p.get('saves') is not None:
+        return p['saves']
+    # older boxscores only have "saves/shots"
+    ssa = p.get('saveShotsAgainst') or ''
+    return int(ssa.split('/')[0]) if '/' in ssa else None
+
+
 def game_stats(box):
     # Goalie rows lack goals/assists; stored as 0
     out = []
@@ -115,6 +123,7 @@ def game_stats(box):
                     'assists': p.get('assists', 0),
                     'plus_minus': None if is_goalie else p.get('plusMinus', 0),
                     'is_goalie': is_goalie,
+                    'saves': goalie_saves(p) if is_goalie else None,
                     'name': name_default(p.get('name')),
                     'position': p.get('position'),
                     'nhl_team': abbrev,

@@ -11,7 +11,7 @@ function teamCard(r) {
         <a class="team-card" href="#/team/${t.id}" style="--team:${esc(t.color)}">
             ${teamBadge(t, 'lg')}
             <span class="team-text"><b>${esc(t.name)}</b><small>${esc(t.owner)}</small></span>
-            <span class="record"><b>${r.wins} W</b><small>${r.total_points} pts</small></span>
+            <span class="record"><b>${r.sp} SP</b><small>${r.place1}-${r.place2}-${r.place3}</small></span>
         </a>`;
 }
 

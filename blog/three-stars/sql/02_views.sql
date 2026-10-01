@@ -80,38 +80,58 @@ from flagged f;
 
 -- ### TEAM WEEK SCORES ###
 
-create or replace view team_week_scores as
-select rp.league_id, rp.week, rp.team_id,
-  sum(rp.total_points)::int as total_points,
-  sum(rp.star_points)::int as star_points,
-  sum(rp.bonus_points)::int as bonus_points,
-  sum(rp.firsts)::int as firsts,
-  sum(rp.seconds)::int as seconds,
-  sum(rp.thirds)::int as thirds,
-  rp.week >= l.first_scoring_week as is_scoring,
-  rp.week < current_week() as is_final,
-  rank() over (partition by rp.league_id, rp.week order by sum(rp.total_points) desc)::int as week_rank
-from roster_week_points rp
-join leagues l on l.id = rp.league_id
-group by rp.league_id, rp.week, rp.team_id, l.first_scoring_week;
+-- Columns changed (SP replaced Ws); create or replace can't reorder, so rebuild.
+drop view if exists season_standings, week_winners, team_week_scores cascade;
+
+-- week_rank is unique: score, star count, goals, skater +/-, then a stable hash coin flip.
+-- sp: 1st 30, 2nd 20, 3rd 10 for scoring weeks with points > 0. Provisional until is_final.
+create view team_week_scores as
+with agg as (
+  select rp.league_id, rp.week, rp.team_id,
+    sum(rp.total_points)::int as total_points,
+    sum(rp.star_points)::int as star_points,
+    sum(rp.bonus_points)::int as bonus_points,
+    sum(rp.firsts)::int as firsts,
+    sum(rp.seconds)::int as seconds,
+    sum(rp.thirds)::int as thirds,
+    sum(rp.goals)::int as goals,
+    coalesce(sum(rp.plus_minus) filter (where rp.position <> 'G'), 0)::int as plus_minus,
+    rp.week >= l.first_scoring_week as is_scoring,
+    rp.week < current_week() as is_final
+  from roster_week_points rp
+  join leagues l on l.id = rp.league_id
+  group by rp.league_id, rp.week, rp.team_id, l.first_scoring_week
+),
+ranked as (
+  select agg.*,
+    row_number() over (partition by league_id, week
+      order by total_points desc, firsts + seconds + thirds desc, goals desc, plus_minus desc,
+        md5(week::text || ':' || team_id::text))::int as week_rank
+  from agg
+)
+select ranked.*,
+  case when is_scoring and total_points > 0 then
+    case week_rank when 1 then 30 when 2 then 20 when 3 then 10 else 0 end
+  else 0 end as sp
+from ranked;
 
 
 
--- ### WINNERS & STANDINGS ###
+-- ### STANDINGS ###
 
--- W awarded for completed scoring weeks. Ties at the top all get a W. Zero-point weeks award nothing.
-create or replace view week_winners as
-select league_id, week, team_id, total_points
-from team_week_scores
-where is_scoring and is_final and week_rank = 1 and total_points > 0;
-
-create or replace view season_standings as
+-- Final weeks only. place1-3 = weeks finished 1st/2nd/3rd with SP.
+create view season_standings as
 with agg as (
   select t.league_id, t.id as team_id,
-    (select count(*) from week_winners w where w.team_id = t.id)::int as wins,
-    coalesce((select sum(s.total_points) from team_week_scores s where s.team_id = t.id and s.is_scoring), 0)::int as total_points
+    coalesce(sum(s.sp) filter (where s.is_final), 0)::int as sp,
+    count(*) filter (where s.is_final and s.sp = 30)::int as place1,
+    count(*) filter (where s.is_final and s.sp = 20)::int as place2,
+    count(*) filter (where s.is_final and s.sp = 10)::int as place3,
+    coalesce(sum(s.total_points) filter (where s.is_scoring), 0)::int as total_points
   from teams t
+  left join team_week_scores s on s.team_id = t.id
+  group by t.league_id, t.id
 )
 select agg.*,
-  rank() over (partition by league_id order by wins desc, total_points desc)::int as standing
+  rank() over (partition by league_id order by sp desc, place1 desc, place2 desc, place3 desc, total_points desc)::int as standing
 from agg;

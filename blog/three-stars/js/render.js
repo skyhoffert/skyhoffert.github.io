@@ -1,3 +1,7 @@
+import { EMOJIS } from './config.js';
+
+
+
 // ### BASICS ###
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -16,6 +20,20 @@ export function setLeague(league) {
 }
 
 export const notFound = what => `<div class="empty">${esc(what)} not found.</div>`;
+
+// inline (not <img>) so currentColor + per-part CSS animation work; keep in sync w/ img/stick.svg
+export const stick = (cls = '') =>
+    `<svg class="stick ${cls}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">` +
+    `<polygon class="stick-gap" points="17.8,1.5 20.4,1.5 12,20.5 3,20.5 1.5,18.1 10.62,17.8"/>` +
+    `<polygon class="knob" points="17.8,1.5 20.4,1.5 19.3,4 16.7,4"/>` +
+    `<polygon class="shaft" points="16.35,4.8 18.95,4.8 12,20.5 6.8,20.5 7.95,17.89 10.62,17.8"/>` +
+    `<polygon class="toe" points="1.5,18.1 7.14,17.92 6,20.5 3,20.5"/></svg>`;
+
+// same deal, keep in sync w/ img/puck.svg
+export const puck = (cls = '') =>
+    `<svg class="puck ${cls}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">` +
+    `<polygon class="puck-top" points="8,6.5 16,6.5 20,10 16,13.5 8,13.5 4,10"/>` +
+    `<polygon class="puck-side" points="4,11 8,14.5 16,14.5 20,11 20,14.5 16,18 8,18 4,14.5"/></svg>`;
 
 
 
@@ -116,8 +134,11 @@ export function rosterTable(players, { editable = false, pills = {} } = {}) {
 
 // ### MOVES ###
 
-// One line per team + source: badge, name, +adds −drops, source chip
-export function movesList(moves) {
+export const moveTarget = (week, teamId, source) => `move:${week}:${teamId}:${source}`;
+
+// One line per team + source: badge, name, +adds −drops, source chip.
+// react: { week, reactions, meId } adds a reaction bar to each line (current week only)
+export function movesList(moves, react = null) {
     if (!moves?.length) return '';
     const groups = new Map();
     for (const m of moves) {
@@ -133,8 +154,29 @@ export function movesList(moves) {
                 ${g.items.map(m => `<span class="move ${m.kind}">${m.kind === 'add' ? '+' : '−'}${esc(m.player.name)} <small>${esc(m.player.position)}</small></span>`).join('')}
             </span>
             <span class="chip">${esc(g.source)}</span>
+            ${react ? reactionBar(moveTarget(react.week, g.team.id, g.source), react.reactions, react.meId) : ''}
         </li>`).join('');
     return `<ul class="moves">${items}</ul>`;
+}
+
+
+
+// ### REACTIONS ###
+
+export const emojiImg = id => `<img class="emoji" src="img/emoji/${esc(id)}.svg" alt="${esc(id)}">`;
+
+// Sits top right of its element: counts per emoji (mine highlighted), then a "+" placeholder when signed in.
+// Tapping opens reactDialog (main.js).
+export function reactionBar(target, reactions, meId) {
+    const list = reactions?.[target] ?? [];
+    if (!list.length && meId == null) return '';
+    const counts = new Map();
+    for (const r of list) counts.set(r.emoji, (counts.get(r.emoji) ?? 0) + 1);
+    const mine = list.find(r => r.team.id === meId)?.emoji;
+    const chips = EMOJIS.filter(e => counts.has(e.id)).map(e =>
+        `<span class="react${e.id === mine ? ' mine' : ''}">${emojiImg(e.id)}${counts.get(e.id)}</span>`).join('');
+    return `<button type="button" class="reacts" data-react="${esc(target)}" aria-label="Reactions">` +
+        `${chips}${meId != null ? '<span class="react add">+</span>' : ''}</button>`;
 }
 
 
@@ -142,10 +184,21 @@ export function movesList(moves) {
 // ### WEEKS ###
 
 export function weekStatus(nav) {
-    if (!nav.is_scoring) return '<span class="chip chip-pre">Preseason · no W</span>';
+    if (!nav.is_scoring) return '<span class="chip chip-pre">Preseason · no SP</span>';
     if (nav.is_final) return '<span class="chip chip-final">Final</span>';
     return '<span class="chip chip-live">In progress</span>';
 }
+
+// SP earned for a week's placement; provisional until the week is final
+export function spChip(sp, isFinal) {
+    if (!sp) return '';
+    const place = { 30: 1, 20: 2, 10: 3 }[sp];
+    return isFinal
+        ? `<span class="chip chip-sp p${place}">+${sp} SP</span>`
+        : `<span class="chip chip-sp p${place} provisional" title="Provisional: week in progress">+${sp} SP?</span>`;
+}
+
+export const placeClass = sp => sp ? `place${{ 30: 1, 20: 2, 10: 3 }[sp]}` : '';
 
 // base: hash prefix the week is appended to, e.g. '#/week/' or '#/team/3/'
 export function weekNav(nav, base) {

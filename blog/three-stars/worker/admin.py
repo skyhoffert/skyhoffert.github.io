@@ -1,8 +1,11 @@
 import argparse
+import os
 import random
 import sys
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
+
+import requests
 
 import db
 
@@ -54,8 +57,18 @@ def die_if_bad_slot(slot):
 
 def cmd_create_league(a):
     db.insert('leagues', [{'id': a.id, 'name': a.name, 'season': a.season,
-                              'first_scoring_week': a.first_week, 'hidden': a.hidden}])
+                              'first_scoring_week': a.first_week, 'hidden': not a.public}])
     print(f'league {a.id} created')
+
+
+def cmd_leagues(a):
+    params = {'order': 'id'}
+    if a.query:
+        params['name'] = f'ilike.*{a.query}*'
+    for lg in db.select('leagues', **params):
+        pw = 'password' if lg.get('pass_hash') else 'NO PASSWORD'
+        hidden = 'hidden' if lg['hidden'] else ''
+        print(f'  {lg["id"]:>4}  {lg["name"]:<32} {lg["season"]}  first {lg["first_scoring_week"]}  {pw:<11}  {hidden}')
 
 
 def cmd_create_team(a):
@@ -75,6 +88,101 @@ def cmd_set_pin(a):
         sys.exit('PIN must be at least 6 characters')
     db.rpc('set_team_pin', p_team=a.team, p_pin=a.pin)
     print(f'team {a.team} PIN set')
+
+
+def cmd_set_league_password(a):
+    if len(a.password) < 4:
+        sys.exit('League password must be at least 4 characters')
+    db.rpc('set_league_password', p_league=a.league, p_pass=a.password)
+    print(f'league {a.league} password set')
+
+
+def cmd_dekes(a):
+    for t in db.select('teams', league_id=f'eq.{a.league}', order='id'):
+        print(f'  {t["id"]:>4}  {t["name"]:<28} {t["dekes"]:>4} dekes')
+
+
+def cmd_grant_dekes(a):
+    bal = db.rpc('add_dekes', p_team=a.team, p_delta=a.n, p_reason='grant', p_detail=a.note)
+    print(f'team {a.team}: {a.n:+} dekes, balance {bal}')
+
+
+def cmd_deke_log(a):
+    for r in db.select('deke_ledger', team_id=f'eq.{a.team}', order='created_at'):
+        print(f'  {r["created_at"][:16]}  {r["delta"]:>+4}  {r["reason"]:<6}  {r["detail"] or ""}')
+
+
+def cmd_unmatched(a):
+    rows = db.select('unmatched_payments', order='created_at')
+    if not a.all:
+        rows = [r for r in rows if r['claimed_team'] is None]
+    for r in rows:
+        done = f'claimed by team {r["claimed_team"]}' if r['claimed_team'] else ''
+        print(f'  {r["created_at"][:16]}  {r["session_id"]}  {r["dekes"]:>3} dekes  {r["amount"] or "":<8}  '
+              f'{r["email"] or "":<28}  {r["note"] or ""}  {done}')
+    if not rows:
+        print('  nothing unmatched')
+
+
+# Credits a paid Stripe session to a team. Same ref as the webhook, so it can never double-credit.
+def cmd_claim(a):
+    um = db.select('unmatched_payments', session_id=f'eq.{a.session}')
+    dekes = a.dekes if a.dekes is not None else (um[0]['dekes'] if um else None)
+    if not dekes:
+        sys.exit('not in unmatched (or 0 dekes): pass --dekes N')
+    bal = db.rpc('add_dekes', p_team=a.team, p_delta=dekes, p_reason='stripe', p_ref=a.session,
+                 p_detail=f'claimed{" " + um[0]["amount"] if um and um[0]["amount"] else ""}')
+    if bal is None:
+        print(f'{a.session} was already credited; nothing done')
+    else:
+        print(f'team {a.team}: +{dekes} dekes, balance {bal}')
+    if um:
+        db.update('unmatched_payments', {'claimed_team': a.team, 'claimed_at': datetime.now(ET).isoformat()},
+                  session_id=f'eq.{a.session}')
+
+
+# Paid Stripe checkouts vs deke_ledger: anything paid that neither credited nor parked in unmatched is flagged.
+def cmd_stripe_check(a):
+    key = os.environ.get('STRIPE_SECRET_KEY')
+    if not key:
+        sys.exit('set STRIPE_SECRET_KEY in worker/.env (restricted key, Checkout Sessions: Read)')
+    since = int((datetime.now(ET) - timedelta(days=a.days)).timestamp())
+    sessions, after = [], None
+    while True:
+        params = {'limit': 100, 'created[gte]': since, **({'starting_after': after} if after else {})}
+        r = requests.get('https://api.stripe.com/v1/checkout/sessions', params=params, auth=(key, ''))
+        if r.status_code >= 300:
+            sys.exit(f'stripe: {r.status_code} {r.text}')
+        page = r.json()
+        sessions += [s for s in page['data'] if s['payment_status'] == 'paid']
+        if not page['has_more']:
+            break
+        after = page['data'][-1]['id']
+
+    credited = {r['ref'] for r in db.select('deke_ledger', select='ref', ref='not.is.null')}
+    parked = {r['session_id']: r for r in db.select('unmatched_payments')}
+    missing = parked_open = 0
+    for s in sessions:
+        when = datetime.fromtimestamp(s['created'], ET).strftime('%Y-%m-%d %H:%M')
+        amt = f'{s["amount_total"] / 100} {s["currency"]}'
+        if s['id'] in credited:
+            continue
+        if s['id'] in parked:
+            if parked[s['id']]['claimed_team'] is None:
+                parked_open += 1
+            continue
+        missing += 1
+        email = (s.get('customer_details') or {}).get('email') or ''
+        print(f'  MISSING  {when}  {s["id"]}  {amt:<8}  team ref {s.get("client_reference_id") or "none":<6}  {email}')
+    print(f'{len(sessions)} paid in last {a.days} days, {missing} missing, {parked_open} waiting in unmatched')
+    if missing:
+        print('fix: admin.py claim <session> <team> --dekes N')
+
+
+def cmd_suggestions(a):
+    teams = {t['id']: t['name'] for t in db.select('teams', select='id,name')}
+    for s in db.select('icon_suggestions', order='created_at'):
+        print(f'  {s["created_at"][:10]}  {teams.get(s["team_id"], s["team_id"]):<24}  {s["suggestion"]}')
 
 
 def cmd_teams(a):
@@ -162,6 +270,19 @@ def cmd_waivers(a):
             print(f'  team {r["team_id"]:>4}  #{n}  {r["player_id"]}  {full_name(r["players"])}  {r["players"]["position"]}')
 
 
+def cmd_trades(a):
+    for t in db.select('trades', select='*,trade_players(player_id,from_team,players(first_name,last_name,position))',
+                       league_id=f'eq.{a.league}', order='id'):
+        print(f'  {t["id"]:>4}  {t["status"]:<8}  team {t["from_team"]} -> team {t["to_team"]}')
+        for tp in t['trade_players']:
+            print(f'          from {tp["from_team"]:>4}  {tp["player_id"]}  {full_name(tp["players"])}  {tp["players"]["position"]}')
+
+
+def cmd_cancel_trade(a):
+    db.delete('trades', id=f'eq.{a.id}')
+    print(f'trade {a.id} deleted')
+
+
 def cmd_cancel(a):
     db.update('pending_transactions', {'status': 'cancelled'}, id=f'eq.{a.id}', status='eq.pending')
     print(f'txn {a.id} cancelled')
@@ -241,8 +362,12 @@ def main():
     p.add_argument('name')
     p.add_argument('--season', type=int, default=20262027)
     p.add_argument('--first-week', default='2026-10-05')
-    p.add_argument('--hidden', action='store_true')
+    p.add_argument('--public', action='store_true', help='leagues are hidden by default')
     p.set_defaults(fn=cmd_create_league)
+
+    p = sp.add_parser('leagues', help='list leagues; optional name search (case-insensitive, partial)')
+    p.add_argument('query', nargs='?')
+    p.set_defaults(fn=cmd_leagues)
 
     p = sp.add_parser('create-team')
     p.add_argument('league', type=int)
@@ -264,6 +389,42 @@ def main():
     p.add_argument('team', type=int)
     p.add_argument('pin')
     p.set_defaults(fn=cmd_set_pin)
+
+    p = sp.add_parser('set-league-password', help='needed (with exact league name) to join on the site, 4+ chars')
+    p.add_argument('league', type=int)
+    p.add_argument('password')
+    p.set_defaults(fn=cmd_set_league_password)
+
+    p = sp.add_parser('dekes', help='Deke balances for a league')
+    p.add_argument('league', type=int)
+    p.set_defaults(fn=cmd_dekes)
+
+    p = sp.add_parser('grant-dekes', help='give (or take, negative) Dekes; for gifts, refunds, failed webhooks')
+    p.add_argument('team', type=int)
+    p.add_argument('n', type=int)
+    p.add_argument('--note')
+    p.set_defaults(fn=cmd_grant_dekes)
+
+    p = sp.add_parser('deke-log', help='every Deke purchase, grant and spend for a team')
+    p.add_argument('team', type=int)
+    p.set_defaults(fn=cmd_deke_log)
+
+    p = sp.add_parser('unmatched', help='paid Stripe checkouts the webhook couldn\'t tie to a team')
+    p.add_argument('--all', action='store_true', help='include already-claimed')
+    p.set_defaults(fn=cmd_unmatched)
+
+    p = sp.add_parser('claim', help='credit a paid Stripe session to a team (safe to repeat)')
+    p.add_argument('session', help='cs_...')
+    p.add_argument('team', type=int)
+    p.add_argument('--dekes', type=int, help='required if the session isn\'t in unmatched')
+    p.set_defaults(fn=cmd_claim)
+
+    p = sp.add_parser('stripe-check', help='flag paid Stripe checkouts that never got credited')
+    p.add_argument('--days', type=int, default=30)
+    p.set_defaults(fn=cmd_stripe_check)
+
+    p = sp.add_parser('suggestions', help='icon suggestions from owners')
+    p.set_defaults(fn=cmd_suggestions)
 
     p = sp.add_parser('teams')
     p.add_argument('league', type=int)
@@ -321,6 +482,14 @@ def main():
     p = sp.add_parser('cancel')
     p.add_argument('id', type=int)
     p.set_defaults(fn=cmd_cancel)
+
+    p = sp.add_parser('trades', help='pending + accepted owner trades')
+    p.add_argument('league', type=int)
+    p.set_defaults(fn=cmd_trades)
+
+    p = sp.add_parser('cancel-trade', help='delete any trade, even accepted')
+    p.add_argument('id', type=int)
+    p.set_defaults(fn=cmd_cancel_trade)
 
     p = sp.add_parser('nick', help='empty nickname clears')
     p.add_argument('league', type=int)

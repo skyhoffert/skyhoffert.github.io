@@ -7,11 +7,13 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ### RPC ###
 
-async function call(fn, args = {}) {
-    const { data, error } = await db.rpc(fn, { p_league: LEAGUE, ...args });
+async function rpc(fn, args) {
+    const { data, error } = await db.rpc(fn, args);
     if (error) throw new Error(error.message);
     return data;
 }
+
+const call = (fn, args = {}) => rpc(fn, { p_league: LEAGUE, ...args });
 
 export const getStandings = () => call('get_standings');
 export const getRecentStars = (days = 3) => call('get_recent_stars', { p_days: days });
@@ -30,12 +32,15 @@ export const getPlayers = ({ search, position, owner, limit } = {}) => call('get
 // ### WRITES ###
 
 // All writes go through here so the cooldown applies to every one. Returns {ok, error?, ...}.
-async function mutate(fn, args) {
+async function mutate(fn, args, send = call) {
     const wait = remainingMs();
     if (wait > 0) return { ok: false, error: `Slow down! Try again in ${Math.ceil(wait / 1000)}s.` };
     mark();
-    return call(fn, args);
+    return send(fn, args);
 }
+
+// Not league-scoped; throttled since it's a password attempt
+export const checkLeague = (name, pass) => mutate('join_league', { p_name: name, p_pass: pass }, rpc);
 
 export const getMyTeam = (team, pin) => call('get_my_team', { p_team: team, p_pin: pin });
 
@@ -48,3 +53,30 @@ export const updateRosterPlayer = (team, pin, player, nickname, waiverOut) => mu
 
 export const setWaiverIn = (team, pin, player, on) =>
     mutate('set_waiver_in', { p_team: team, p_pin: pin, p_player: player, p_on: on });
+
+export const proposeTrade = (team, pin, toTeam, give, get) =>
+    mutate('propose_trade', { p_team: team, p_pin: pin, p_to_team: toTeam, p_give: give, p_get: get });
+
+export const respondTrade = (team, pin, trade, accept) =>
+    mutate('respond_trade', { p_team: team, p_pin: pin, p_trade: trade, p_accept: accept });
+
+export const cancelTrade = (team, pin, trade) =>
+    mutate('cancel_trade', { p_team: team, p_pin: pin, p_trade: trade });
+
+// field: 'name' | 'color' | 'icon'; costs 1 Deke
+export const customizeTeam = (team, pin, field, value) =>
+    mutate('customize_team', { p_team: team, p_pin: pin, p_field: field, p_value: value });
+
+export const suggestIcon = (team, pin, text) => mutate('suggest_icon', { p_team: team, p_pin: pin, p_text: text });
+
+// Decoration only: a failure here shouldn't take the page down
+export const getReactions = () => call('get_reactions').catch(() => ({}));
+export const getMyReactions = (team, pin) => call('get_my_reactions', { p_team: team, p_pin: pin }).catch(() => null);
+
+// emoji '' removes; buyPass also buys this week's pass (1 Deke) in the same write
+export const react = (team, pin, target, emoji, buyPass = false) =>
+    mutate('react', { p_team: team, p_pin: pin, p_target: target, p_emoji: emoji, p_buy_pass: buyPass });
+
+// item: 'pass' or an emoji id
+export const buyReactionItem = (team, pin, item) =>
+    mutate('buy_reaction_item', { p_team: team, p_pin: pin, p_item: item });

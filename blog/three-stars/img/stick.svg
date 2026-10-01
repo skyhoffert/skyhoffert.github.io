@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+  <polygon class="stick-gap" points="17.8,1.5 20.4,1.5 12,20.5 3,20.5 1.5,18.1 10.62,17.8" fill="none"/>
+  <polygon class="knob" points="17.8,1.5 20.4,1.5 19.3,4 16.7,4"/>
+  <polygon class="shaft" points="16.35,4.8 18.95,4.8 12,20.5 6.8,20.5 7.95,17.89 10.62,17.8"/>
+  <polygon class="toe" points="1.5,18.1 7.14,17.92 6,20.5 3,20.5"/>
+</svg>

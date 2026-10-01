@@ -68,7 +68,7 @@ as $$
     'star_points', coalesce(s.star_points, 0),
     'bonus_points', coalesce(s.bonus_points, 0),
     'week_rank', s.week_rank,
-    'is_winner', exists (select 1 from week_winners ww where ww.team_id = p_team and ww.week = p_week),
+    'sp', coalesce(s.sp, 0),
     'players', coalesce((
       select jsonb_agg(
         player_json(p_league, p_team, rp.player_id) || jsonb_build_object(
@@ -149,11 +149,12 @@ as $$
     'standings', coalesce((
       select jsonb_agg(jsonb_build_object(
         'team', team_json(s.team_id),
-        'wins', s.wins,
+        'sp', s.sp,
+        'place1', s.place1,
+        'place2', s.place2,
+        'place3', s.place3,
         'total_points', s.total_points,
-        'standing', s.standing,
-        'week_points', coalesce((select w.total_points from team_week_scores w
-                                 where w.team_id = s.team_id and w.week = current_week()), 0)
+        'standing', s.standing
       ) order by s.standing, s.team_id)
       from season_standings s where s.league_id = p_league
     ), '[]'::jsonb)
@@ -172,7 +173,7 @@ as $$
     'league', league_json(p_league),
     'nav', week_nav_json(p_league, p.w),
     'teams', coalesce((
-      select jsonb_agg(tw order by (tw->>'total_points')::int desc, tw->'team'->>'name')
+      select jsonb_agg(tw order by (tw->>'week_rank')::int nulls last, tw->'team'->>'name')
       from (select team_week_json(p_league, t.id, p.w) as tw from teams t where t.league_id = p_league) x
     ), '[]'::jsonb),
     'moves', moves_json(p_league, p.w)
@@ -192,7 +193,8 @@ as $$
   else jsonb_build_object(
     'league', league_json(p_league),
     'nav', week_nav_json(p_league, p.w),
-    'standing', (select jsonb_build_object('wins', s.wins, 'total_points', s.total_points, 'standing', s.standing)
+    'standing', (select jsonb_build_object('sp', s.sp, 'place1', s.place1, 'place2', s.place2, 'place3', s.place3,
+                                           'total_points', s.total_points, 'standing', s.standing)
                  from season_standings s where s.team_id = p_team),
     'week', team_week_json(p_league, p_team, p.w),
     'editable', p.w = roster_week(p_league),
@@ -203,7 +205,7 @@ as $$
         'week_rank', s.week_rank,
         'is_scoring', s.is_scoring,
         'is_final', s.is_final,
-        'is_winner', exists (select 1 from week_winners ww where ww.team_id = p_team and ww.week = s.week)
+        'sp', s.sp
       ) order by s.week desc)
       from team_week_scores s where s.team_id = p_team
     ), '[]'::jsonb)
@@ -231,7 +233,7 @@ as $$
             'team', team_json(s.team_id),
             'total_points', s.total_points,
             'week_rank', s.week_rank,
-            'is_winner', exists (select 1 from week_winners ww where ww.team_id = s.team_id and ww.week = s.week)
+            'sp', s.sp
           ) order by s.week_rank, s.team_id)
           from team_week_scores s where s.league_id = p_league and s.week = wk.week
         ),
@@ -330,10 +332,15 @@ as $$
         'star', st.star,
         'points', case st.star when 1 then 30 when 2 then 20 else 10 end,
         'player', player_json(p_league, rw.team_id, st.player_id),
-        'owner', case when rw.team_id is null then null else team_json(rw.team_id) end
+        'owner', case when rw.team_id is null then null else team_json(rw.team_id) end,
+        'goals', s.goals,
+        'assists', s.assists,
+        'saves', s.saves,
+        'is_goalie', s.is_goalie
       ) order by st.star)
       from game_stars st
       left join roster_weeks rw on rw.league_id = p_league and rw.week = week_of(g.game_date) and rw.player_id = st.player_id
+      left join player_game_stats s on s.game_id = g.id and s.player_id = st.player_id
       where st.game_id = g.id
     )
   ) order by g.game_date desc, g.id desc), '[]'::jsonb)
@@ -428,7 +435,7 @@ end;
 $$;
 
 -- Catch-up + idempotent: creates every missing week up to the current one by copying the previous
--- week, then applies admin pending transactions (target_week <= that week), then waivers.
+-- week, then applies admin pending transactions (target_week <= that week), then trades, then waivers.
 -- Returns weeks created. Worker only calls this once the ended week's games are all final.
 create or replace function rollover(p_league int)
 returns int
@@ -468,6 +475,7 @@ begin
       end;
     end loop;
 
+    perform process_trades(p_league, w);
     perform process_waivers(p_league, w);
     last := w;
     n := n + 1;

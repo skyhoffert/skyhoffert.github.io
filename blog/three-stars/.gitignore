@@ -1,4 +1,7 @@
 worker/.env
+*.local.txt
 worker/.venv/
 __pycache__/
 worker/ingest.log
+supabase/.temp/
+.claude/settings.local.json
