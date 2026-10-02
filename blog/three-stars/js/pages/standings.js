@@ -1,6 +1,6 @@
 import { getStandings, getRecentStars, getReactions } from '../api.js';
 import { getMe } from '../session.js';
-import { esc, setLeague, notFound, teamLabel, ownerChip, playerName, fmtDate, fmtWeek, reactionBar } from '../render.js';
+import { esc, setLeague, notFound, draftBanner, teamLabel, ownerChip, playerName, fmtDate, fmtWeek, reactionBar } from '../render.js';
 
 
 
@@ -74,6 +74,7 @@ export async function standingsPage() {
     if (!s.league) return notFound('League');
     setLeague(s.league);
     return `
+        ${draftBanner(s.league)}
         <section>
             <h1>Standings</h1>
             <p class="sub">Season ${String(s.league.season).replace(/(\d{4})(\d{4})/, '$1–$2')} · SP count from week of ${fmtWeek(s.league.first_scoring_week)}</p>

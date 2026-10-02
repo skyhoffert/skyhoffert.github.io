@@ -19,7 +19,7 @@ create table if not exists deke_ledger (
 -- Separate from the table so re-running this file updates the list
 alter table deke_ledger drop constraint if exists deke_ledger_reason_check;
 alter table deke_ledger add constraint deke_ledger_reason_check
-  check (reason in ('stripe', 'grant', 'starter', 'name', 'color', 'icon', 'nickname', 'pass', 'emoji'));
+  check (reason in ('stripe', 'grant', 'starter', 'name', 'color', 'icon', 'nickname', 'pass', 'season_pass', 'emoji'));
 
 -- Paid Stripe checkouts the webhook couldn't tie to a team (no/unknown client_reference_id).
 -- Resolved by hand: admin.py unmatched / claim.
@@ -45,7 +45,8 @@ create table if not exists icon_suggestions (
 
 -- ### CREDITS (service role only: edge function + admin.py) ###
 
--- Returns the new balance, or null if p_ref was already applied
+-- Returns the new balance, or null if p_ref was already applied.
+-- A single Stripe purchase of 40+ (the supporter bundle) also makes the team a Three Stars Supporter for its league's season.
 create or replace function add_dekes(p_team int, p_delta int, p_reason text, p_ref text default null, p_detail text default null)
 returns int
 language plpgsql
@@ -61,7 +62,10 @@ begin
   if not found then
     return null;
   end if;
-  update teams set dekes = dekes + p_delta where id = p_team returning dekes into bal;
+  update teams t set dekes = t.dekes + p_delta,
+    supporter_season = case when p_reason = 'stripe' and p_delta >= 40
+      then (select season from leagues where id = t.league_id) else t.supporter_season end
+  where t.id = p_team returning t.dekes into bal;
   if bal is null then
     raise exception 'No team %', p_team;
   end if;
@@ -90,7 +94,7 @@ create trigger teams_starter_dekes after insert on teams
 
 -- ### OWNER ACTIONS (anon, PIN-gated) ###
 
--- p_field: 'name' | 'color' | 'icon' (icon '' = none). Costs 1 Deke; unchanged values are rejected, not charged.
+-- p_field: 'name' | 'color' (1 Deke) | 'icon' (2 Dekes; '' = none, free). Unchanged values are rejected, not charged.
 create or replace function customize_team(p_league int, p_team int, p_pin text, p_field text, p_value text)
 returns jsonb
 language plpgsql
@@ -102,13 +106,15 @@ declare
   t teams;
   v text := nullif(trim(coalesce(p_value, '')), '');
   old text;
+  cost int := case when p_field <> 'icon' then 1 when v is null then 0 else 2 end;
 begin
   if not pin_ok(p_league, p_team, p_pin) then
     return jsonb_build_object('ok', false, 'error', 'Wrong PIN.');
   end if;
   select * into t from teams where id = p_team for update;
-  if t.dekes < 1 then
-    return jsonb_build_object('ok', false, 'error', 'You need 1 Deke for this. Grab a bundle below.');
+  if t.dekes < cost then
+    return jsonb_build_object('ok', false, 'error',
+      format('You need %s Deke%s for this. Grab a bundle below.', cost, case when cost = 1 then '' else 's' end));
   end if;
 
   if p_field = 'name' then
@@ -143,9 +149,9 @@ begin
     color = case when p_field = 'color' then v else color end,
     icon_path = case when p_field = 'icon' then v else icon_path end
   where id = p_team;
-  perform add_dekes(p_team, -1, p_field, null, coalesce(old, '(none)') || ' -> ' || coalesce(v, '(none)'));
+  perform add_dekes(p_team, -cost, p_field, null, coalesce(old, '(none)') || ' -> ' || coalesce(v, '(none)'));
 
-  return jsonb_build_object('ok', true, 'team', team_json(p_team), 'dekes', t.dekes - 1);
+  return jsonb_build_object('ok', true, 'team', team_json(p_team), 'dekes', t.dekes - cost);
 end;
 $$;
 

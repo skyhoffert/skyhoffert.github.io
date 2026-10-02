@@ -13,13 +13,33 @@ export function el(html) {
     return t.content.firstElementChild;
 }
 
+let curLeague = null;
+
 export function setLeague(league) {
     if (!league) return;
+    curLeague = league;
     document.getElementById('league-name').textContent = league.name;
     document.title = `${league.name} · Three Stars`;
 }
 
 export const notFound = what => `<div class="empty">${esc(what)} not found.</div>`;
+
+// Next trades/waivers run: admin-posted midweek time (only set until it runs), else Monday rollover.
+// short: day only, for pills.
+export function nextRun(short = false, league = curLeague) {
+    const at = league?.midweek_at && new Date(league.midweek_at);
+    if (!at) return short ? 'Monday' : 'Monday morning';
+    return at.toLocaleString([], short ? { weekday: 'long' } : { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+}
+
+// Open draft, else a posted midweek run; the draft page has no nav tab
+export function draftBanner(league) {
+    if (league?.draft_status === 'open')
+        return '<a class="draft-banner" href="#/draft"><b>The draft is open</b><span>Set your wishlist ›</span></a>';
+    if (league?.midweek_at)
+        return `<a class="draft-banner" href="#/players"><b>Extra waivers + trades</b><span>${esc(nextRun(false, league))} ›</span></a>`;
+    return '';
+}
 
 // inline (not <img>) so currentColor + per-part CSS animation work; keep in sync w/ img/stick.svg
 export const stick = (cls = '') =>
@@ -59,26 +79,48 @@ export function ordinal(n) {
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export const SLOT_LABEL = { F1: 'F', F2: 'F', D1: 'D', D2: 'D', G: 'G', X: 'FLEX' };
+// Slot = type letter + number (F1, X2...). Mirrors slot_fits in 01_schema.sql.
+const SLOT_TYPES = {
+    F: { label: 'F', name: 'F', pos: 'CLR' },
+    D: { label: 'D', name: 'D', pos: 'D' },
+    G: { label: 'G', name: 'G', pos: 'G' },
+    X: { label: 'FLEX', name: 'Flex (any F or D)', pos: 'CLRD' },
+    S: { label: 'SFLEX', name: 'Superflex (any player)', pos: 'CLRDG' },
+};
+export const slotLabel = slot => SLOT_TYPES[slot[0]]?.label ?? slot;
+export const slotFits = (slot, pos) => !!SLOT_TYPES[slot[0]]?.pos.includes(pos);
+
+// e.g. "<b>2 F</b>, <b>2 D</b>, <b>1 G</b> and <b>1 Flex (any F or D)</b>"
+export function slotSummary(slots) {
+    const parts = Object.entries(SLOT_TYPES)
+        .map(([t, s]) => [slots.filter(x => x[0] === t).length, s.name])
+        .filter(([n]) => n)
+        .map(([n, name]) => `<b>${n} ${name}</b>`);
+    return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts.join('');
+}
 
 
 
 // ### TEAMS ###
 
+// Supporters get a gold ring (wrapper, since the badge's clip-path would clip a border) and a star after the name
 export function teamBadge(team, size = 'md') {
     const initials = team.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const img = team.icon_path ? `<img src="${esc(team.icon_path)}" alt="" onerror="this.remove()">` : '';
-    return `<span class="badge badge-${size}" style="--team:${esc(team.color)}"><span>${esc(initials)}</span>${img}</span>`;
+    const badge = `<span class="badge badge-${size}" style="--team:${esc(team.color)}"><span>${esc(initials)}</span>${img}</span>`;
+    return team.supporter ? `<span class="badge-ring" title="Three Stars Supporter">${badge}</span>` : badge;
 }
+
+export const supporterStar = team => team?.supporter ? '<span class="supporter-star" title="Three Stars Supporter">★</span>' : '';
 
 export function teamLabel(team, { owner = true, size = 'md' } = {}) {
     return `<span class="team-label">${teamBadge(team, size)}` +
-        `<span class="team-text"><b>${esc(team.name)}</b>${owner ? `<small>${esc(team.owner)}</small>` : ''}</span></span>`;
+        `<span class="team-text"><b>${esc(team.name)}${supporterStar(team)}</b>${owner ? `<small>${esc(team.owner)}</small>` : ''}</span></span>`;
 }
 
 export function ownerChip(team) {
     if (!team) return '<span class="chip chip-fa">FA</span>';
-    return `<span class="chip chip-team" style="--team:${esc(team.color)}">${esc(team.name)}</span>`;
+    return `<span class="chip chip-team" style="--team:${esc(team.color)}">${esc(team.name)}${supporterStar(team)}</span>`;
 }
 
 
@@ -111,7 +153,7 @@ export function rosterTable(players, { editable = false, pills = {} } = {}) {
     if (!players.length) return '<div class="empty">No roster this week.</div>';
     const rows = players.map(p => `
         <tr${editable ? ` class="editable" data-player="${p.id}"` : ''}>
-            <td class="slot">${SLOT_LABEL[p.slot]}</td>
+            <td class="slot">${slotLabel(p.slot)}</td>
             <td>${playerName(p)}${pills[p.id] ?? ''}</td>
             <td class="stars">${starPips(p)} ${bonusChips(p)}</td>
             <td class="num hide-sm">${p.games}</td>
@@ -150,7 +192,7 @@ export function movesList(moves, react = null) {
         <li>
             ${teamBadge(g.team, 'sm')}
             <span class="moves-body">
-                <b>${esc(g.team.name)}</b>
+                <b>${esc(g.team.name)}${supporterStar(g.team)}</b>
                 ${g.items.map(m => `<span class="move ${m.kind}">${m.kind === 'add' ? '+' : '−'}${esc(m.player.name)} <small>${esc(m.player.position)}</small></span>`).join('')}
             </span>
             <span class="chip">${esc(g.source)}</span>
@@ -163,7 +205,10 @@ export function movesList(moves, react = null) {
 
 // ### REACTIONS ###
 
-export const emojiImg = id => `<img class="emoji" src="img/emoji/${esc(id)}.svg" alt="${esc(id)}">`;
+export const emojiImg = id => {
+    const ext = EMOJIS.find(e => e.id === id)?.ext ?? 'svg';
+    return `<img class="emoji" src="img/emoji/${esc(id)}.${ext}" alt="${esc(id)}">`;
+};
 
 // Sits top right of its element: counts per emoji (mine highlighted), then a "+" placeholder when signed in.
 // Tapping opens reactDialog (main.js).

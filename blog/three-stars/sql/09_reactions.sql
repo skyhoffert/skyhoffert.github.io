@@ -1,5 +1,6 @@
 -- Reactions: one emoji per team on a public Moves line (current week) or a Recent Three Stars game.
--- Reacting needs that week's pass (1 Deke). Emojis come from the team's pool: fire is free, others 3 Dekes each.
+-- Reacting needs that week's pass (1 Deke) or a season pass (10 Dekes, the league's season).
+-- Emojis come from the team's pool: fire is free, others 3 Dekes each.
 -- Run after 08 (ledger reasons), then re-run 05.
 
 -- Keep in sync w/ EMOJIS in js/config.js
@@ -8,7 +9,8 @@ returns text[]
 language sql
 immutable
 as $$
-  select array['fire', 'lamp', 'hat', 'trash', 'angry'];
+  select array['fire', 'lamp', 'hat', 'trash', 'angry', 'star1', 'star2', 'star3',
+               'heart', 'cry', 'poop', 'brain', 'thumbsup', 'thumbsdown', 'eyes', 'skull', 'O_O', 'sidemouth'];
 $$;
 
 create table if not exists team_emojis (
@@ -23,6 +25,14 @@ create table if not exists reaction_passes (
   week date not null,
   created_at timestamptz not null default now(),
   primary key (team_id, week)
+);
+
+-- season = leagues.season of the team's league
+create table if not exists season_passes (
+  team_id int not null references teams(id) on delete cascade,
+  season int not null,
+  created_at timestamptz not null default now(),
+  primary key (team_id, season)
 );
 
 -- target: 'game:<game id>' or 'move:<week>:<team id>:<source>' (one Moves line = a team's moves from one source)
@@ -52,6 +62,18 @@ as $$
   from team_emojis where team_id = p_team and emoji <> 'fire';
 $$;
 
+create or replace function has_season_pass(p_team int)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from season_passes sp
+                 join teams t on t.id = sp.team_id join leagues l on l.id = t.league_id
+                 where sp.team_id = p_team and sp.season = l.season);
+$$;
+
 create or replace function has_reaction_pass(p_team int)
 returns boolean
 language sql
@@ -59,7 +81,8 @@ stable
 security definer
 set search_path = public
 as $$
-  select exists (select 1 from reaction_passes where team_id = p_team and week = current_week());
+  select has_season_pass(p_team)
+      or exists (select 1 from reaction_passes where team_id = p_team and week = current_week());
 $$;
 
 -- Games: still in the Recent Three Stars window. Moves: this week's only, so they clear at rollover.
@@ -127,6 +150,7 @@ as $$
       'ok', true,
       'dekes', (select dekes from teams where id = p_team),
       'pass', has_reaction_pass(p_team),
+      'season_pass', has_season_pass(p_team),
       'emojis', to_jsonb(emoji_pool(p_team))
     )
   end;
@@ -173,7 +197,7 @@ begin
 end;
 $$;
 
--- p_item: 'pass' (1 Deke, this week) or an emoji id (3 Dekes, permanent)
+-- p_item: 'pass' (1 Deke, this week), 'season' (10 Dekes, rest of the league's season) or an emoji id (3 Dekes, permanent)
 create or replace function buy_reaction_item(p_league int, p_team int, p_pin text, p_item text)
 returns jsonb
 language plpgsql
@@ -183,7 +207,7 @@ set search_path = public
 as $$
 declare
   bal int;
-  cost int := case when p_item = 'pass' then 1 else 3 end;
+  cost int := case p_item when 'pass' then 1 when 'season' then 10 else 3 end;
 begin
   if not pin_ok(p_league, p_team, p_pin) then
     return jsonb_build_object('ok', false, 'error', 'Wrong PIN.');
@@ -192,7 +216,11 @@ begin
 
   if p_item = 'pass' then
     if has_reaction_pass(p_team) then
-      return jsonb_build_object('ok', false, 'error', 'You already have this week''s pass.');
+      return jsonb_build_object('ok', false, 'error', 'You already have a pass for this week.');
+    end if;
+  elsif p_item = 'season' then
+    if has_season_pass(p_team) then
+      return jsonb_build_object('ok', false, 'error', 'You already have the season pass.');
     end if;
   elsif p_item = any(reaction_emojis()) and p_item <> 'fire' then
     if p_item = any(emoji_pool(p_team)) then
@@ -209,6 +237,9 @@ begin
   if p_item = 'pass' then
     insert into reaction_passes (team_id, week) values (p_team, current_week());
     perform add_dekes(p_team, -1, 'pass', null, current_week()::text);
+  elsif p_item = 'season' then
+    insert into season_passes (team_id, season) values (p_team, (select season from leagues where id = p_league));
+    perform add_dekes(p_team, -cost, 'season_pass', null, (select season from leagues where id = p_league)::text);
   else
     insert into team_emojis (team_id, emoji) values (p_team, p_item);
     perform add_dekes(p_team, -3, 'emoji', null, p_item);

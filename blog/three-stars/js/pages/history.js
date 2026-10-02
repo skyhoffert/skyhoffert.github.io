@@ -1,5 +1,5 @@
 import { getHistory } from '../api.js';
-import { esc, setLeague, notFound, teamBadge, weekStatus, fmtWeek, movesList, spChip, placeClass } from '../render.js';
+import { esc, setLeague, notFound, teamBadge, supporterStar, weekStatus, fmtWeek, movesList, spChip, placeClass } from '../render.js';
 
 
 
@@ -10,7 +10,7 @@ function weekRow(w) {
         <span class="hist-team ${placeClass(t.sp)}">
             <small>${t.week_rank}</small>
             ${teamBadge(t.team, 'sm')}
-            <span>${esc(t.team.name)}</span>
+            <span>${esc(t.team.name)}${supporterStar(t.team)}</span>
             <b>${t.total_points}</b>
             ${spChip(t.sp, w.is_final)}
         </span>`).join('');
@@ -25,6 +25,19 @@ function weekRow(w) {
         </div>`;
 }
 
+function draftCard(league) {
+    if (!league.draft_status) return '';
+    const open = league.draft_status === 'open';
+    return `
+        <a class="card hist-draft" href="#/draft">
+            <div class="card-head">
+                <b>${league.season.toString().replace(/(\d{4})(\d{4})/, '$1–$2')} Draft</b>
+                <span class="chip ${open ? 'chip-live' : 'chip-final'}">${open ? 'Open' : 'Results'}</span>
+                <span class="draft-go">›</span>
+            </div>
+        </a>`;
+}
+
 export async function historyPage() {
     const h = await getHistory();
     if (!h.league) return notFound('League');
@@ -32,6 +45,9 @@ export async function historyPage() {
     return `
         <section>
             <h1>History</h1>
-            <div class="cards">${h.weeks.map(weekRow).join('') || '<div class="empty">No weeks yet.</div>'}</div>
+            <div class="cards">
+                ${h.weeks.map(weekRow).join('') || '<div class="empty">No weeks yet.</div>'}
+                ${draftCard(h.league)}
+            </div>
         </section>`;
 }

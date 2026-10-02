@@ -1,8 +1,11 @@
 import argparse
 import os
 import random
+import re
 import sys
+import unicodedata
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
@@ -10,7 +13,8 @@ import requests
 import db
 
 ET = ZoneInfo('America/New_York')
-SLOTS = ('F1', 'F2', 'D1', 'D2', 'G', 'X')
+SLOT_TYPES = 'FDGXS'
+CONFIG = (('f', 'n_f'), ('d', 'n_d'), ('g', 'n_g'), ('x', 'n_x'), ('s', 'n_s'), ('max_teams', 'max_teams'))
 FWD = ('C', 'L', 'R')
 
 
@@ -47,9 +51,27 @@ def resolve_player(q):
     return rows[0]
 
 
+def slot_key(slot):
+    return SLOT_TYPES.index(slot[0]), slot
+
+
+# Only checks the format; the DB trigger checks the league actually has the slot
 def die_if_bad_slot(slot):
-    if slot not in SLOTS:
-        sys.exit(f'slot must be one of {SLOTS}')
+    if not re.fullmatch(r'[FDGXS][1-9]', slot):
+        sys.exit('slot must be a type F D G X(flex) S(superflex) + number, e.g. F1, G1, X2')
+
+
+def config_vals(a):
+    return {col: getattr(a, arg) for arg, col in CONFIG if getattr(a, arg) is not None}
+
+
+def add_config_args(p):
+    p.add_argument('--f', type=int, help='forward slots (default 2)')
+    p.add_argument('--d', type=int, help='defense slots (default 2)')
+    p.add_argument('--g', type=int, help='goalie slots (default 1)')
+    p.add_argument('--x', type=int, help='flex F/D slots (default 1)')
+    p.add_argument('--s', type=int, help='superflex F/D/G slots (default 0)')
+    p.add_argument('--max-teams', type=int, help='1-16 (default 10)')
 
 
 
@@ -57,8 +79,20 @@ def die_if_bad_slot(slot):
 
 def cmd_create_league(a):
     db.insert('leagues', [{'id': a.id, 'name': a.name, 'season': a.season,
-                              'first_scoring_week': a.first_week, 'hidden': not a.public}])
+                              'first_scoring_week': a.first_week, 'hidden': not a.public, **config_vals(a)}])
     print(f'league {a.id} created')
+
+
+def config_str(lg):
+    return f'{lg["n_f"]}F {lg["n_d"]}D {lg["n_g"]}G {lg["n_x"]}X {lg["n_s"]}S  max {lg["max_teams"]} teams'
+
+
+# Lowering a slot count fails (DB trigger) while that slot is filled in the latest week
+def cmd_league_config(a):
+    vals = config_vals(a)
+    if vals:
+        db.update('leagues', vals, id=f'eq.{a.league}')
+    print(f'league {a.league}: {config_str(db.select("leagues", id=f"eq.{a.league}")[0])}')
 
 
 def cmd_leagues(a):
@@ -68,7 +102,7 @@ def cmd_leagues(a):
     for lg in db.select('leagues', **params):
         pw = 'password' if lg.get('pass_hash') else 'NO PASSWORD'
         hidden = 'hidden' if lg['hidden'] else ''
-        print(f'  {lg["id"]:>4}  {lg["name"]:<32} {lg["season"]}  first {lg["first_scoring_week"]}  {pw:<11}  {hidden}')
+        print(f'  {lg["id"]:>4}  {lg["name"]:<32} {lg["season"]}  first {lg["first_scoring_week"]}  {pw:<11}  {hidden:<6}  {config_str(lg)}')
 
 
 def cmd_create_team(a):
@@ -99,12 +133,28 @@ def cmd_set_league_password(a):
 
 def cmd_dekes(a):
     for t in db.select('teams', league_id=f'eq.{a.league}', order='id'):
-        print(f'  {t["id"]:>4}  {t["name"]:<28} {t["dekes"]:>4} dekes')
+        print(f'  {t["id"]:>4}  {t["name"]:<28} {t["dekes"]:>4} dekes  {"supporter " + str(t["supporter_season"]) if t.get("supporter_season") else ""}')
 
 
 def cmd_grant_dekes(a):
     bal = db.rpc('add_dekes', p_team=a.team, p_delta=a.n, p_reason='grant', p_detail=a.note)
     print(f'team {a.team}: {a.n:+} dekes, balance {bal}')
+
+
+# Supporter for the team's league's current season
+def cmd_supporter(a):
+    t = db.select('teams', select='league_id', id=f'eq.{a.team}')[0]
+    season = None if a.off else db.select('leagues', select='season', id=f'eq.{t["league_id"]}')[0]['season']
+    db.update('teams', {'supporter_season': season}, id=f'eq.{a.team}')
+    print(f'team {a.team} supporter {"off" if a.off else f"for season {season}"}')
+
+
+# Free weekly reaction pass for every team in the league
+def cmd_grant_pass(a):
+    wk = parse_week(a.week, current_week())
+    teams = db.select('teams', select='id', league_id=f'eq.{a.league}')
+    db.upsert('reaction_passes', [{'team_id': t['id'], 'week': str(wk)} for t in teams], 'team_id,week', ignore=True)
+    print(f'league {a.league}: reaction pass for week {wk} granted to {len(teams)} teams')
 
 
 def cmd_deke_log(a):
@@ -185,6 +235,25 @@ def cmd_suggestions(a):
         print(f'  {s["created_at"][:10]}  {teams.get(s["team_id"], s["team_id"]):<24}  {s["suggestion"]}')
 
 
+def cmd_feedback(a):
+    params = {'order': 'created_at', 'select': '*,teams(name)'}
+    if not a.all:
+        params['done'] = 'is.false'
+    rows = db.select('feedback', **params)
+    for r in rows:
+        who = r['teams']['name'] if r.get('teams') else 'anon'
+        print(f'  #{r["id"]:<4} {r["created_at"][:16]}  {r["kind"]:<5}  league {r["league_id"]}  {who}'
+              f'{"  (" + r["contact"] + ")" if r["contact"] else ""}{"  [done]" if r["done"] else ""}')
+        print(f'        {r["message"]}')
+    if not rows:
+        print('  no messages')
+
+
+def cmd_feedback_done(a):
+    db.update('feedback', {'done': True}, id=f'in.({",".join(map(str, a.ids))})')
+    print(f'marked done: {a.ids}')
+
+
 def cmd_teams(a):
     for t in db.select('teams', league_id=f'eq.{a.league}', order='id'):
         pin = 'pin' if t.get('pin_hash') else 'NO PIN'
@@ -209,7 +278,7 @@ def cmd_roster(a):
     if a.team:
         rows = [r for r in rows if r['team_id'] == a.team]
     print(f'week {wk}')
-    for r in sorted(rows, key=lambda r: (r['team_id'], SLOTS.index(r['slot']))):
+    for r in sorted(rows, key=lambda r: (r['team_id'], slot_key(r['slot']))):
         p = r['players']
         print(f'  team {r["team_id"]:>4}  {r["slot"]:<3} {r["player_id"]}  {full_name(p):<28} {p["position"]}  {p["nhl_team"]}')
 
@@ -259,15 +328,18 @@ def cmd_txns(a):
 
 
 def cmd_waivers(a):
-    for kind in ('waiver_outs', 'waiver_ins'):
-        rows = db.select(kind, select='team_id,player_id,players(first_name,last_name,position)',
-                         league_id=f'eq.{a.league}', order='team_id,created_at')
-        print(kind)
-        n, last_team = 0, None
-        for r in rows:
-            n = n + 1 if r['team_id'] == last_team else 1
-            last_team = r['team_id']
-            print(f'  team {r["team_id"]:>4}  #{n}  {r["player_id"]}  {full_name(r["players"])}  {r["players"]["position"]}')
+    rows = db.select('waiver_ins', select='team_id,player_id,drop_player_id,'
+                     'add:players!waiver_ins_player_id_fkey(first_name,last_name,position),'
+                     'drop:players!waiver_ins_drop_player_id_fkey(first_name,last_name,position)',
+                     league_id=f'eq.{a.league}', order='team_id,created_at')
+    n, last_team = 0, None
+    for r in rows:
+        n = n + 1 if r['team_id'] == last_team else 1
+        last_team = r['team_id']
+        print(f'  team {r["team_id"]:>4}  #{n}  add {r["player_id"]} {full_name(r["add"])} {r["add"]["position"]}'
+              f'  drop {r["drop_player_id"]} {full_name(r["drop"])} {r["drop"]["position"]}')
+    if not rows:
+        print('  no claims')
 
 
 def cmd_trades(a):
@@ -311,6 +383,326 @@ def cmd_rollover(a):
 
 
 
+### DRAFT ###
+
+RANK_LINE = re.compile(r'^\s*(\d{1,3})\.\s+(.+?),\s*([FDG]),\s*([A-Z]{3})\b')
+BUCKET = {'F': FWD, 'D': ('D',), 'G': ('G',)}
+
+
+def norm(s):
+    return re.sub(r'[^a-z]', '', unicodedata.normalize('NFKD', s or '').encode('ascii', 'ignore').decode().lower())
+
+
+# PostgREST caps a response at 1000 rows
+def select_all(table, **params):
+    out, off = [], 0
+    while True:
+        page = db.select(table, limit=1000, offset=off, **params)
+        out += page
+        if len(page) < 1000:
+            return out
+        off += 1000
+
+
+# [(rank, name, F/D/G, team)] from the NHL.com rankings PDF, or a text file with the same "N. Name, P, TEAM" lines
+def parse_ranks(path):
+    if path.lower().endswith('.pdf'):
+        import pypdf
+        text = '\n'.join(p.extract_text() or '' for p in pypdf.PdfReader(path).pages)
+    else:
+        text = open(path, encoding='utf-8').read()
+    rows = {}
+    for line in text.splitlines():
+        m = RANK_LINE.match(line)
+        if m:
+            rows.setdefault(int(m[1]), (int(m[1]), m[2].strip(), m[3], m[4]))
+    return [rows[k] for k in sorted(rows)]
+
+
+def match_rank(by_name, by_last, name, bucket, team):
+    pos = BUCKET[bucket]
+    cands = [p for p in by_name.get(norm(name), []) if p['position'] in pos]
+    if len(cands) > 1:
+        cands = [p for p in cands if p['nhl_team'] == team]
+    if not cands:
+        cands = [p for p in by_last.get(norm(name.split()[-1]), []) if p['position'] in pos and p['nhl_team'] == team]
+    return cands
+
+
+def cmd_ranks_import(a):
+    rows = parse_ranks(a.file)
+    missing = sorted(set(range(1, max((r[0] for r in rows), default=0) + 1)) - {r[0] for r in rows})
+    print(f'parsed {len(rows)} ranks' + (f', missing numbers {missing}' if missing else ''))
+    players = select_all('players', select='id,first_name,last_name,position,nhl_team')
+    by_name, by_last = {}, {}
+    for p in players:
+        by_name.setdefault(norm(full_name(p)), []).append(p)
+        by_last.setdefault(norm(p['last_name'].split()[-1]), []).append(p)
+
+    out, misses, seen = [], [], {}
+    for rank, name, bucket, team in rows:
+        cands = match_rank(by_name, by_last, name, bucket, team)
+        if len(cands) != 1:
+            misses.append((rank, name, bucket, team, cands))
+            continue
+        p = cands[0]
+        if p['id'] in seen:
+            misses.append((rank, name, bucket, team, [p]))
+            continue
+        seen[p['id']] = rank
+        if p['nhl_team'] != team:
+            print(f'  note #{rank} {name}: list says {team}, DB says {p["nhl_team"]}')
+        out.append({'season': a.season, 'player_id': p['id'], 'rank': rank, 'source': a.source})
+
+    for rank, name, bucket, team, cands in misses:
+        print(f'  MISS #{rank} {name} {bucket} {team}: ' +
+              (', '.join(f'{p["id"]} {full_name(p)} {p["position"]} {p["nhl_team"]}' for p in cands) or 'no candidates'))
+    print(f'{len(out)} matched, {len(misses)} missed' + ('' if not misses else f'; fix with: rank-set {a.season} <rank> <player id>'))
+    if a.dry_run:
+        print('dry run, nothing written')
+        return
+    db.delete('player_ranks', season=f'eq.{a.season}', source=f'eq.{a.source}')
+    db.upsert('player_ranks', out, 'season,player_id')
+    print(f'season {a.season}: {len(out)} ranks written ({a.source})')
+
+
+def cmd_rank_set(a):
+    p = resolve_player(a.player)
+    db.upsert('player_ranks', [{'season': a.season, 'player_id': p['id'], 'rank': a.rank, 'source': a.source}], 'season,player_id')
+    print(f'season {a.season}: #{a.rank} {full_name(p)} {p["position"]} {p["nhl_team"]}')
+
+
+def league_draft(league):
+    lg = db.select('leagues', id=f'eq.{league}')
+    if not lg:
+        sys.exit(f'no league {league}')
+    d = db.select('drafts', league_id=f'eq.{league}', season=f'eq.{lg[0]["season"]}')
+    return lg[0], (d[0] if d else None)
+
+
+def print_order(league, order):
+    names = {t['id']: t for t in db.select('teams', league_id=f'eq.{league}')}
+    for i, t in enumerate(order, 1):
+        print(f'  {i:>2}. team {t:>4}  {names[t]["name"]:<28} {names[t]["owner"]}')
+
+
+def save_order(lg, d, order, typ=None):
+    if d and d['status'] == 'done':
+        sys.exit(f'draft already ran at {d["ran_at"]}')
+    vals = {'draft_order': order, **({'type': typ} if typ else {})}
+    if d:
+        db.update('drafts', vals, id=f'eq.{d["id"]}')
+    else:
+        db.insert('drafts', [{'league_id': lg['id'], 'season': lg['season'], **vals}])
+
+
+def cmd_draft_init(a):
+    lg, d = league_draft(a.league)
+    order = [t['id'] for t in db.select('teams', select='id', league_id=f'eq.{a.league}')]
+    if not order:
+        sys.exit('league has no teams')
+    random.shuffle(order)
+    if a.no_order:
+        order = []
+    save_order(lg, d, order, 'linear' if a.linear else 'snake')
+    print(f'league {a.league} draft open ({"linear" if a.linear else "snake"}), ' + ('order TBD' if a.no_order else 'random order:'))
+    print_order(a.league, order)
+
+
+def cmd_draft_order(a):
+    lg, d = league_draft(a.league)
+    if not d:
+        sys.exit('no draft yet: run draft-init first')
+    teams = {t['id'] for t in db.select('teams', select='id', league_id=f'eq.{a.league}')}
+    if len(a.teams) != len(set(a.teams)) or set(a.teams) != teams:
+        sys.exit(f'order must list every team in league {a.league} exactly once: {sorted(teams)}')
+    save_order(lg, d, a.teams)
+    print(f'league {a.league} draft order set:')
+    print_order(a.league, a.teams)
+
+
+def set_draft_time(a, col, label):
+    lg, d = league_draft(a.league)
+    if not d:
+        sys.exit('no draft yet: run draft-init first')
+    if not a.clear and not a.when:
+        sys.exit('pass "YYYY-MM-DD HH:MM" or --clear')
+    at = None if a.clear else datetime.fromisoformat(a.when).replace(tzinfo=ET)
+    db.update('drafts', {col: at.isoformat() if at else None}, id=f'eq.{d["id"]}')
+    print(f'league {a.league} {label} time ' + (at.strftime('%a %b %d %I:%M %p ET') if at else 'cleared'))
+
+
+# Countdown on the draft page only; the draft still runs by hand
+def cmd_draft_time(a):
+    set_draft_time(a, 'scheduled_at', 'draft')
+
+
+# Shown in the banner + trade/waiver hints until midweek runs; still run by hand
+def cmd_midweek_time(a):
+    set_draft_time(a, 'midweek_at', 'midweek')
+
+
+def print_picks(draft_id):
+    picks = db.select('draft_picks', select='overall,round,team_id,wish_rank,players(first_name,last_name,position,nhl_team)',
+                      draft_id=f'eq.{draft_id}', order='overall')
+    for p in picks:
+        pl = p['players']
+        src = f'wish #{p["wish_rank"]}' if p['wish_rank'] else 'auto'
+        print(f'  {p["overall"]:>3}  R{p["round"]}  team {p["team_id"]:>4}  {full_name(pl):<28} {pl["position"]}  {pl["nhl_team"]:<4} {src}')
+
+
+def cmd_draft_show(a):
+    lg, d = league_draft(a.league)
+    if not d:
+        sys.exit('no draft yet: run draft-init first')
+    print(f'league {a.league} season {d["season"]}: {d["type"]}, {d["status"]}'
+          f'{", scheduled " + d["scheduled_at"][:16] if d.get("scheduled_at") else ""}'
+          f'{", ran " + d["ran_at"][:16] if d["ran_at"] else ""}{", midweek " + d["midweek_ran_at"][:16] if d["midweek_ran_at"] else ""}'
+          f'{", midweek posted " + d["midweek_at"][:16] if d.get("midweek_at") and not d["midweek_ran_at"] else ""}')
+    print_order(a.league, d['draft_order'])
+    counts = {}
+    for w in db.select('draft_wishlists', select='team_id', draft_id=f'eq.{d["id"]}'):
+        counts[w['team_id']] = counts.get(w['team_id'], 0) + 1
+    print('wishlists: ' + (', '.join(f'team {t} {n}' for t, n in sorted(counts.items())) or 'none'))
+    if d['status'] == 'done':
+        print_picks(d['id'])
+
+
+def cmd_draft(a):
+    lg, d = league_draft(a.league)
+    if not d or d['status'] != 'open':
+        sys.exit('no open draft for this league')
+    if not a.skip_players:
+        import ingest
+        ingest.refresh_players()
+    res = db.rpc('run_draft', p_league=a.league)
+    print(f'week {res["week"]}: {res["picks"]} picks, {res["from_wishlist"]} from wishlists')
+    print_picks(d['id'])
+
+
+def cmd_midweek(a):
+    res = db.rpc('run_midweek', p_league=a.league)
+    print(f'week {res["week"]}: {res["trades"]} trade(s), {res["waivers"]} waiver claim(s) applied')
+
+
+
+### CHECK-IN ###
+
+ISSUES = Path(__file__).parent.parent / 'ISSUES.md'
+CHANGELOG = Path(__file__).parent.parent / 'CHANGELOG.md'
+
+
+def hours_ago(iso):
+    return (datetime.now(ET) - datetime.fromisoformat(iso)).total_seconds() / 3600
+
+
+# Open items = "- " lines under "## Open" in ISSUES.md
+def open_issues():
+    if not ISSUES.exists():
+        return None
+    out, on = [], False
+    for line in ISSUES.read_text(encoding='utf-8').splitlines():
+        if line.startswith('## '):
+            on = line[3:].strip().lower() == 'open'
+        elif on and line.startswith('- '):
+            out.append(line[2:].strip())
+    return out
+
+
+def cmd_checkin(a):
+    import nhl
+    warns = []
+
+    def check(ok, msg):
+        print(f'  {"ok" if ok else "!!"}  {msg}')
+        if not ok:
+            warns.append(msg)
+
+    def note(msg):
+        print(f'  --  {msg}')
+
+    print('Ingest')
+    p = db.select('players', select='updated_at', order='updated_at.desc', limit=1)
+    check(bool(p) and hours_ago(p[0]['updated_at']) < 30,
+          f'players refreshed {hours_ago(p[0]["updated_at"]):.0f}h ago' if p else 'no players')
+    g = db.select('games', select='ingested_at', order='ingested_at.desc', limit=1)
+    check(bool(g) and hours_ago(g[0]['ingested_at']) < 30,
+          f'last game ingest {hours_ago(g[0]["ingested_at"]):.0f}h ago' if g else 'no games')
+    yday = datetime.now(ET).date() - timedelta(days=1)
+    try:
+        final = [x['id'] for x in nhl.schedule(yday) if x['gameType'] == nhl.REGULAR_SEASON and x['gameState'] in nhl.FINAL_STATES]
+        ids = ','.join(map(str, final))
+        stored = {r['id'] for r in db.select('games', select='id', id=f'in.({ids})')} if final else set()
+        starred = {r['game_id'] for r in db.select('game_stars', select='game_id', game_id=f'in.({ids})')} if final else set()
+        check(len(stored) == len(final), f'{yday}: {len(stored)}/{len(final)} final games stored')
+        if final:
+            check(len(starred) == len(final), f'{yday}: {len(starred)}/{len(final)} games have three stars')
+    except Exception as e:
+        check(False, f'NHL schedule check failed: {e}')
+
+    print('Leagues')
+    cur = current_week()
+    for lg in db.select('leagues', order='id'):
+        name = f'{lg["id"]} {lg["name"]}'
+        last = db.select('roster_weeks', select='week', league_id=f'eq.{lg["id"]}', order='week.desc', limit=1)
+        if not last:
+            note(f'{name}: no rosters yet')
+        else:
+            wk = date.fromisoformat(last[0]['week'])
+            check(wk >= cur, f'{name}: rosters at week {wk}' + ('' if wk >= cur else f', current is {cur} (rollover not done)'))
+        failed = db.select('pending_transactions', select='id', league_id=f'eq.{lg["id"]}', status='eq.failed')
+        if failed:
+            check(False, f'{name}: {len(failed)} failed admin txn(s) (txns {lg["id"]} --all)')
+        d = db.select('drafts', league_id=f'eq.{lg["id"]}', season=f'eq.{lg["season"]}')
+        if not d:
+            continue
+        d = d[0]
+        if d['status'] == 'open':
+            teams = {t['id'] for t in db.select('teams', select='id', league_id=f'eq.{lg["id"]}')}
+            wl = {w['team_id'] for w in db.select('draft_wishlists', select='team_id', draft_id=f'eq.{d["id"]}')}
+            note(f'{name}: draft open, {len(wl)}/{len(teams)} teams have wishlists')
+            check(set(d['draft_order']) == teams, f'{name}: draft order ' + ('set' if set(d['draft_order']) == teams else 'not set or missing teams (draft-init)'))
+            if d.get('scheduled_at') and hours_ago(d['scheduled_at']) > 0:
+                check(False, f'{name}: draft was scheduled {d["scheduled_at"][:16]} UTC and hasn\'t run (draft {lg["id"]})')
+        elif not d['midweek_ran_at'] and d.get('midweek_at'):
+            if hours_ago(d['midweek_at']) > 0:
+                check(False, f'{name}: midweek was posted for {d["midweek_at"][:16]} UTC and hasn\'t run (midweek {lg["id"]})')
+            else:
+                note(f'{name}: midweek posted for {d["midweek_at"][:16]} UTC (midweek {lg["id"]})')
+
+    print('Payments')
+    um = db.select('unmatched_payments', select='session_id', claimed_team='is.null')
+    check(not um, f'{len(um)} unmatched payment(s) (unmatched)' if um else 'no unmatched payments')
+
+    print('Feedback')
+    fb = db.select('feedback', select='id,kind,message,created_at', done='is.false', order='created_at')
+    if not fb:
+        note('no new messages')
+    for r in fb:
+        note(f'#{r["id"]} {r["created_at"][:10]} {r["kind"]}: {r["message"][:90]}')
+    if fb:
+        warns.append(f'{len(fb)} feedback message(s)')
+
+    print('Issues')
+    issues = open_issues()
+    if issues is None:
+        note('no ISSUES.md')
+    else:
+        note(f'{len(issues)} open in ISSUES.md')
+        for i in issues:
+            note(i)
+
+    print('Changelog')
+    weeks = re.findall(r'^## Week of (.+)$', CHANGELOG.read_text(encoding='utf-8'), re.M) if CHANGELOG.exists() else []
+    newest = max((datetime.strptime(w.strip(), '%b %d, %Y').date() for w in weeks), default=None)
+    check(newest is not None and newest >= cur - timedelta(days=7),
+          f'newest entry: week of {newest}' + ('' if newest and newest >= cur - timedelta(days=7) else ', add this week\'s (CHANGELOG.md)')
+          if newest else 'no "## Week of Mon D, YYYY" entries in CHANGELOG.md')
+
+    print(f'\n{len(warns)} thing(s) need attention' if warns else '\nall good')
+
+
+
 ### TEST LEAGUE ###
 
 TEST_TEAMS = [
@@ -328,8 +720,11 @@ def cmd_seed_test(a):
         if not a.reset:
             sys.exit('league 0 exists, pass --reset to recreate')
         db.delete('leagues', id='eq.0')
-    db.insert('leagues', [{'id': 0, 'name': 'Test League', 'season': 20262027,
-                              'first_scoring_week': str(week), 'hidden': True}])
+    lg = db.insert('leagues', [{'id': 0, 'name': 'Test League', 'season': 20262027,
+                                   'first_scoring_week': str(week), 'hidden': True, **config_vals(a)}])[0]
+    pool_of = {'F': lambda: 'F', 'D': lambda: 'D', 'G': lambda: 'G',
+               'X': lambda: random.choice('FD'), 'S': lambda: random.choice('FFFDDG')}
+    slots = [f'{t}{i}' for t in SLOT_TYPES for i in range(1, lg[f'n_{t.lower()}'] + 1)]
 
     # Prefer players who have actually played so scores are non-trivial
     played = {r['player_id'] for r in db.select('player_game_stats', select='player_id')}
@@ -342,8 +737,8 @@ def cmd_seed_test(a):
     rows = []
     for name, owner, color, icon in TEST_TEAMS:
         t = db.insert('teams', [{'league_id': 0, 'name': name, 'owner': owner, 'color': color, 'icon_path': icon}])[0]
-        picks = [('F1', 'F'), ('F2', 'F'), ('D1', 'D'), ('D2', 'D'), ('G', 'G'), ('X', random.choice('FD'))]
-        for slot, pool in picks:
+        for slot in slots:
+            pool = pool_of[slot[0]]()
             rows.append({'league_id': 0, 'week': str(week), 'team_id': t['id'], 'player_id': pools[pool].pop()['id'], 'slot': slot})
         print(f'team {t["id"]}: {name}')
     db.insert('roster_weeks', rows)
@@ -363,7 +758,13 @@ def main():
     p.add_argument('--season', type=int, default=20262027)
     p.add_argument('--first-week', default='2026-10-05')
     p.add_argument('--public', action='store_true', help='leagues are hidden by default')
+    add_config_args(p)
     p.set_defaults(fn=cmd_create_league)
+
+    p = sp.add_parser('league-config', help='show or change roster slot counts and team cap')
+    p.add_argument('league', type=int)
+    add_config_args(p)
+    p.set_defaults(fn=cmd_league_config)
 
     p = sp.add_parser('leagues', help='list leagues; optional name search (case-insensitive, partial)')
     p.add_argument('query', nargs='?')
@@ -405,7 +806,17 @@ def main():
     p.add_argument('--note')
     p.set_defaults(fn=cmd_grant_dekes)
 
-    p = sp.add_parser('deke-log', help='every Deke purchase, grant and spend for a team')
+    p = sp.add_parser('supporter', help='mark a team as Three Stars Supporter for its league\'s season (auto on any 40+ Deke purchase)')
+    p.add_argument('team', type=int)
+    p.add_argument('--off', action='store_true')
+    p.set_defaults(fn=cmd_supporter)
+
+    p = sp.add_parser('grant-pass', help='free weekly reaction pass for every team in a league (default current week)')
+    p.add_argument('league', type=int)
+    p.add_argument('--week')
+    p.set_defaults(fn=cmd_grant_pass)
+
+    p = sp.add_parser('deke-log',help='every Deke purchase, grant and spend for a team')
     p.add_argument('team', type=int)
     p.set_defaults(fn=cmd_deke_log)
 
@@ -425,6 +836,17 @@ def main():
 
     p = sp.add_parser('suggestions', help='icon suggestions from owners')
     p.set_defaults(fn=cmd_suggestions)
+
+    p = sp.add_parser('checkin', help='daily dev check: ingest/rollover health, drafts, payments, feedback, ISSUES.md')
+    p.set_defaults(fn=cmd_checkin)
+
+    p = sp.add_parser('feedback', help='messages sent from the Support page (unhandled only unless --all)')
+    p.add_argument('--all', action='store_true')
+    p.set_defaults(fn=cmd_feedback)
+
+    p = sp.add_parser('feedback-done', help='mark feedback messages handled')
+    p.add_argument('ids', type=int, nargs='+')
+    p.set_defaults(fn=cmd_feedback_done)
 
     p = sp.add_parser('teams')
     p.add_argument('league', type=int)
@@ -502,9 +924,60 @@ def main():
     p.add_argument('league', type=int, nargs='?')
     p.set_defaults(fn=cmd_rollover)
 
+    p = sp.add_parser('ranks-import', help='default draft ranking from the NHL.com rankings PDF (or a text file of "N. Name, P, TEAM" lines)')
+    p.add_argument('file')
+    p.add_argument('--season', type=int, default=20262027)
+    p.add_argument('--source', default='nhl.com top 200')
+    p.add_argument('--dry-run', action='store_true', help='match and report only')
+    p.set_defaults(fn=cmd_ranks_import)
+
+    p = sp.add_parser('rank-set', help='set one player\'s default draft rank (fix ranks-import misses)')
+    p.add_argument('season', type=int)
+    p.add_argument('rank', type=int)
+    p.add_argument('player')
+    p.add_argument('--source', default='nhl.com top 200')
+    p.set_defaults(fn=cmd_rank_set)
+
+    p = sp.add_parser('draft-init', help='open the league\'s draft with a random order; re-run to re-roll until it runs')
+    p.add_argument('league', type=int)
+    p.add_argument('--linear', action='store_true', help='same order every round (default snake)')
+    p.add_argument('--no-order', action='store_true', help='open for wishlists, order TBD (re-run without it to roll)')
+    p.set_defaults(fn=cmd_draft_init)
+
+    p = sp.add_parser('draft-order', help='set the full draft order by hand')
+    p.add_argument('league', type=int)
+    p.add_argument('teams', type=int, nargs='+', help='team ids, first pick first')
+    p.set_defaults(fn=cmd_draft_order)
+
+    p = sp.add_parser('draft-time', help='when the draft will run, for the countdown on the draft page (ET)')
+    p.add_argument('league', type=int)
+    p.add_argument('when', nargs='?', help='"YYYY-MM-DD HH:MM" Eastern, e.g. "2026-10-03 17:00"')
+    p.add_argument('--clear', action='store_true')
+    p.set_defaults(fn=cmd_draft_time)
+
+    p = sp.add_parser('draft-show', help='draft order, wishlist counts, picks')
+    p.add_argument('league', type=int)
+    p.set_defaults(fn=cmd_draft_show)
+
+    p = sp.add_parser('draft', help='run the draft now into the current week (refreshes NHL rosters first)')
+    p.add_argument('league', type=int)
+    p.add_argument('--skip-players', action='store_true', help='skip the roster refresh')
+    p.set_defaults(fn=cmd_draft)
+
+    p = sp.add_parser('midweek', help='one extra trades + waivers pass after the draft, reverse draft order; once per draft')
+    p.add_argument('league', type=int)
+    p.set_defaults(fn=cmd_midweek)
+
+    p = sp.add_parser('midweek-time', help='when midweek will run, shown to players until it does (ET)')
+    p.add_argument('league', type=int)
+    p.add_argument('when', nargs='?', help='"YYYY-MM-DD HH:MM" Eastern, e.g. "2026-10-04 04:00"')
+    p.add_argument('--clear', action='store_true')
+    p.set_defaults(fn=cmd_midweek_time)
+
     p = sp.add_parser('seed-test')
     p.add_argument('--week', help='first week, default 2026-09-28')
     p.add_argument('--reset', action='store_true')
+    add_config_args(p)
     p.set_defaults(fn=cmd_seed_test)
 
     a = ap.parse_args()

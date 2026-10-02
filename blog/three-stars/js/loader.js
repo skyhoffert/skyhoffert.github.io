@@ -23,6 +23,7 @@ let raf = 0;
 // ### ANIMATION ###
 
 function init() {
+    showTextWhenFonts();
     const stage = overlay.querySelector('.loader-stage');
     stage.innerHTML = puck('loader-puck') + stick('loader-stick');
     cycleWords(overlay.querySelector('.loader-word'));
@@ -50,6 +51,13 @@ function init() {
         raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
+}
+
+// Text stays hidden until its webfonts load so it doesn't flash in the fallback font (capped so it can't stay blank)
+function showTextWhenFonts() {
+    const fonts = Promise.all(['italic 800 1em "Barlow Condensed"', '1em Michroma'].map(f => document.fonts.load(f)));
+    Promise.race([fonts, new Promise(r => setTimeout(r, 1500))])
+        .finally(() => overlay.classList.add('fonts'));
 }
 
 // swap word at the dim point of each pulse so the change is hidden

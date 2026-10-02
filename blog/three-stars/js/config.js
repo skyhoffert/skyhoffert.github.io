@@ -6,22 +6,39 @@ export const SUPABASE_KEY = 'sb_publishable_VbYYEdmoMrfSK_RAaFEIGA_hNJM_0Z_';
 // ### DEKES ###
 
 // Stripe Payment Link per bundle (leave '' until created; button shows "Soon"). Team id is appended as client_reference_id.
+// supporter: 40+ Dekes in one purchase also makes the team a Three Stars Supporter (add_dekes, sql/08)
 export const DEKE_BUNDLES = [
     { dekes: 3, price: '$3', url: 'https://buy.stripe.com/9B6cN64ON1fj3Ek9LWenS03' },
     { dekes: 7, price: '$5', url: 'https://buy.stripe.com/eVq9AUbdb3nr8YE7DOenS04' },
     { dekes: 15, price: '$10', url: 'https://buy.stripe.com/bJe28s6WV1fj6QwgakenS05' },
+    { dekes: 40, price: '$20', url: 'https://buy.stripe.com/aFa6oIftr2jn5Ms5vGenS06', supporter: true },
 ];
+export const SUPPORTER_BUNDLE = DEKE_BUNDLES.find(b => b.supporter);
 
-// Reaction emojis, img/emoji/<id>.svg; keep in sync w/ reaction_emojis() in sql/09_reactions.sql. fire is free.
+// Reaction emojis, img/emoji/<id>.<ext> (ext default svg); keep in sync w/ reaction_emojis() in sql/09_reactions.sql. fire is free.
 export const EMOJIS = [
     { id: 'fire', label: 'Fire' },
     { id: 'lamp', label: 'Goal lamp' },
     { id: 'hat', label: 'Hat trick' },
     { id: 'trash', label: 'Trash' },
     { id: 'angry', label: 'Angry' },
+    { id: 'star1', label: 'First star' },
+    { id: 'star2', label: 'Second star' },
+    { id: 'star3', label: 'Third star' },
+    { id: 'heart', label: 'Heart' },
+    { id: 'cry', label: 'Crying' },
+    { id: 'poop', label: 'Poop' },
+    { id: 'brain', label: 'Big brain' },
+    { id: 'thumbsup', label: 'Thumbs up' },
+    { id: 'thumbsdown', label: 'Thumbs down' },
+    { id: 'eyes', label: 'Eyes' },
+    { id: 'skull', label: 'Skull' },
+    { id: 'O_O', label: 'O_O', ext: 'png' },
+    { id: 'sidemouth', label: 'Side mouth', ext: 'png' },
 ];
 export const EMOJI_PRICE = 3;
 export const PASS_PRICE = 1;
+export const SEASON_PASS_PRICE = 10;
 
 // Preset team icons; customize_team only accepts img/teams/<slug>.(svg|png)
 export const ICONS = [

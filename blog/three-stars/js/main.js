@@ -3,15 +3,17 @@ import { route, start, refresh } from './router.js';
 import { getMe, onMeChange } from './session.js';
 import { signInDialog, leagueDialog, reactDialog } from './dialogs.js';
 import { LEAGUE } from './config.js';
-import { esc, teamBadge } from './render.js';
+import { esc, teamBadge, supporterStar } from './render.js';
 import { standingsPage } from './pages/standings.js';
 import { weekPage } from './pages/week.js';
 import { teamsPage } from './pages/teams.js';
 import { teamPage } from './pages/team.js';
 import { historyPage } from './pages/history.js';
 import { playersPage } from './pages/players.js';
+import { draftPage } from './pages/draft.js';
 import { helpPage } from './pages/help.js';
 import { supportPage } from './pages/support.js';
+import { changesPage } from './pages/changes.js';
 import { joinPage } from './pages/join.js';
 
 
@@ -29,13 +31,15 @@ if (joined) {
     route('team', teamPage);
     route('history', historyPage);
     route('players', playersPage);
+    route('draft', draftPage);
 }
 route('help', helpPage);
 route('support', supportPage);
+route('changes', changesPage);
 
 finishLoader(start(document.getElementById('app'), name => {
     const mine = name === 'team' && location.hash.split('/')[2] === String(getMe()?.team.id);
-    const page = mine ? null : name === 'team' ? 'teams' : name;
+    const page = mine ? null : name === 'team' ? 'teams' : name === 'draft' ? 'history' : name === 'changes' ? 'support' : name;
     for (const a of document.querySelectorAll('#nav a')) {
         a.classList.toggle('active', a.dataset.page === page);
     }
@@ -55,7 +59,7 @@ function renderMe() {
     if (me) {
         myTeam.href = `#/team/${me.team.id}`;
         myTeam.style.setProperty('--team', me.team.color);
-        myTeam.innerHTML = `${teamBadge(me.team, 'sm')}<span>${esc(me.team.name)}</span>`;
+        myTeam.innerHTML = `${teamBadge(me.team, 'sm')}<span>${esc(me.team.name)}${supporterStar(me.team)}</span>`;
     }
     const label = me ? `Signed in as ${me.team.name}` : 'Sign in';
     meBtn.title = label;

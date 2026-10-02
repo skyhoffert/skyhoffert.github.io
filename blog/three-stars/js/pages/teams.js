@@ -1,5 +1,5 @@
 import { getStandings } from '../api.js';
-import { esc, setLeague, notFound, teamBadge } from '../render.js';
+import { esc, setLeague, notFound, draftBanner, teamBadge, supporterStar } from '../render.js';
 
 
 
@@ -10,7 +10,7 @@ function teamCard(r) {
     return `
         <a class="team-card" href="#/team/${t.id}" style="--team:${esc(t.color)}">
             ${teamBadge(t, 'lg')}
-            <span class="team-text"><b>${esc(t.name)}</b><small>${esc(t.owner)}</small></span>
+            <span class="team-text"><b>${esc(t.name)}${supporterStar(t)}</b><small>${esc(t.owner)}</small></span>
             <span class="record"><b>${r.sp} SP</b><small>${r.place1}-${r.place2}-${r.place3}</small></span>
         </a>`;
 }
@@ -21,6 +21,7 @@ export async function teamsPage() {
     setLeague(s.league);
     const teams = [...s.standings].sort((a, b) => a.team.name.localeCompare(b.team.name));
     return `
+        ${draftBanner(s.league)}
         <section>
             <h1>Teams</h1>
             <p class="sub">Tap a team to see its roster.</p>

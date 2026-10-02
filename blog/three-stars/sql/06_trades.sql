@@ -1,7 +1,8 @@
 -- ### HELPERS ###
 
 -- Where every traded player lands for p_week, as [{player_id, team_id, slot}].
--- Incoming players fill the slots freed by outgoing ones (specific slot before X). With one X, greedy is exact.
+-- Incoming players fill the slots freed by outgoing ones: goalies first, each taking specific before X before S.
+-- Greedy is exact: a specific slot only takes its own position, and once goalies are placed X and S are interchangeable.
 -- Null if any player is no longer on the giving team or the slots don't work out.
 create or replace function trade_plan(p_trade int, p_week date)
 returns jsonb
@@ -40,8 +41,9 @@ begin
     for p in
       select tp.player_id, pl.position from trade_players tp join players pl on pl.id = tp.player_id
       where tp.trade_id = p_trade and tp.from_team = give
+      order by pl.position = 'G' desc
     loop
-      select f into s from unnest(free) f where slot_fits(f, p.position) order by f = 'X' limit 1;
+      select f into s from unnest(free) f where slot_fits(f, p.position) order by strpos('FDGXS', left(f, 1)) limit 1;
       if s is null then
         return null;
       end if;
@@ -86,9 +88,9 @@ security definer
 set search_path = public
 as $$
   select coalesce(
-    (select pl.last_name || ' is on Waiver Out. Remove it first.'
-     from waiver_outs wo join players pl on pl.id = wo.player_id
-     where wo.league_id = p_league and wo.player_id = any(p_players) limit 1),
+    (select pl.last_name || ' is the drop in a waiver claim. Remove the claim first.'
+     from waiver_ins wi join players pl on pl.id = wi.drop_player_id
+     where wi.league_id = p_league and wi.drop_player_id = any(p_players) limit 1),
     (select pl.last_name || ' is already in an accepted trade.'
      from trade_players tp join trades t on t.id = tp.trade_id join players pl on pl.id = tp.player_id
      where t.league_id = p_league and t.status = 'accepted' and t.id is distinct from p_ignore

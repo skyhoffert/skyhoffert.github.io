@@ -1,6 +1,6 @@
 import { getWeek, getReactions } from '../api.js';
 import { getMe } from '../session.js';
-import { setLeague, notFound, teamLabel, rosterTable, weekNav, fmtWeek, movesList, spChip, placeClass } from '../render.js';
+import { setLeague, notFound, draftBanner, teamLabel, rosterTable, weekNav, fmtWeek, movesList, spChip, placeClass } from '../render.js';
 
 
 
@@ -26,6 +26,7 @@ export async function weekPage(week) {
     // Reactions only live on the current week's moves; they clear at rollover
     const react = w.nav.week === w.nav.current_week ? { week: w.nav.week, reactions, meId: getMe()?.team.id } : null;
     return `
+        ${draftBanner(w.league)}
         <section>
             <h1>Week of ${fmtWeek(w.nav.week)}</h1>
             ${weekNav(w.nav, '#/week/')}

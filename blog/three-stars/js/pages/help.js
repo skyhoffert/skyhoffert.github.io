@@ -1,13 +1,17 @@
 import { getStandings } from '../api.js';
-import { setLeague } from '../render.js';
+import { setLeague, slotSummary } from '../render.js';
 
 
 
 // ### PAGE ###
 
 export function helpPage() {
-    // static page; fetch only so the header shows the league name
-    getStandings().then(s => setLeague(s.league)).catch(() => {});
+    // static page; fetch for the header's league name and this league's roster slots
+    getStandings().then(s => {
+        setLeague(s.league);
+        const slots = document.querySelector('[data-slots]');
+        if (slots && s.league?.slots) slots.innerHTML = `${s.league.slots.length} slots: ${slotSummary(s.league.slots)}`;
+    }).catch(() => {});
     return `
         <section>
             <h1>Help</h1>
@@ -26,7 +30,7 @@ export function helpPage() {
         <section>
             <h2>Rosters</h2>
             <div class="prose">
-                <p>Each team has 6 slots: <b>2 F</b>, <b>2 D</b>, <b>1 G</b> and <b>1 Flex</b> (any F or D).
+                <p>Each team has <span data-slots>the slots your league sets: F, D, G, Flex (any F or D) and Superflex (any player)</span>.
                 A player can only be on one team in the league.</p>
             </div>
         </section>
@@ -67,13 +71,27 @@ export function helpPage() {
         </section>
 
         <section>
+            <h2>Draft</h2>
+            <div class="prose">
+                <p>New leagues start with an automatic draft. While it's open, a banner links to the <b>Draft</b> page
+                (afterwards it lives at the bottom of History). Sign in and build a <b>wishlist</b> of up to three times
+                your roster size, best first, then hit Save.</p>
+                <p>The draft runs all at once in a snake order. On each of your picks you get the first wishlist player
+                still available who fits an open slot. If none are left, you get the best available player by the
+                default ranking (NHL.com's top 200). Results show which picks came from your wishlist.</p>
+            </div>
+        </section>
+
+        <section>
             <h2>My team</h2>
             <div class="prose">
                 <p>Tap the <b>profile icon</b> at the top right and sign in with your team and PIN. Your device
                 remembers you, and your team button then takes you straight to your roster.</p>
-                <p>From your team page you can give players a <b>nickname</b>, and mark players as <b>Waiver Out</b>.
-                From the Players page you can claim free agents as <b>Waiver In</b>. Both lists are private, ordered by
-                when you added them.</p>
+                <p>From your team page you can give players a <b>nickname</b>.</p>
+                <p>From the Players page you can put in a <b>waiver claim</b> on a free agent: pick who you'd drop for
+                them. The new player takes the dropped player's slot, so the drop must be in a slot that fits. You
+                can use the same drop on several claims as backups. Claims are private and ordered by when you
+                added them.</p>
                 <p>From another team's page you can propose a <b>trade</b>. They can accept or reject, and you can
                 cancel while it's pending. Accepted trades are final.</p>
             </div>
@@ -82,15 +100,16 @@ export function helpPage() {
         <section>
             <h2>Dekes</h2>
             <div class="prose">
-                <p><b>Dekes</b> let you customize your team. Each change costs 1 Deke: a new <b>team name</b>,
-                <b>color</b>, <b>icon</b>, or a new <b>player nickname</b>. They're cosmetic only and never affect scoring.
-                Clearing a nickname and Waiver Outs are always free.</p>
+                <p><b>Dekes</b> let you customize your team. A new <b>team name</b>, <b>color</b> or
+                <b>player nickname</b> costs 1 Deke; a new <b>icon</b> costs 2. They're cosmetic only and never affect scoring.
+                Clearing a nickname or icon and waiver claims are always free.</p>
                 <p><b>Reactions</b>: tap the <b>+</b> on one of this week's Moves or a Recent Three Stars game to react
-                with an emoji. Reacting needs a <b>weekly reaction pass</b> (1 Deke, good until Monday's rollover), and you
+                with an emoji. Reacting needs a <b>weekly reaction pass</b> (1 Deke, good until Monday's rollover) or a
+                <b>season pass</b> (10 Dekes, every week for the rest of the season), and you
                 can react with any emoji in your pool. Everyone starts with fire; each extra emoji costs 3 Dekes and is
                 yours for good. One reaction per team on each item; change it while your pass is active, or remove it any time.</p>
                 <p>Buy Dekes in bundles from the <b>Dekes</b> section of your team page. Every purchase helps keep
-                Three Stars ad-free. Got an idea for a new icon? Suggest it there for free.</p>
+                Three Stars ad-free. Got an idea for a new icon? Send it with Message the Dev on the Support page.</p>
             </div>
         </section>
 
@@ -102,10 +121,13 @@ export function helpPage() {
                     <li>Commissioner fixes</li>
                     <li>Accepted trades, in the order they were accepted</li>
                     <li>Waivers. Lowest score last week picks first, then lowest SP, then lowest season points.
-                    Each team gets at most one claim per round, and a claim only succeeds if one of your
-                    Waiver Outs fits the player's position.</li>
+                    Right after a draft, before scoring starts, it's reverse draft order instead.
+                    Each team gets at most one claim per round, in your order. A claim is skipped if the player
+                    was already taken or its drop player has left your team.</li>
                 </ol>
                 <p>Unanswered trades expire and all waiver lists are cleared. Every move shows up on the Week and History pages.</p>
+                <p>Some leagues get one <b>extra run</b> of trades and waivers after the draft. When one is coming, a
+                banner at the top shows the time.</p>
             </div>
         </section>`;
 }

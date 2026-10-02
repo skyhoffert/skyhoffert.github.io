@@ -11,6 +11,9 @@ Create one product per bundle, each with a one-time price and **metadata `dekes`
 | 3 Dekes | $3.00 | `dekes` = `3` |
 | 7 Dekes | $5.00 | `dekes` = `7` |
 | 15 Dekes | $10.00 | `dekes` = `15` |
+| 40 Dekes (Supporter) | $20.00 | `dekes` = `40` |
+
+Any single purchase of 40+ Dekes also makes the team a Three Stars Supporter for the league's season (`add_dekes` in `sql/08_dekes.sql`); no webhook change needed.
 
 ## 2. Payment Links (Stripe dashboard → Payment Links)
 

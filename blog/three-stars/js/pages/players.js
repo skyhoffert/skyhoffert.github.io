@@ -1,7 +1,7 @@
 import { getPlayers } from '../api.js';
 import { getMe, loadMine } from '../session.js';
 import { waiverInSheet } from '../dialogs.js';
-import { el, setLeague, notFound, playerName, ownerChip, starPips, signed, pill } from '../render.js';
+import { el, esc, setLeague, notFound, playerName, ownerChip, starPips, signed, pill, nextRun } from '../render.js';
 
 
 
@@ -36,6 +36,7 @@ function playersTable(players, ins) {
 }
 
 const insMap = mine => mine ? Object.fromEntries(mine.ins.map(p => [p.id, p.n])) : null;
+const claimOf = (mine, id) => mine?.ins.find(p => p.id === id) ?? null;
 
 
 
@@ -47,8 +48,9 @@ export async function playersPage() {
     setLeague(first.league);
 
     let players = first.players;
-    let ins = insMap(firstMine);
-    const hint = ins ? 'Tap a free agent to put in a waiver claim.' : 'Sign in to claim free agents.';
+    let mine = firstMine;
+    let ins = insMap(mine);
+    const hint = ins ? `Tap a free agent to put in a waiver claim. Next processed ${esc(nextRun())}.` : 'Sign in to claim free agents.';
 
     const page = el(`
         <section>
@@ -77,9 +79,10 @@ export async function playersPage() {
 
     const load = async () => {
         const my = ++seq;
-        const [data, mine] = await Promise.all([getPlayers(Object.fromEntries(new FormData(form))), getMe() ? loadMine() : null]);
+        const [data, m] = await Promise.all([getPlayers(Object.fromEntries(new FormData(form))), getMe() ? loadMine() : null]);
         if (my !== seq) return;
         players = data.players;
+        mine = m;
         ins = insMap(mine);
         results.innerHTML = playersTable(players, ins);
     };
@@ -92,7 +95,7 @@ export async function playersPage() {
         const row = e.target.closest('tr.editable');
         if (!row) return;
         const p = players.find(x => x.id === Number(row.dataset.player));
-        if (p && await waiverInSheet(p, ins?.[p.id])) load();
+        if (p && await waiverInSheet(p, claimOf(mine, p.id))) load();
     });
     return page;
 }

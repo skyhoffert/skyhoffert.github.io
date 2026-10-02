@@ -18,8 +18,9 @@ stable
 security definer
 set search_path = public
 as $$
-  select jsonb_build_object('id', id, 'name', name, 'owner', owner, 'color', color, 'icon_path', icon_path)
-  from teams where id = p_team;
+  select jsonb_build_object('id', t.id, 'name', t.name, 'owner', t.owner, 'color', t.color, 'icon_path', t.icon_path,
+                            'supporter', t.supporter_season is not distinct from l.season)
+  from teams t join leagues l on l.id = t.league_id where t.id = p_team;
 $$;
 
 -- p_team is the owner whose nickname applies; null means no nickname
@@ -51,8 +52,12 @@ stable
 security definer
 set search_path = public
 as $$
-  select jsonb_build_object('id', id, 'name', name, 'season', season, 'first_scoring_week', first_scoring_week)
-  from leagues where id = p_league;
+  select jsonb_build_object('id', l.id, 'name', l.name, 'season', l.season, 'first_scoring_week', l.first_scoring_week,
+                            'slots', to_jsonb(slot_list(l.n_f, l.n_d, l.n_g, l.n_x, l.n_s)), 'max_teams', l.max_teams,
+                            'draft_status', (select d.status from drafts d where d.league_id = l.id and d.season = l.season),
+                            'midweek_at', (select d.midweek_at from drafts d
+                                           where d.league_id = l.id and d.season = l.season and d.midweek_ran_at is null))
+  from leagues l where l.id = p_league;
 $$;
 
 create or replace function team_week_json(p_league int, p_team int, p_week date)
@@ -88,7 +93,7 @@ as $$
           'bonus_points', rp.bonus_points,
           'total_points', rp.total_points
         )
-        order by array_position(array['F1', 'F2', 'D1', 'D2', 'G', 'X'], rp.slot))
+        order by strpos('FDGXS', left(rp.slot, 1)), rp.slot)
       from roster_week_points rp
       where rp.league_id = p_league and rp.team_id = p_team and rp.week = p_week
     ), '[]'::jsonb)

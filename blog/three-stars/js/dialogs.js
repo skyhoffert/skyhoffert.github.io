@@ -1,8 +1,8 @@
-import { getStandings, signIn, checkLeague, updateRosterPlayer, setWaiverIn, proposeTrade, respondTrade, cancelTrade, customizeTeam, suggestIcon,
+import { getStandings, getTeam, signIn, checkLeague, updateRosterPlayer, setWaiverIn, proposeTrade, respondTrade, cancelTrade, customizeTeam,
     getReactions, getMyReactions, react, buyReactionItem } from './api.js';
-import { LEAGUE, LEAGUES, ICONS, EMOJIS, EMOJI_PRICE, PASS_PRICE, joinLeague, switchLeague, leaveLeague } from './config.js';
+import { LEAGUE, LEAGUES, ICONS, EMOJIS, EMOJI_PRICE, PASS_PRICE, SEASON_PASS_PRICE, joinLeague, switchLeague, leaveLeague } from './config.js';
 import { getMe, setMe } from './session.js';
-import { el, esc, SLOT_LABEL, emojiImg } from './render.js';
+import { el, esc, slotLabel, slotFits, emojiImg, nextRun } from './render.js';
 
 
 
@@ -151,6 +151,7 @@ const CUSTOM = {
     },
     icon: {
         title: 'Team Icon',
+        cost: 2,
         body: t => `<div class="icon-grid">
             ${[{ path: '', label: 'None' }, ...ICONS].map(i => `
                 <label class="icon-opt">
@@ -162,31 +163,23 @@ const CUSTOM = {
     },
 };
 
-// Spends 1 Deke; on success the session team is refreshed (header button, page)
+export const customCost = field => CUSTOM[field].cost ?? 1;
+
+// Spends Dekes; on success the session team is refreshed (header button, page)
 export function customizeDialog(field, dekes) {
     const me = getMe();
     const c = CUSTOM[field];
+    const cost = dekesWord(customCost(field));
     return openDialog({
         title: c.title,
-        sub: `Costs <b>1 Deke</b>. You have <b>${dekes}</b>.`,
+        sub: `Costs <b>${cost}</b>${field === 'icon' ? ' (None is free)' : ''}. You have <b>${dekes}</b>.`,
         body: c.body(me.team),
-        submitLabel: 'Spend 1 Deke',
+        submitLabel: `Spend ${cost}`,
         onSubmit: async (action, f) => {
             const res = await customizeTeam(me.team.id, me.pin, field, f.value ?? '');
             if (res.ok) setMe({ ...me, team: res.team });
             return res;
         },
-    });
-}
-
-export function suggestIconDialog() {
-    const me = getMe();
-    return openDialog({
-        title: 'Suggest an Icon',
-        sub: 'Free. Describe an icon you\'d like added to the list.',
-        body: '<label>Your idea<textarea name="text" maxlength="200" rows="3" placeholder="e.g. a goalie mask"></textarea></label>',
-        submitLabel: 'Send',
-        onSubmit: (action, f) => suggestIcon(me.team.id, me.pin, f.text),
     });
 }
 
@@ -230,8 +223,8 @@ export async function reactDialog(target) {
             ${locked.slice(0, 4).map(e => `<span title="${esc(e.label)}">${emojiImg(e.id)}</span>`).join('')}${more}
             <small>Unlock more for ${EMOJI_PRICE} Dekes each on your team page.</small>
         </div>` : '';
-    const sub = mine.pass
-        ? 'Reaction pass active this week.'
+    const sub = mine.season_pass ? 'Season pass active.'
+        : mine.pass ? 'Reaction pass active this week.'
         : `Reacting needs this week's pass: <b>${dekesWord(PASS_PRICE)}</b>. You have <b>${mine.dekes}</b>.`;
     return openDialog({
         title: 'React',
@@ -248,17 +241,25 @@ export async function reactDialog(target) {
     });
 }
 
-// item: 'pass' or an emoji id
+const PASSES = {
+    pass: { title: 'Reaction Pass', cost: PASS_PRICE,
+        body: 'React to this week\'s Moves and Recent Three Stars games as much as you like until Monday\'s rollover.' },
+    season: { title: 'Season Pass', cost: SEASON_PASS_PRICE,
+        body: 'React as much as you like every week for the rest of this season. No weekly pass needed.' },
+};
+
+// item: 'pass', 'season' or an emoji id
 export function buyReactionDialog(item, dekes) {
     const me = getMe();
     const e = EMOJIS.find(x => x.id === item);
-    const cost = e ? EMOJI_PRICE : PASS_PRICE;
+    const p = PASSES[item];
+    const cost = e ? EMOJI_PRICE : p.cost;
     return openDialog({
-        title: e ? `Unlock ${e.label}` : 'Reaction Pass',
+        title: e ? `Unlock ${e.label}` : p.title,
         sub: `Costs <b>${dekesWord(cost)}</b>. You have <b>${dekes}</b>.`,
         body: e
             ? `<p class="note react-preview">${emojiImg(e.id)} Yours for good. Use it with a reaction pass.</p>`
-            : '<p class="note">React to this week\'s Moves and Recent Three Stars games as much as you like until Monday\'s rollover.</p>',
+            : `<p class="note">${p.body}</p>`,
         submitLabel: `Spend ${dekesWord(cost)}`,
         onSubmit: () => buyReactionItem(me.team.id, me.pin, item),
     });
@@ -268,7 +269,7 @@ export function buyReactionDialog(item, dekes) {
 
 // ### ROSTER PLAYER ###
 
-export function playerSheet(player, outN, dekes) {
+export function playerSheet(player, dekes) {
     const me = getMe();
     return openDialog({
         title: player.name,
@@ -277,12 +278,8 @@ export function playerSheet(player, outN, dekes) {
             <label>Nickname
                 <input name="nickname" maxlength="20" autocomplete="off" value="${esc(player.nickname ?? '')}" placeholder="Leave blank to clear">
             </label>
-            <p class="hint">A new nickname costs <b>1 Deke</b> (you have ${dekes}). Clearing one is free.</p>
-            <label class="check">
-                <input type="checkbox" name="out" ${outN ? 'checked' : ''}>
-                <span>Waiver Out${outN ? ` <b>#${outN}</b>` : ''}<small>Dropped if one of your Waiver Ins succeeds. #1 goes first.</small></span>
-            </label>`,
-        onSubmit: (_, f) => updateRosterPlayer(me.team.id, me.pin, player.id, f.nickname, f.out === 'on'),
+            <p class="hint">A new nickname costs <b>1 Deke</b> (you have ${dekes}). Clearing one is free.</p>`,
+        onSubmit: (_, f) => updateRosterPlayer(me.team.id, me.pin, player.id, f.nickname),
     });
 }
 
@@ -290,16 +287,26 @@ export function playerSheet(player, outN, dekes) {
 
 // ### WAIVER IN ###
 
-export function waiverInSheet(player, inN) {
+// claim: existing {n, drop} or null. Drop choices = my current roster players whose slot fits the claimed player.
+export async function waiverInSheet(player, claim) {
     const me = getMe();
+    const mine = await getTeam(me.team.id);
+    const fits = mine.week.players.filter(p => slotFits(p.slot, player.position));
+    const opts = fits.map(p => `<option value="${p.id}" ${claim?.drop.id === p.id ? 'selected' : ''}>` +
+        `${esc(p.name)} · ${slotLabel(p.slot)} · ${esc(p.position)}</option>`).join('');
+    const body = fits.length
+        ? `<label>Drop<select name="drop">${opts}</select></label>
+            <p class="note"><small>Processed ${esc(nextRun())}. ${esc(player.name)} takes the dropped player's slot.
+            If the claim fails, nobody is dropped.</small></p>`
+        : `<p class="note">None of your roster slots fit a ${esc(player.position)}.</p>`;
     return openDialog({
-        title: inN ? `Waiver In #${inN}` : 'Waiver In',
+        title: claim ? `Waiver In #${claim.n}` : 'Waiver In',
         sub: `${esc(player.name)} · ${esc(player.position)} · ${esc(player.nhl_team ?? '')}`,
-        body: inN
-            ? '<p class="note">Remove this claim? Your other claims move up.</p>'
-            : `<p class="note">Claim for <b>${esc(me.team.name)}</b>. Processed Monday morning; needs a Waiver Out whose slot fits.</p>`,
-        submitLabel: inN ? 'Remove claim' : 'Claim',
-        onSubmit: () => setWaiverIn(me.team.id, me.pin, player.id, !inN),
+        body,
+        submitLabel: !fits.length ? null : claim ? 'Save' : 'Claim',
+        cancelLabel: fits.length ? 'Cancel' : 'Close',
+        extra: claim ? [{ label: 'Remove claim', action: 'remove', cls: 'danger' }] : [],
+        onSubmit: (action, f) => setWaiverIn(me.team.id, me.pin, player.id, action === 'remove' ? null : Number(f.drop)),
     });
 }
 
@@ -310,7 +317,7 @@ export function waiverInSheet(player, inN) {
 // locked: { [player_id]: reason } shown disabled
 function tradeSelect(label, name, players, locked = {}) {
     const opts = players.map(p => `<option value="${p.id}" ${locked[p.id] ? 'disabled' : ''}>` +
-        `${esc(p.name)} · ${SLOT_LABEL[p.slot]} · ${esc(p.position)}${locked[p.id] ? ` (${esc(locked[p.id])})` : ''}</option>`).join('');
+        `${esc(p.name)} · ${slotLabel(p.slot)} · ${esc(p.position)}${locked[p.id] ? ` (${esc(locked[p.id])})` : ''}</option>`).join('');
     return `<label>${label}<select name="${name}"><option value="">Pick a player…</option>${opts}</select></label>`;
 }
 
@@ -323,7 +330,7 @@ export function proposeTradeDialog(other, theirPlayers, myPlayers, myLocked) {
         body: `
             ${tradeSelect('You give', 'give', myPlayers, myLocked)}
             ${tradeSelect('You get', 'get', theirPlayers)}
-            <p class="note"><small>Positions must fit each other's slot. If accepted, it happens Monday morning before waivers. Unanswered offers expire then.</small></p>`,
+            <p class="note"><small>Positions must fit each other's slot. If accepted, it happens ${esc(nextRun())} before waivers. Unanswered offers expire then.</small></p>`,
         submitLabel: 'Send offer',
         onSubmit: (_, f) => {
             if (!f.give || !f.get) return { error: 'Pick a player from each side.' };
@@ -343,21 +350,21 @@ export function tradeSheet(trade) {
     if (trade.status === 'accepted') {
         return openDialog({
             title: 'Trade accepted', sub,
-            body: body + '<p class="note"><small>Final. Happens Monday morning before waivers.</small></p>',
+            body: body + `<p class="note"><small>Final. Happens ${esc(nextRun())} before waivers.</small></p>`,
             submitLabel: null, cancelLabel: 'Close',
         });
     }
     if (trade.sent) {
         return openDialog({
             title: 'Trade offer', sub,
-            body: body + '<p class="note"><small>Waiting on their reply. Expires Monday morning.</small></p>',
+            body: body + `<p class="note"><small>Waiting on their reply. Expires ${esc(nextRun())}.</small></p>`,
             submitLabel: 'Cancel offer', cancelLabel: 'Close',
             onSubmit: () => cancelTrade(me.team.id, me.pin, trade.id),
         });
     }
     return openDialog({
         title: 'Trade offer', sub,
-        body: body + '<p class="note"><small>Accepting is final; neither side can back out. Happens Monday morning before waivers.</small></p>',
+        body: body + `<p class="note"><small>Accepting is final; neither side can back out. Happens ${esc(nextRun())} before waivers.</small></p>`,
         submitLabel: 'Accept', cancelLabel: 'Close',
         extra: [{ label: 'Reject', action: 'reject', cls: 'danger' }],
         onSubmit: action => respondTrade(me.team.id, me.pin, trade.id, action !== 'reject'),
