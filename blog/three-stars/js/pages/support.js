@@ -21,13 +21,20 @@ function feedbackForm(me) {
                         <option value="other">Other</option>
                     </select>
                 </label>
-                <label>Message<textarea name="message" rows="4" maxlength="1000" required></textarea></label>
-                <label>How to reach you (optional)<input name="contact" maxlength="100" autocomplete="off"></label>
+                <label>Message<textarea name="message" rows="3" maxlength="200" required></textarea><small class="char-count"></small></label>
+                <label>How to reach you (optional)<input name="contact" maxlength="40" autocomplete="off"><small class="char-count"></small></label>
                 <p class="dialog-msg" role="status"></p>
                 <button class="btn-action" type="submit">Send</button>
             </div>
         </form>`);
     const msg = form.querySelector('.dialog-msg');
+    const counts = () => form.querySelectorAll('[maxlength]').forEach(f => {
+        const c = f.nextElementSibling;
+        c.textContent = `${f.value.length}/${f.maxLength}`;
+        c.classList.toggle('near', f.value.length >= f.maxLength * .9);
+    });
+    counts();
+    form.addEventListener('input', counts);
     form.addEventListener('submit', async e => {
         e.preventDefault();
         const f = Object.fromEntries(new FormData(form));
@@ -36,6 +43,7 @@ function feedbackForm(me) {
             const res = await sendFeedback(me?.team.id, me?.pin, f.kind, f.message, f.contact);
             if (!res.ok) return msg.textContent = res.error;
             form.reset();
+            counts();
             msg.textContent = 'Sent. Thanks!';
         } catch (err) {
             msg.textContent = err.message;
@@ -69,7 +77,10 @@ export async function supportPage() {
             <div class="card support-card">
                 <div class="card-head"><b>Become a Supporter</b></div>
                 <div class="prose">
-                    <p class="no-ads"><b>No ads. Ever.</b> Three Stars will <b>never</b> show ads; it runs entirely on players like you.</p>                    <p>The <b>Supporter bundle</b> is <b>${B.dekes} Dekes for ${B.price}</b>, about a full season of reaction passes,
+                    <p class="no-ads"><b>No ads. Ever.</b> Three Stars will <b>never</b> show ads; it runs entirely on players like you.</p>
+                    <p class="no-ads"><b>Your data is never sold.</b> Three Stars will <b>never</b> sell your data to third parties;
+                    it's only used to run the game.</p>
+                    <p>The <b>Supporter bundle</b> is <b>${B.dekes} Dekes for ${B.price}</b>, about a full season of reaction passes,
                     emojis, nicknames and team makeovers. It also makes your team a <span class="supporter-tag">Three Stars Supporter</span>
                     for the season: a gold ring on your team badge and a <span class="supporter-star">★</span> next to your name everywhere
                     in the league.</p>

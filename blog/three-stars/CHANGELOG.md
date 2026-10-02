@@ -13,5 +13,6 @@ Updated weekly. Spot a bug or have an idea? Use **Message the Dev** on the [Supp
 - **Extra waivers after the draft** (some leagues). Trades and claims made after the draft can go through in an extra run before Monday's rollover, in reverse draft order. If your league has one, a banner shows when it's coming, and your trade and waiver notes show the time.
 - **New reactions:** heart, cry, poop, brain, thumbs up, thumbs down, eyes, skull and O_O. Reactions are bigger, too.
 - **Free reaction pass** for everyone for draft week and Week 1.
-- **Message the Dev** form on the Support page for bugs and ideas.
+- **Message the Dev** form on the Support page for bugs and ideas, with a character count as you type.
+- The Support page now says it plainly: your data is **never sold**.
 - This page!

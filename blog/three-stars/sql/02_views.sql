@@ -67,7 +67,8 @@ flagged as (
   select r.*,
     (l.max_goals > 0 and r.goals = l.max_goals) as goals_leader,
     (l.max_points > 0 and r.points = l.max_points) as points_leader,
-    (r.position <> 'G' and l.max_pm > 0 and r.plus_minus = l.max_pm) as pm_leader
+    -- coalesce: plus_minus stays null (shown as –) for no games, which would null the totals
+    coalesce(r.position <> 'G' and l.max_pm > 0 and r.plus_minus = l.max_pm, false) as pm_leader
   from r
   join leaders l on l.league_id = r.league_id and l.week = r.week
 )

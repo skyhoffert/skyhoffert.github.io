@@ -6,11 +6,17 @@ create table if not exists feedback (
   league_id int references leagues(id) on delete set null,
   team_id int references teams(id) on delete set null,
   kind text not null check (kind in ('bug', 'idea', 'other')),
-  message text not null check (char_length(message) between 1 and 1000),
-  contact text check (char_length(contact) <= 100),
+  message text not null check (char_length(message) between 1 and 200),
+  contact text check (char_length(contact) <= 40),
   done boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+-- Limits were 1000/100
+alter table feedback drop constraint if exists feedback_message_check;
+alter table feedback add constraint feedback_message_check check (char_length(message) between 1 and 200);
+alter table feedback drop constraint if exists feedback_contact_check;
+alter table feedback add constraint feedback_contact_check check (char_length(contact) <= 40);
 
 
 
@@ -32,11 +38,11 @@ begin
   if coalesce(p_kind, '') not in ('bug', 'idea', 'other') then
     return jsonb_build_object('ok', false, 'error', 'Pick a type.');
   end if;
-  if char_length(msg) not between 1 and 1000 then
-    return jsonb_build_object('ok', false, 'error', 'Message must be 1-1000 characters.');
+  if char_length(msg) not between 1 and 200 then
+    return jsonb_build_object('ok', false, 'error', 'Message must be 1-200 characters.');
   end if;
-  if char_length(who) > 100 then
-    return jsonb_build_object('ok', false, 'error', 'Contact max 100 characters.');
+  if char_length(who) > 40 then
+    return jsonb_build_object('ok', false, 'error', 'Contact max 40 characters.');
   end if;
   if (select count(*) from feedback where created_at > now() - interval '1 hour') >= 30 then
     return jsonb_build_object('ok', false, 'error', 'Lots of messages right now. Try again later.');

@@ -244,7 +244,7 @@ def cmd_feedback(a):
         who = r['teams']['name'] if r.get('teams') else 'anon'
         print(f'  #{r["id"]:<4} {r["created_at"][:16]}  {r["kind"]:<5}  league {r["league_id"]}  {who}'
               f'{"  (" + r["contact"] + ")" if r["contact"] else ""}{"  [done]" if r["done"] else ""}')
-        print(f'        {r["message"]}')
+        print('        ' + r['message'].replace('\n', '\n        '))
     if not rows:
         print('  no messages')
 
@@ -679,7 +679,7 @@ def cmd_checkin(a):
     if not fb:
         note('no new messages')
     for r in fb:
-        note(f'#{r["id"]} {r["created_at"][:10]} {r["kind"]}: {r["message"][:90]}')
+        note(f'#{r["id"]} {r["created_at"][:10]} {r["kind"]}: {" ".join(r["message"].split())[:90]}')
     if fb:
         warns.append(f'{len(fb)} feedback message(s)')
 

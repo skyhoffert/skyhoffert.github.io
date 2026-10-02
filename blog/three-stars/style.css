@@ -139,6 +139,8 @@ footer .btn-foot.gold { background: var(--chrome-gold); color: #241a00; }
 .card .prose { border: none; box-shadow: none; }
 .form-card { max-width: 420px; }
 .form-card.feedback-card { max-width: none; }
+.char-count { justify-self: end; margin-top: -.15rem; }
+.char-count.near { color: var(--red); }
 .changes-card { display: block; color: inherit; }
 .changes-card:hover { text-decoration: none; filter: brightness(1.08); }
 .changes-card .card-head b { font: italic 800 1.3rem/1.1 var(--font-head); text-transform: uppercase; }
