@@ -76,7 +76,8 @@ export function helpPage() {
                 <p>New leagues start with an automatic draft. While it's open, a banner links to the <b>Draft</b> page
                 (afterwards it lives at the bottom of History). Sign in and build a <b>wishlist</b> of up to three times
                 your roster size, best first, then hit Save.</p>
-                <p>The draft runs all at once in a snake order. On each of your picks you get the first wishlist player
+                <p>The draft runs in a snake order, either all at once or one round at a time with a short break
+                between rounds so you can see who's gone and adjust your wishlist. On each of your picks you get the first wishlist player
                 still available who fits an open slot. If none are left, you get the best available player by the
                 default ranking (NHL.com's top 200). Results show which picks came from your wishlist.</p>
             </div>

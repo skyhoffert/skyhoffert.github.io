@@ -106,7 +106,9 @@ See [README.md](../README.md#draft). One draft per league season.
 | `draft-order <league> <team> ...` | Set the full order by hand, first pick first; must list every team once |
 | `draft-time <league> "YYYY-MM-DD HH:MM" \| --clear` | Planned draft time (Eastern), shown as a countdown on the draft page. Doesn't run anything |
 | `draft-show <league>` | Order, wishlist counts, picks once done |
-| `draft <league> [--skip-players]` | Refresh NHL rosters, then run the whole draft into the current week. Locks wishlists |
+| `draft <league> [--skip-players] [--slow SECS]` | Refresh NHL rosters, then run the whole draft into the current week. Locks wishlists. `--slow 120`: one round every 120s, owners edit wishlists in between (countdown on the draft page). Keep the terminal open; Ctrl-C and re-run to resume from the next round. Order is locked once round 1 runs |
+| `draft-reset <league> --yes` | **Test leagues.** Reopen the draft: deletes its picks and ALL the league's rosters and moves. Wishlists and order kept |
+| `draft-watch <league> [--slow 120] [--allow-reset] [--once]` | Polls feedback every 10s until Ctrl-C (`--once`: ~55s, for cron every minute). Owners in the league send a Message the Dev: `start draft [secs]` (10-600, also resumes), `stop draft` (pause; start resumes), `cancel draft` (stop + reset), `reset draft` (works on a finished draft). Cancel/reset need `--allow-reset`. Runs `draft --slow` detached, logs `draft-<league>.log`; `draft-<league>.run`/`.stop` files coordinate |
 | `midweek <league>` | One extra trades + waivers pass after the draft, priority reverse draft order. Once per draft |
 | `midweek-time <league> "YYYY-MM-DD HH:MM" \| --clear` | Planned midweek time (Eastern). Until midweek runs: banner on Standings/Teams/Week/Team, and waiver/trade hints say that time instead of "Monday morning". Doesn't run anything |
 

@@ -868,6 +868,9 @@ button.tile:hover { background: var(--surface-2); }
 .draft-clock { display: grid; justify-items: center; gap: .3rem; padding: .9rem 1rem; text-align: center; }
 .draft-clock small { font: .62rem/1.2 var(--font-label); text-transform: uppercase; letter-spacing: .06em; }
 .draft-clock b { font: italic 800 2.4rem/1 var(--font-head); font-variant-numeric: tabular-nums; color: var(--red); }
+.draft-refresh { display: flex; align-items: center; justify-content: center; gap: .6rem; margin-top: .6rem; }
+.draft-refresh[hidden] { display: none; }
+.draft-refresh .btn { color: var(--text); cursor: pointer; }
 
 .hist-draft { display: block; color: inherit; }
 .hist-draft:hover { text-decoration: none; filter: brightness(1.08); }

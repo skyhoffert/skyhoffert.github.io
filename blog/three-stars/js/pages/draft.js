@@ -48,21 +48,26 @@ function countdownText(ms) {
     return `${d ? `${d}d ` : ''}${pad(Math.floor(s / 3600) % 24)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
 }
 
-// Ticks every second; stops once the page is swapped out
-function countdown(iso) {
+// Ticks every second; stops once the page is swapped out. onZero fires once when it runs out.
+function countdown(iso, label = 'Draft runs', onZero) {
     const at = new Date(iso);
     const when = at.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
     const box = el(`
         <div class="draft-clock card">
-            <small>Draft runs ${esc(when)}</small>
+            <small>${esc(label)} ${esc(when)}</small>
             <b></b>
         </div>`);
     const out = box.querySelector('b');
-    let seen = false;
+    let seen = false, fired = at <= Date.now();
     const tick = () => {
         if (box.isConnected) seen = true;
         else if (seen) return clearInterval(timer);
-        out.textContent = countdownText(at - Date.now());
+        const ms = at - Date.now();
+        out.textContent = countdownText(ms);
+        if (ms <= 0 && !fired) {
+            fired = true;
+            onZero?.();
+        }
     };
     const timer = setInterval(tick, 1000);
     tick();
@@ -108,7 +113,8 @@ function wishlistEditor(me, wishlist, max, firstPool) {
         <section>
             <h2>Your Wishlist <span class="wish-count"></span></h2>
             <p class="hint">Only you can see this. When it's your pick you get the first player still available who fits an open slot,
-                otherwise the best available by default rank (NHL.com top 200). Editable until the draft runs.</p>
+                otherwise the best available by default rank (NHL.com top 200). Editable until the draft ends;
+                in a round-by-round draft, changes count from the next round.</p>
             <div class="card wish-list"></div>
             <div class="wish-save">
                 <button type="button" class="btn-action" data-save>Save</button>
@@ -166,13 +172,26 @@ function wishlistEditor(me, wishlist, max, firstPool) {
             b.disabled = true;
             const ids = list.map(p => p.id);
             const res = await setWishlist(me.team.id, me.pin, ids);
-            if (res.ok) saved = JSON.stringify(ids);
+            const taken = res.taken ?? [];
+            if (res.ok) {
+                list = list.filter(p => !taken.includes(p.id));
+                saved = JSON.stringify(list.map(p => p.id));
+            }
             render();
-            msg.textContent = res.ok ? 'Saved ✓' : res.error;
+            msg.textContent = !res.ok ? res.error : taken.length ? `Saved ✓ (${taken.length} already drafted, removed)` : 'Saved ✓';
             return;
         }
         render();
     });
+
+    // Live draft: drop picked players from the list, pool and saved baseline (server ignores them anyway)
+    box.prune = taken => {
+        const keep = p => !taken.has(p.id);
+        saved = JSON.stringify(JSON.parse(saved).filter(id => !taken.has(id)));
+        list = list.filter(keep);
+        pool = pool.filter(keep);
+        render();
+    };
 
     render();
     msg.textContent = '';
@@ -191,29 +210,90 @@ export async function draftPage() {
     const d = g.draft;
     if (!d) return `<section><h1>Draft</h1><div class="empty">No draft this season.</div></section>`;
 
-    const open = d.status === 'open';
     const meId = me?.team.id;
+    const rounds = g.league.slots.length;
     const type = d.type === 'snake' ? 'Snake (order flips every round)' : 'Linear (same order every round)';
     const page = el(`<div>
         <section>
             <h1>Draft</h1>
-            <p class="sub">${type} · ${g.league.slots.length} rounds · ${open ? 'Open, set your wishlist' : 'Complete'}</p>
+            <p class="sub"></p>
             <div class="clock-slot"></div>
+            <div class="draft-refresh">
+                <button type="button" class="btn" data-refresh aria-label="Update" title="Update">↻</button>
+                <small class="hint"></small>
+            </div>
         </section>
-        ${open ? `
-            <section>
-                <h2>Draft Order</h2>
-                ${orderList(d, meId)}
-            </section>
-            <div class="wish-slot">${me && g.wishlist ? '' : '<p class="hint">Sign in to set your wishlist.</p>'}</div>`
-        : `
-            <section>
-                <h2>Results</h2>
-                <div class="cards">${picksBoard(g.picks, meId)}</div>
-            </section>`}
+        <section class="order-slot">
+            <h2>Draft Order</h2>
+            ${orderList(d, meId)}
+        </section>
+        <section class="results-slot">
+            <h2>Results</h2>
+            <div class="cards"></div>
+        </section>
+        <div class="wish-slot">${me && g.wishlist ? '' : '<p class="hint">Sign in to set your wishlist.</p>'}</div>
     </div>`);
+    const $ = s => page.querySelector(s);
+    const editor = d.status === 'open' && me && g.wishlist ? wishlistEditor(me, g.wishlist, d.wish_max, pool) : null;
+    if (editor) $('.wish-slot').append(editor);
 
-    if (open && d.scheduled_at) page.querySelector('.clock-slot').append(countdown(d.scheduled_at));
-    if (open && me && g.wishlist) page.querySelector('.wish-slot').append(wishlistEditor(me, g.wishlist, d.wish_max, pool));
+    let clockKey = '', cur = d;
+    const show = (d, picks) => {
+        cur = d;
+        const open = d.status === 'open';
+        const live = open && picks.length > 0;
+        $('.sub').textContent = `${type} · ${rounds} rounds · ${!open ? 'Complete' : live ? `Live, ${d.rounds_done} of ${rounds} rounds done` : 'Open, set your wishlist'}`;
+        const [at, label] = live ? [d.next_round_at, `Round ${d.rounds_done + 1} picks`] : open ? [d.scheduled_at, 'Draft runs'] : [];
+        if (`${at}${label}${live}` !== clockKey) {
+            clockKey = `${at}${label}${live}`;
+            // Live with no next round time = slow draft stopped between rounds
+            const clock = at ? countdown(at, label, () => refresh())
+                : live ? el(`<div class="draft-clock card"><small>${esc(label)}</small><b>Paused</b></div>`) : null;
+            $('.clock-slot').replaceChildren(...(clock ? [clock] : []));
+        }
+        $('.draft-refresh').hidden = !open;
+        $('.order-slot').hidden = !open;
+        $('.results-slot').hidden = !picks.length && open;
+        $('.results-slot .cards').innerHTML = picksBoard(picks, meId);
+        $('.wish-slot').hidden = !open;
+        editor?.prune(new Set(picks.map(p => p.player.id)));
+    };
+    const btn = $('[data-refresh]'), stamp = $('.draft-refresh small');
+    const stampNow = () => stamp.textContent = `Updated ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
+    let busy = false;
+    async function refresh() {
+        if (busy || cur.status !== 'open') return;
+        busy = btn.disabled = true;
+        const n = await getDraft(meId, me?.pin).catch(() => null);
+        busy = btn.disabled = false;
+        if (!n?.draft) return void (stamp.textContent = 'Update failed, try again');
+        show(n.draft, n.picks);
+        stampNow();
+    }
+    btn.addEventListener('click', refresh);
+    show(d, g.picks);
+    stampNow();
+
+    // Poll while open so a round-by-round draft shows up live: 10s, 3s once the round is due. Also on tab return.
+    // Stops once the page is swapped out or the draft is done.
+    if (d.status === 'open') {
+        let seen = false;
+        const alive = () => {
+            if (page.isConnected) seen = true;
+            return (page.isConnected || !seen) && cur.status === 'open';
+        };
+        const onVis = () => {
+            if (!alive()) return document.removeEventListener('visibilitychange', onVis);
+            if (document.visibilityState === 'visible') refresh();
+        };
+        document.addEventListener('visibilitychange', onVis);
+        const loop = async () => {
+            if (!alive()) return;
+            if (seen && document.visibilityState === 'visible') await refresh();
+            const due = cur.next_round_at && new Date(cur.next_round_at) <= Date.now();
+            setTimeout(loop, due ? 3000 : 10000);
+        };
+        setTimeout(loop, 10000);
+    }
     return page;
 }

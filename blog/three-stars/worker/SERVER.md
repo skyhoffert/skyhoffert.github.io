@@ -36,6 +36,7 @@ CRON_TZ=America/New_York
 ```
 Check it next morning: `tail -50 ingest.log`
 
+
 ## Updating later
 ```
 cd skyhoffert.github.io && git pull

@@ -3,8 +3,9 @@ import os
 import random
 import re
 import sys
+import time
 import unicodedata
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -489,7 +490,9 @@ def print_order(league, order):
 def save_order(lg, d, order, typ=None):
     if d and d['status'] == 'done':
         sys.exit(f'draft already ran at {d["ran_at"]}')
-    vals = {'draft_order': order, **({'type': typ} if typ else {})}
+    if d and db.select('draft_picks', select='overall', draft_id=f'eq.{d["id"]}', limit=1):
+        sys.exit('draft is in progress (slow draft); order is locked')
+    vals ={'draft_order': order, **({'type': typ} if typ else {})}
     if d:
         db.update('drafts', vals, id=f'eq.{d["id"]}')
     else:
@@ -575,14 +578,123 @@ def cmd_draft(a):
     if not a.skip_players:
         import ingest
         ingest.refresh_players()
-    res = db.rpc('run_draft', p_league=a.league)
-    print(f'week {res["week"]}: {res["picks"]} picks, {res["from_wishlist"]} from wishlists')
+    if not a.slow:
+        res = db.rpc('run_draft', p_league=a.league)
+        print(f'week {res["week"]}: {res["picks"]} picks, {res["from_wishlist"]} from wishlists')
+        print_picks(d['id'])
+        return
+    # Slow: one round, then a gap for wishlist edits. Ctrl-C (or the stop file) and re-run to resume from the next round.
+    # The run file is a heartbeat so draft-watch knows one is going.
+    run, stop = draft_file(a.league, 'run'), draft_file(a.league, 'stop')
+    stop.unlink(missing_ok=True)
+    try:
+        while True:
+            run.touch()
+            res = db.rpc('run_draft', p_league=a.league, p_rounds=1)
+            print(f'round {res["round"]}/{res["rounds"]}: {res["picks"]} picks, {res["from_wishlist"]} from wishlists', flush=True)
+            if res['done']:
+                break
+            at = datetime.now(timezone.utc) + timedelta(seconds=a.slow)
+            db.update('drafts', {'next_round_at': at.isoformat()}, id=f'eq.{d["id"]}')
+            print(f'  next round at {at.astimezone(ET):%I:%M:%S %p} ET', flush=True)
+            while (left := (at - datetime.now(timezone.utc)).total_seconds()) > 0:
+                if stop.exists():
+                    stop.unlink(missing_ok=True)
+                    db.update('drafts', {'next_round_at': None}, id=f'eq.{d["id"]}')
+                    print('  stopped; re-run to resume', flush=True)
+                    return
+                run.touch()
+                time.sleep(min(2, left))
+    finally:
+        run.unlink(missing_ok=True)
     print_picks(d['id'])
 
 
 def cmd_midweek(a):
     res = db.rpc('run_midweek', p_league=a.league)
     print(f'week {res["week"]}: {res["trades"]} trade(s), {res["waivers"]} waiver claim(s) applied')
+
+
+# Wipes the league's rosters + moves too, so test leagues only
+def draft_reset(league):
+    lg, d = league_draft(league)
+    if not d:
+        sys.exit('no draft yet: run draft-init first')
+    db.delete('draft_picks', draft_id=f'eq.{d["id"]}')
+    db.delete('roster_weeks', league_id=f'eq.{league}')
+    db.delete('moves', league_id=f'eq.{league}')
+    db.update('drafts', {'status': 'open', 'ran_at': None, 'midweek_ran_at': None, 'next_round_at': None}, id=f'eq.{d["id"]}')
+    print(f'league {league} draft reset: picks, rosters, moves cleared; open')
+
+
+def cmd_draft_reset(a):
+    if not a.yes:
+        sys.exit(f'deletes ALL rosters and moves in league {a.league}; pass --yes')
+    draft_reset(a.league)
+
+
+def draft_file(league, kind):
+    return Path(__file__).parent / f'draft-{league}.{kind}'
+
+
+def draft_running(league):
+    run = draft_file(league, 'run')
+    return run.exists() and time.time() - run.stat().st_mtime < 30
+
+
+# Asks a running slow draft to stop; waits up to 15s for it to exit
+def draft_stop(league):
+    if not draft_running(league):
+        return
+    draft_file(league, 'stop').touch()
+    for _ in range(15):
+        if not draft_running(league):
+            return
+        time.sleep(1)
+
+
+# Polls every 10s until Ctrl-C (--once: ~55s, for cron). An owner in the league sends one via Message the Dev:
+#   start draft [secs]  start, or resume a stopped one (default --slow)
+#   stop draft          pause after the current round; start resumes
+#   cancel draft        stop + reset   (--allow-reset only)
+#   reset draft         reset, even a finished draft (--allow-reset only)
+def cmd_draft_watch(a):
+    end = time.time() + 55 if a.once else float('inf')
+    print(f'watching league {a.league} feedback for draft commands (Ctrl-C to quit)', flush=True)
+    while True:
+        rows = db.select('feedback', select='id,team_id,message', done='is.false', league_id=f'eq.{a.league}',
+                         team_id='not.is.null', order='created_at')
+        for r in rows:
+            m = re.fullmatch(r'(start|stop|cancel|reset) draft(?: (\d+))?', r['message'].strip().lower())
+            if not m:
+                continue
+            db.update('feedback', {'done': True}, id=f'eq.{r["id"]}')
+            cmd, secs = m[1], min(max(int(m[2] or a.slow), 10), 600)
+            print(f'{datetime.now(ET):%m-%d %H:%M:%S} #{r["id"]} team {r["team_id"]}: {r["message"].strip()}', flush=True)
+            if cmd == 'stop':
+                draft_stop(a.league)
+                print('  stopped', flush=True)
+            elif cmd in ('cancel', 'reset'):
+                if not a.allow_reset:
+                    print('  skipped: --allow-reset not set', flush=True)
+                    continue
+                draft_stop(a.league)
+                draft_reset(a.league)
+            else:
+                lg, d = league_draft(a.league)
+                if not d or d['status'] != 'open' or draft_running(a.league):
+                    print('  skipped: draft not open or already running', flush=True)
+                    continue
+                import subprocess
+                log = open(Path(__file__).parent / f'draft-{a.league}.log', 'a')
+                subprocess.Popen([sys.executable, '-u', __file__, 'draft', str(a.league), '--slow', str(secs), '--skip-players'],
+                                 stdout=log, stderr=log, cwd=Path(__file__).parent, start_new_session=True,
+                                 creationflags=getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0))
+                draft_file(a.league, 'run').touch()
+                print(f'  started: --slow {secs}, log draft-{a.league}.log', flush=True)
+        if time.time() > end:
+            return
+        time.sleep(10)
 
 
 
@@ -962,7 +1074,20 @@ def main():
     p = sp.add_parser('draft', help='run the draft now into the current week (refreshes NHL rosters first)')
     p.add_argument('league', type=int)
     p.add_argument('--skip-players', action='store_true', help='skip the roster refresh')
+    p.add_argument('--slow', type=int, metavar='SECS', help='one round at a time, SECS apart for wishlist edits; re-run to resume')
     p.set_defaults(fn=cmd_draft)
+
+    p = sp.add_parser('draft-reset', help='TEST LEAGUES: reopen the draft, deleting picks, all rosters and moves')
+    p.add_argument('league', type=int)
+    p.add_argument('--yes', action='store_true')
+    p.set_defaults(fn=cmd_draft_reset)
+
+    p = sp.add_parser('draft-watch', help='cron: owners start/stop/cancel/reset the slow draft via Message the Dev')
+    p.add_argument('league', type=int)
+    p.add_argument('--slow', type=int, default=120, metavar='SECS', help='default gap for "start draft" with no secs')
+    p.add_argument('--allow-reset', action='store_true', help='also honor "cancel draft" / "reset draft" (test leagues only)')
+    p.add_argument('--once', action='store_true', help='poll ~55s then exit (cron every minute)')
+    p.set_defaults(fn=cmd_draft_watch)
 
     p = sp.add_parser('midweek', help='one extra trades + waivers pass after the draft, reverse draft order; once per draft')
     p.add_argument('league', type=int)

@@ -3,5 +3,6 @@ worker/.env
 worker/.venv/
 __pycache__/
 worker/ingest.log
+worker/draft-*.*
 supabase/.temp/
 .claude/settings.local.json

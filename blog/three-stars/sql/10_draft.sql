@@ -57,6 +57,8 @@ as $$
       'type', d.type,
       'ran_at', d.ran_at,
       'scheduled_at', d.scheduled_at,
+      'next_round_at', d.next_round_at,
+      'rounds_done', (select coalesce(max(round), 0) from draft_picks where draft_id = d.id),
       'wish_max', wish_max(p_league),
       'order', coalesce((select jsonb_agg(team_json(u.t) order by u.i)
                          from unnest(d.draft_order) with ordinality u(t, i)
@@ -80,6 +82,7 @@ as $$
       select jsonb_agg(player_json(p_league, null, w.player_id) || jsonb_build_object('rank', pr.rank) order by w.rank)
       from d join draft_wishlists w on w.draft_id = d.id and w.team_id = p_team
       left join player_ranks pr on pr.season = d.season and pr.player_id = w.player_id
+      where not exists (select 1 from draft_picks dp where dp.draft_id = d.id and dp.player_id = w.player_id)
     ), '[]'::jsonb) end
   );
 $$;
@@ -115,7 +118,7 @@ $$;
 
 -- ### OWNER ACTIONS (anon, PIN-gated) ###
 
--- Full replace, in priority order
+-- Full replace, in priority order. Players already picked in this draft are dropped, returned as 'taken'.
 create or replace function set_wishlist(p_league int, p_team int, p_pin text, p_players int[])
 returns jsonb
 language plpgsql
@@ -126,6 +129,7 @@ as $$
 declare
   d drafts;
   ids int[] := coalesce(p_players, '{}');
+  taken int[];
   bad text;
 begin
   if not pin_ok(p_league, p_team, p_pin) then
@@ -141,6 +145,9 @@ begin
   if array_position(ids, null) is not null or cardinality(ids) <> (select count(distinct x) from unnest(ids) x) then
     return jsonb_build_object('ok', false, 'error', 'Wishlist has duplicates.');
   end if;
+  select coalesce(array_agg(x), '{}') into taken from unnest(ids) x
+  where exists (select 1 from draft_picks dp where dp.draft_id = d.id and dp.player_id = x);
+  ids := array(select x from unnest(ids) with ordinality u(x, i) where not x = any(taken) order by i);
   select coalesce(pl.last_name, x::text) into bad from unnest(ids) x left join players pl on pl.id = x
   where not exists (select 1 from draft_pool() dp where dp.player_id = x)
      or exists (select 1 from roster_weeks rw where rw.league_id = p_league and rw.week = roster_week(p_league) and rw.player_id = x)
@@ -152,7 +159,7 @@ begin
   delete from draft_wishlists where draft_id = d.id and team_id = p_team;
   insert into draft_wishlists (draft_id, team_id, rank, player_id)
   select d.id, p_team, u.i, u.x from unnest(ids) with ordinality u(x, i);
-  return jsonb_build_object('ok', true);
+  return jsonb_build_object('ok', true, 'taken', to_jsonb(taken));
 end;
 $$;
 
@@ -163,7 +170,9 @@ $$;
 -- Fills open slots in the current week. Snake reverses even rounds. Each pick: the team's first wishlist player
 -- still free with an open slot that fits, else the best default-ranked pool player that fits (unranked by name).
 -- Slot: specific type first, then X, then S. Atomic; refuses unless open and the order matches the league's teams.
-create or replace function run_draft(p_league int)
+-- p_rounds: run only that many rounds from where it left off (slow draft); null = the rest. Done after the last round.
+drop function if exists run_draft(int);
+create or replace function run_draft(p_league int, p_rounds int default null)
 returns jsonb
 language plpgsql
 security definer
@@ -178,9 +187,12 @@ declare
   open_slots text[];
   t int;
   r int;
+  r0 int;
+  r1 int;
   c record;
   s text;
-  n int := 0;
+  n int;
+  n0 int;
 begin
   perform pg_advisory_xact_lock(31337, p_league);
   d := league_draft(p_league);
@@ -200,7 +212,10 @@ begin
   end if;
 
   slots := league_slots(p_league);
-  for r in 1 .. cardinality(slots) loop
+  select coalesce(max(round), 0) + 1, coalesce(max(overall), 0) into r0, n from draft_picks where draft_id = d.id;
+  n0 := n;
+  r1 := least(cardinality(slots), r0 + coalesce(greatest(p_rounds, 1), cardinality(slots)) - 1);
+  for r in r0 .. r1 loop
     seq := case when d.type = 'snake' and r % 2 = 0
       then (select array_agg(x order by i desc) from unnest(d.draft_order) with ordinality u(x, i))
       else d.draft_order end;
@@ -236,9 +251,11 @@ begin
     end loop;
   end loop;
 
-  update drafts set status = 'done', ran_at = now() where id = d.id;
-  return jsonb_build_object('week', w, 'picks', n,
-    'from_wishlist', (select count(*) from draft_picks where draft_id = d.id and wish_rank is not null));
+  if r1 >= cardinality(slots) then
+    update drafts set status = 'done', ran_at = now(), next_round_at = null where id = d.id;
+  end if;
+  return jsonb_build_object('week', w, 'picks', n - n0, 'round', r1, 'rounds', cardinality(slots), 'done', r1 >= cardinality(slots),
+    'from_wishlist', (select count(*) from draft_picks where draft_id = d.id and wish_rank is not null and overall > n0));
 end;
 $$;
 

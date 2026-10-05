@@ -7,6 +7,7 @@ Bugs and to-dos. `admin.py checkin` lists every `- ` line under **Open**. When s
 - Verify the Linux cron (6am ET `ingest.py`) is set up and running (worker/SERVER.md). Monday rollover depends on it.
 - Late joiners after a draft can't waiver into empty slots (claims need a drop). Workaround: admin `set`. Fix idea: drop-less claims into open slots.
 - Wishlist edits are lost silently if you leave the draft page without saving.
+- NHL `/roster` feed can omit active players (Nikishin 8482100, CAR, missing 2026-10-02), so they're never in the pool. Added by hand 10-02; drops out of `draft_pool` once a refresh lands 2+ days later (~10-05 cron) unless the feed picks him up. Fix idea: refresh also re-checks pool players missing from rosters via `/player/{id}/landing` (`currentTeamAbbrev`).
 
 ## Ideas
 

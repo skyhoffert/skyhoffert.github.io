@@ -359,6 +359,8 @@ create table if not exists drafts (
 alter table drafts add column if not exists scheduled_at timestamptz;
 -- When the admin plans the post-draft midweek run (shown on hints/banner until it runs; still run by hand)
 alter table drafts add column if not exists midweek_at timestamptz;
+-- Slow draft: when the next round runs (countdown while live; set by admin.py draft --slow)
+alter table drafts add column if not exists next_round_at timestamptz;
 
 create table if not exists draft_wishlists (
   draft_id int not null references drafts(id) on delete cascade,
