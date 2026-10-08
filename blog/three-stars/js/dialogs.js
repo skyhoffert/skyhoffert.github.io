@@ -1,6 +1,6 @@
 import { getStandings, getTeam, signIn, checkLeague, updateRosterPlayer, setWaiverIn, proposeTrade, respondTrade, cancelTrade, customizeTeam,
-    getReactions, getMyReactions, react, buyReactionItem } from './api.js';
-import { LEAGUE, LEAGUES, ICONS, EMOJIS, EMOJI_PRICE, PASS_PRICE, SEASON_PASS_PRICE, joinLeague, switchLeague, leaveLeague } from './config.js';
+    getReactions, getMyReactions, react, buyPack } from './api.js';
+import { LEAGUE, LEAGUES, ICONS, EMOJIS, PACKS, joinLeague, switchLeague, leaveLeague } from './config.js';
 import { getMe, setMe } from './session.js';
 import { el, esc, slotLabel, slotFits, emojiImg, nextRun } from './render.js';
 
@@ -151,9 +151,8 @@ const CUSTOM = {
     },
     icon: {
         title: 'Team Icon',
-        cost: 2,
-        body: t => `<div class="icon-grid">
-            ${[{ path: '', label: 'None' }, ...ICONS].map(i => `
+        body: (t, packs) => `<div class="icon-grid">
+            ${[{ path: '', label: 'None' }, ...ICONS.filter(i => !i.pack || packs.includes(i.pack))].map(i => `
                 <label class="icon-opt">
                     <input type="radio" name="value" value="${esc(i.path)}" ${(t.icon_path ?? '') === i.path ? 'checked' : ''}>
                     <span class="badge badge-lg" style="--team:${esc(t.color)}">${i.path ? `<img src="${esc(i.path)}" alt="">` : `<span>${esc(t.name.slice(0, 2).toUpperCase())}</span>`}</span>
@@ -163,17 +162,15 @@ const CUSTOM = {
     },
 };
 
-export const customCost = field => CUSTOM[field].cost ?? 1;
-
-// Spends Dekes; on success the session team is refreshed (header button, page)
-export function customizeDialog(field, dekes) {
+// Spends Dekes; on success the session team is refreshed (header button, page). packs: owned pack ids (unlock icons).
+export function customizeDialog(field, dekes, packs = []) {
     const me = getMe();
     const c = CUSTOM[field];
-    const cost = dekesWord(customCost(field));
+    const cost = dekesWord(1);
     return openDialog({
         title: c.title,
         sub: `Costs <b>${cost}</b>${field === 'icon' ? ' (None is free)' : ''}. You have <b>${dekes}</b>.`,
-        body: c.body(me.team),
+        body: c.body(me.team, packs),
         submitLabel: `Spend ${cost}`,
         onSubmit: async (action, f) => {
             const res = await customizeTeam(me.team.id, me.pin, field, f.value ?? '');
@@ -185,7 +182,7 @@ export function customizeDialog(field, dekes) {
 
 
 
-// ### REACTIONS (Dekes) ###
+// ### REACTIONS + PACKS (Dekes) ###
 
 const dekesWord = n => `${n} Deke${n === 1 ? '' : 's'}`;
 
@@ -221,47 +218,40 @@ export async function reactDialog(target) {
     const teaser = locked.length ? `
         <div class="emoji-locked">
             ${locked.slice(0, 4).map(e => `<span title="${esc(e.label)}">${emojiImg(e.id)}</span>`).join('')}${more}
-            <small>Unlock more for ${EMOJI_PRICE} Dekes each on your team page.</small>
+            <small>Unlock more with emoji packs on your team page.</small>
         </div>` : '';
-    const sub = mine.season_pass ? 'Season pass active.'
-        : mine.pass ? 'Reaction pass active this week.'
-        : `Reacting needs this week's pass: <b>${dekesWord(PASS_PRICE)}</b>. You have <b>${mine.dekes}</b>.`;
     return openDialog({
         title: 'React',
-        sub,
         body: `${reactWho(list)}<div class="emoji-grid">${grid}</div>${teaser}`,
-        submitLabel: !mine.pass ? 'Buy pass & react' : cur ? 'Change reaction' : 'React',
+        submitLabel: cur ? 'Change reaction' : 'React',
         extra: cur ? [{ label: 'Remove', action: 'remove', cls: 'danger' }] : [],
         onSubmit: (action, f) => {
             if (action === 'remove') return react(me.team.id, me.pin, target, '');
             if (!f.emoji) return { error: 'Pick an emoji.' };
             if (f.emoji === cur) return { error: 'That\'s already your reaction.' };
-            return react(me.team.id, me.pin, target, f.emoji, !mine.pass);
+            return react(me.team.id, me.pin, target, f.emoji);
         },
     });
 }
 
-const PASSES = {
-    pass: { title: 'Reaction Pass', cost: PASS_PRICE,
-        body: 'React to this week\'s Moves and Recent Three Stars games as much as you like until Monday\'s rollover.' },
-    season: { title: 'Season Pass', cost: SEASON_PASS_PRICE,
-        body: 'React as much as you like every week for the rest of this season. No weekly pass needed.' },
-};
+// Pack contents as small images; icons sit on the team color like a badge
+export function packPreview(pack, color) {
+    return pack.kind === 'emoji'
+        ? EMOJIS.filter(e => e.pack === pack.id).map(e => emojiImg(e.id)).join('')
+        : ICONS.filter(i => i.pack === pack.id).map(i => `<span class="badge" style="--team:${esc(color)}"><img src="${esc(i.path)}" alt=""></span>`).join('');
+}
 
-// item: 'pass', 'season' or an emoji id
-export function buyReactionDialog(item, dekes) {
+export function buyPackDialog(id, dekes) {
     const me = getMe();
-    const e = EMOJIS.find(x => x.id === item);
-    const p = PASSES[item];
-    const cost = e ? EMOJI_PRICE : p.cost;
+    const p = PACKS.find(x => x.id === id);
+    const what = p.kind === 'emoji' ? 'Reaction emojis' : 'Team icons';
     return openDialog({
-        title: e ? `Unlock ${e.label}` : p.title,
-        sub: `Costs <b>${dekesWord(cost)}</b>. You have <b>${dekes}</b>.`,
-        body: e
-            ? `<p class="note react-preview">${emojiImg(e.id)} Yours for good. Use it with a reaction pass.</p>`
-            : `<p class="note">${p.body}</p>`,
-        submitLabel: `Spend ${dekesWord(cost)}`,
-        onSubmit: () => buyReactionItem(me.team.id, me.pin, item),
+        title: `${p.label} Pack`,
+        sub: `Costs <b>${dekesWord(p.price)}</b>. You have <b>${dekes}</b>.`,
+        body: `<div class="pack-preview">${packPreview(p, me.team.color)}</div>
+            <p class="note">${what}, yours for good.</p>`,
+        submitLabel: `Spend ${dekesWord(p.price)}`,
+        onSubmit: () => buyPack(me.team.id, me.pin, id),
     });
 }
 

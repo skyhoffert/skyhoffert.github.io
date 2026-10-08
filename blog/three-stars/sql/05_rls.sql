@@ -19,6 +19,7 @@ alter table deke_ledger enable row level security;
 alter table icon_suggestions enable row level security;
 alter table unmatched_payments enable row level security;
 alter table team_emojis enable row level security;
+alter table team_packs enable row level security;
 alter table reaction_passes enable row level security;
 alter table season_passes enable row level security;
 alter table reactions enable row level security;
@@ -55,8 +56,8 @@ grant execute on function customize_team(int, int, text, text, text) to anon, au
 grant execute on function suggest_icon(int, int, text, text) to anon, authenticated;
 grant execute on function get_reactions(int) to anon, authenticated;
 grant execute on function get_my_reactions(int, int, text) to anon, authenticated;
-grant execute on function react(int, int, text, text, text, boolean) to anon, authenticated;
-grant execute on function buy_reaction_item(int, int, text, text) to anon, authenticated;
+grant execute on function react(int, int, text, text, text) to anon, authenticated;
+grant execute on function buy_pack(int, int, text, text) to anon, authenticated;
 grant execute on function get_draft(int, int, text) to anon, authenticated;
 grant execute on function get_draft_pool(int, text, text, int) to anon, authenticated;
 grant execute on function set_wishlist(int, int, text, int[]) to anon, authenticated;

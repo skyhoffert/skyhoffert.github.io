@@ -7,6 +7,18 @@ Updated weekly. Spot a bug or have an idea? Use **Message the Dev** on the [Supp
 - Late joiners will be able to pick up free agents into empty roster spots (for now the commissioner fills their roster).
 - A warning before you leave the draft page with unsaved wishlist changes.
 
+## Week of Oct 5, 2026
+
+- **Cheaper Dekes.** 10 Dekes for $3, or the **Supporter bundle**: 20 Dekes for $5, which also makes your team a Three Stars Supporter for the season.
+- New teams start with **10 Dekes**.
+- **Reactions are free all season.** No more reaction passes. Everyone starts with fire, heart, thumbs up/down, eyes, crying, angry, skull and trash.
+- **Packs**: unlock a set of extras for good. **Classics** (5 Dekes): goal lamp, hat trick, the three stars, big brain and poop. **Faces** (10 Dekes): player face emojis, with more coming. **Hockey Icons** (5 Dekes): puck, sticks, skate, helmet, goalie mask, jersey, whistle, goal light and tooth for your team badge.
+- **9 new free team icons**: lightning, flame, snowflake, crown, shield, anchor, rocket, pizza and coffee.
+- Changing your team icon now costs 1 Deke, same as name and color.
+- **Goalie stats.** Goalies now show saves (SV) and save percentage (SV%) in place of G-A and +/- on rosters and the Players page. Recent stars show SV% too.
+- **3 new weekly bonuses**, +5 each like the others: **Save Machine** (SV%) for the best save percentage among rostered goalies with 25+ shots against, **PIM** for the most penalty minutes, and **Five for Fighting** (FT) for the most fights. See [Help](#/help).
+- **Copy recaps.** Finished weeks get a **Copy recap** button on the Week and History pages (every team's points and SP) and a **Copy** button on each team (its stars and bonuses), ready to paste into your group chat.
+
 ## Week of Sep 28, 2026
 
 - **Round-by-round draft** (some leagues). The draft can run one round at a time with a couple of minutes between rounds. The Draft page updates live with picks and a countdown to the next round, and drafted players drop off your wishlist so you can re-plan. A **↻** button refreshes it on demand, the page checks right away when the countdown hits zero, and it shows "Paused" if the draft is stopped between rounds.

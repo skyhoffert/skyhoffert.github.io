@@ -1,6 +1,6 @@
 import { getStandings, getRecentStars, getReactions } from '../api.js';
 import { getMe } from '../session.js';
-import { esc, setLeague, notFound, draftBanner, teamLabel, ownerChip, playerName, fmtDate, fmtWeek, reactionBar } from '../render.js';
+import { esc, setLeague, notFound, draftBanner, teamLabel, ownerChip, playerName, fmtDate, fmtWeek, reactionBar, svPct } from '../render.js';
 
 
 
@@ -28,10 +28,11 @@ function standingsTable(s) {
 
 // ### RECENT STARS ###
 
-// e.g. "1G · 1A", "2A", "32SV"; zeros left out
+// e.g. "1G · 1A", "2A", "32SV · .941"; zeros left out
 function gameLine(s) {
     const parts = [];
     if (s.is_goalie && s.saves != null) parts.push(`${s.saves}SV`);
+    if (s.is_goalie && s.shots_against) parts.push(svPct(s.saves, s.shots_against));
     if (s.goals) parts.push(`${s.goals}G`);
     if (s.assists) parts.push(`${s.assists}A`);
     return parts.length ? `<span class="game-line">${parts.join(' · ')}</span>` : '';

@@ -80,9 +80,9 @@ export const customizeTeam = (team, pin, field, value) =>
 export const getReactions = () => call('get_reactions').catch(() => ({}));
 export const getMyReactions = (team, pin) => call('get_my_reactions', { p_team: team, p_pin: pin }).catch(() => null);
 
-// emoji '' removes; buyPass also buys this week's pass (1 Deke) in the same write
-export const react = (team, pin, target, emoji, buyPass = false) =>
-    mutate('react', { p_team: team, p_pin: pin, p_target: target, p_emoji: emoji, p_buy_pass: buyPass });
+// emoji '' removes
+export const react = (team, pin, target, emoji) =>
+    mutate('react', { p_team: team, p_pin: pin, p_target: target, p_emoji: emoji });
 
 // players: ids in priority order; replaces the whole wishlist
 export const setWishlist = (team, pin, players) =>
@@ -92,6 +92,6 @@ export const setWishlist = (team, pin, players) =>
 export const sendFeedback = (team, pin, kind, message, contact) =>
     mutate('send_feedback', { p_team: team ?? null, p_pin: pin ?? null, p_kind: kind, p_message: message, p_contact: contact || null });
 
-// item: 'pass' or an emoji id
-export const buyReactionItem = (team, pin, item) =>
-    mutate('buy_reaction_item', { p_team: team, p_pin: pin, p_item: item });
+// pack: PACKS id
+export const buyPack = (team, pin, pack) =>
+    mutate('buy_pack', { p_team: team, p_pin: pin, p_pack: pack });

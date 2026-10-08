@@ -8,7 +8,11 @@ with stats as (
     sum(s.goals) as goals,
     sum(s.assists) as assists,
     sum(s.goals + s.assists) as points,
-    sum(s.plus_minus) as plus_minus
+    sum(s.plus_minus) as plus_minus,
+    sum(s.saves) as saves,
+    sum(s.shots_against) as shots_against,
+    sum(s.pim) as pim,
+    sum(s.fights) as fights
   from player_game_stats s
   join games g on g.id = s.game_id
   where g.game_type = 2
@@ -29,7 +33,8 @@ select s.season, s.week, s.player_id, s.games, s.goals, s.assists, s.points, s.p
   coalesce(t.firsts, 0) as firsts,
   coalesce(t.seconds, 0) as seconds,
   coalesce(t.thirds, 0) as thirds,
-  coalesce(t.star_points, 0) as star_points
+  coalesce(t.star_points, 0) as star_points,
+  s.saves, s.shots_against, s.pim, s.fights
 from stats s
 left join stars t on t.week = s.week and t.player_id = s.player_id;
 
@@ -39,7 +44,10 @@ left join stars t on t.week = s.week and t.player_id = s.player_id;
 
 -- One row per rostered player per league week, with bonuses.
 -- Bonus leaders are among players rostered in that league that week; leader stat must be > 0.
-create or replace view roster_week_points as
+-- Columns changed (saves added mid-row); create or replace can't reorder, so rebuild everything downstream.
+drop view if exists season_standings, week_winners, team_week_scores, roster_week_points cascade;
+
+create view roster_week_points as
 with r as (
   select rw.league_id, rw.week, rw.team_id, rw.player_id, rw.slot, p.position,
     coalesce(pw.games, 0) as games,
@@ -50,7 +58,13 @@ with r as (
     coalesce(pw.firsts, 0) as firsts,
     coalesce(pw.seconds, 0) as seconds,
     coalesce(pw.thirds, 0) as thirds,
-    coalesce(pw.star_points, 0) as star_points
+    coalesce(pw.star_points, 0) as star_points,
+    pw.saves,
+    pw.shots_against,
+    coalesce(pw.pim, 0) as pim,
+    coalesce(pw.fights, 0) as fights,
+    -- SV% only counts with 25+ shots against, so a mop-up 5/5 can't take it
+    case when pw.shots_against >= 25 then pw.saves::numeric / pw.shots_against end as sv_pct
   from roster_weeks rw
   join players p on p.id = rw.player_id
   left join player_week_points pw on pw.week = rw.week and pw.player_id = rw.player_id
@@ -59,7 +73,10 @@ leaders as (
   select league_id, week,
     max(goals) as max_goals,
     max(points) as max_points,
-    max(plus_minus) filter (where position <> 'G') as max_pm
+    max(plus_minus) filter (where position <> 'G') as max_pm,
+    max(pim) as max_pim,
+    max(fights) as max_fights,
+    max(sv_pct) filter (where position = 'G') as max_sv
   from r
   group by 1, 2
 ),
@@ -68,21 +85,25 @@ flagged as (
     (l.max_goals > 0 and r.goals = l.max_goals) as goals_leader,
     (l.max_points > 0 and r.points = l.max_points) as points_leader,
     -- coalesce: plus_minus stays null (shown as –) for no games, which would null the totals
-    coalesce(r.position <> 'G' and l.max_pm > 0 and r.plus_minus = l.max_pm, false) as pm_leader
+    coalesce(r.position <> 'G' and l.max_pm > 0 and r.plus_minus = l.max_pm, false) as pm_leader,
+    (l.max_pim > 0 and r.pim = l.max_pim) as pim_leader,
+    (l.max_fights > 0 and r.fights = l.max_fights) as fights_leader,
+    coalesce(r.position = 'G' and r.sv_pct = l.max_sv, false) as sv_leader
   from r
   join leaders l on l.league_id = r.league_id and l.week = r.week
+),
+bonus as (
+  select f.*,
+    5 * (f.goals_leader::int + f.points_leader::int + f.pm_leader::int
+       + f.pim_leader::int + f.fights_leader::int + f.sv_leader::int) as bonus_points
+  from flagged f
 )
-select f.*,
-  5 * (f.goals_leader::int + f.points_leader::int + f.pm_leader::int) as bonus_points,
-  f.star_points + 5 * (f.goals_leader::int + f.points_leader::int + f.pm_leader::int) as total_points
-from flagged f;
+select b.*, b.star_points + b.bonus_points as total_points
+from bonus b;
 
 
 
 -- ### TEAM WEEK SCORES ###
-
--- Columns changed (SP replaced Ws); create or replace can't reorder, so rebuild.
-drop view if exists season_standings, week_winners, team_week_scores cascade;
 
 -- week_rank is unique: score, star count, goals, skater +/-, then a stable hash coin flip.
 -- sp: 1st 30, 2nd 20, 3rd 10 for scoring weeks with points > 0. Provisional until is_final.

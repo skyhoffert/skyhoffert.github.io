@@ -1,14 +1,15 @@
 import { getPlayers } from '../api.js';
 import { getMe, loadMine } from '../session.js';
 import { waiverInSheet } from '../dialogs.js';
-import { el, esc, setLeague, notFound, playerName, ownerChip, starPips, signed, pill, nextRun } from '../render.js';
+import { el, esc, setLeague, notFound, playerName, ownerChip, starPips, statCells, statHeads, pill, nextRun } from '../render.js';
 
 
 
 // ### TABLE ###
 
 // ins: { [player_id]: n } for the signed-in team; null when signed out
-function playersTable(players, ins) {
+// goalies: goalie filter on, so headers read SV / SV%
+function playersTable(players, ins, goalies = false) {
     if (!players.length) return '<div class="empty">No players match.</div>';
     const rows = players.map((p, i) => {
         const claimable = ins && !p.owner;
@@ -18,8 +19,7 @@ function playersTable(players, ins) {
             <td>${playerName(p)}${ins?.[p.id] ? pill(`Waiver In #${ins[p.id]}`, 'pill-in') : ''}</td>
             <td>${ownerChip(p.owner)}</td>
             <td class="num hide-sm">${p.games}</td>
-            <td class="num hide-sm">${p.goals}-${p.assists}</td>
-            <td class="num hide-sm">${signed(p.plus_minus)}</td>
+            ${statCells(p)}
             <td class="stars">${starPips(p)}</td>
             <td class="num pts">${p.star_points}</td>
         </tr>`;
@@ -28,7 +28,7 @@ function playersTable(players, ins) {
         <table>
             <thead><tr>
                 <th></th><th>Player</th><th>Owner</th>
-                <th class="num hide-sm">GP</th><th class="num hide-sm">G-A</th><th class="num hide-sm">+/-</th>
+                <th class="num hide-sm">GP</th>${statHeads(goalies)}
                 <th>Stars</th><th class="num">Star pts</th>
             </tr></thead>
             <tbody>${rows}</tbody>
@@ -79,12 +79,13 @@ export async function playersPage() {
 
     const load = async () => {
         const my = ++seq;
-        const [data, m] = await Promise.all([getPlayers(Object.fromEntries(new FormData(form))), getMe() ? loadMine() : null]);
+        const filters = Object.fromEntries(new FormData(form));
+        const [data, m] = await Promise.all([getPlayers(filters), getMe() ? loadMine() : null]);
         if (my !== seq) return;
         players = data.players;
         mine = m;
         ins = insMap(mine);
-        results.innerHTML = playersTable(players, ins);
+        results.innerHTML = playersTable(players, ins, filters.position === 'G');
     };
 
     form.addEventListener('input', () => {

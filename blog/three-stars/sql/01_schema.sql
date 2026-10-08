@@ -52,7 +52,7 @@ create table if not exists teams (
   created_at timestamptz not null default now()
 );
 
--- Three Stars Supporter for this leagues.season: set by any single Stripe purchase of 40+ Dekes (add_dekes, 08)
+-- Three Stars Supporter for this leagues.season: set by any single Stripe purchase of 20+ Dekes (add_dekes, 08)
 -- or admin.py supporter. Only shown while it matches the league's season.
 alter table teams add column if not exists supporter_season int;
 
@@ -168,6 +168,10 @@ create table if not exists player_game_stats (
 );
 create index if not exists player_game_stats_player on player_game_stats(player_id);
 alter table player_game_stats add column if not exists saves int;
+alter table player_game_stats add column if not exists shots_against int;
+-- Fights = fighting majors (landing penalty summary). Games ingested before these existed read 0 until re-ingested.
+alter table player_game_stats add column if not exists pim int not null default 0;
+alter table player_game_stats add column if not exists fights int not null default 0;
 
 
 

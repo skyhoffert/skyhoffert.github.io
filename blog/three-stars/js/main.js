@@ -67,10 +67,17 @@ function renderMe() {
     meBtn.classList.toggle('signed-in', !!me);
 }
 
-// Reaction bars live on several pages (Standings games, Week moves)
+// Reaction bars live on several pages (Standings games, Week moves); copy buttons on Week
 document.getElementById('app').addEventListener('click', async e => {
     const bar = e.target.closest('[data-react]');
     if (bar && await reactDialog(bar.dataset.react)) refresh();
+    const copy = e.target.closest('[data-copy]');
+    if (copy) {
+        copy.dataset.label ??= copy.textContent;
+        const ok = await navigator.clipboard?.writeText(copy.dataset.copy).then(() => true, () => false);
+        copy.textContent = ok ? 'Copied!' : 'Copy failed';
+        setTimeout(() => { copy.textContent = copy.dataset.label; }, 1500);
+    }
 });
 
 meBtn.addEventListener('click', signInDialog);

@@ -80,12 +80,12 @@ export async function supportPage() {
                     <p class="no-ads"><b>No ads. Ever.</b> Three Stars will <b>never</b> show ads; it runs entirely on players like you.</p>
                     <p class="no-ads"><b>Your data is never sold.</b> Three Stars will <b>never</b> sell your data to third parties;
                     it's only used to run the game.</p>
-                    <p>The <b>Supporter bundle</b> is <b>${B.dekes} Dekes for ${B.price}</b>, about a full season of reaction passes,
-                    emojis, nicknames and team makeovers. It also makes your team a <span class="supporter-tag">Three Stars Supporter</span>
+                    <p>The <b>Supporter bundle</b> is <b>${B.dekes} Dekes for ${B.price}</b>, enough for a couple of emoji or icon
+                    packs plus some nicknames and a team makeover. It also makes your team a <span class="supporter-tag">Three Stars Supporter</span>
                     for the season: a gold ring on your team badge and a <span class="supporter-star">★</span> next to your name everywhere
                     in the league.</p>
                     ${cta(me)}
-                    <p class="muted">Smaller bundles are in the Dekes section of your team page.</p>
+                    <p class="muted">A smaller bundle is in the Dekes section of your team page.</p>
                 </div>
             </div>
         </section>

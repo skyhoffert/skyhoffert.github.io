@@ -6,41 +6,44 @@ export const SUPABASE_KEY = 'sb_publishable_VbYYEdmoMrfSK_RAaFEIGA_hNJM_0Z_';
 // ### DEKES ###
 
 // Stripe Payment Link per bundle (leave '' until created; button shows "Soon"). Team id is appended as client_reference_id.
-// supporter: 40+ Dekes in one purchase also makes the team a Three Stars Supporter (add_dekes, sql/08)
+// supporter: 20+ Dekes in one purchase also makes the team a Three Stars Supporter (add_dekes, sql/08)
 export const DEKE_BUNDLES = [
-    { dekes: 3, price: '$3', url: 'https://buy.stripe.com/9B6cN64ON1fj3Ek9LWenS03' },
-    { dekes: 7, price: '$5', url: 'https://buy.stripe.com/eVq9AUbdb3nr8YE7DOenS04' },
-    { dekes: 15, price: '$10', url: 'https://buy.stripe.com/bJe28s6WV1fj6QwgakenS05' },
-    { dekes: 40, price: '$20', url: 'https://buy.stripe.com/aFa6oIftr2jn5Ms5vGenS06', supporter: true },
+    { dekes: 10, price: '$3', url: 'https://buy.stripe.com/cNi3cw3KJ7DHdeUcY8enS07' },
+    { dekes: 20, price: '$5', url: 'https://buy.stripe.com/fZu7sMbdb6zDfn2f6genS08', supporter: true },
 ];
 export const SUPPORTER_BUNDLE = DEKE_BUNDLES.find(b => b.supporter);
 
-// Reaction emojis, img/emoji/<id>.<ext> (ext default svg); keep in sync w/ reaction_emojis() in sql/09_reactions.sql. fire is free.
+// Unlockable packs, bought once and kept for good; keep in sync w/ all_packs() in sql/08_dekes.sql.
+// Contents: EMOJIS / ICONS entries tagged with the pack id.
+export const PACKS = [
+    { id: 'classics', kind: 'emoji', label: 'Classics', price: 5 },
+    { id: 'faces', kind: 'emoji', label: 'Faces', price: 10 },
+    { id: 'hockey', kind: 'icon', label: 'Hockey Icons', price: 5 },
+];
+
+// Reaction emojis, img/emoji/<id>.<ext> (ext default svg). No pack = starter (starter_emojis() in sql/09_reactions.sql).
 export const EMOJIS = [
     { id: 'fire', label: 'Fire' },
-    { id: 'lamp', label: 'Goal lamp' },
-    { id: 'hat', label: 'Hat trick' },
-    { id: 'trash', label: 'Trash' },
-    { id: 'angry', label: 'Angry' },
-    { id: 'star1', label: 'First star' },
-    { id: 'star2', label: 'Second star' },
-    { id: 'star3', label: 'Third star' },
     { id: 'heart', label: 'Heart' },
-    { id: 'cry', label: 'Crying' },
-    { id: 'poop', label: 'Poop' },
-    { id: 'brain', label: 'Big brain' },
     { id: 'thumbsup', label: 'Thumbs up' },
     { id: 'thumbsdown', label: 'Thumbs down' },
     { id: 'eyes', label: 'Eyes' },
+    { id: 'cry', label: 'Crying' },
+    { id: 'angry', label: 'Angry' },
     { id: 'skull', label: 'Skull' },
-    { id: 'O_O', label: 'O_O', ext: 'png' },
-    { id: 'sidemouth', label: 'Side mouth', ext: 'png' },
+    { id: 'trash', label: 'Trash' },
+    { id: 'lamp', label: 'Goal lamp', pack: 'classics' },
+    { id: 'hat', label: 'Hat trick', pack: 'classics' },
+    { id: 'star1', label: 'First star', pack: 'classics' },
+    { id: 'star2', label: 'Second star', pack: 'classics' },
+    { id: 'star3', label: 'Third star', pack: 'classics' },
+    { id: 'brain', label: 'Big brain', pack: 'classics' },
+    { id: 'poop', label: 'Poop', pack: 'classics' },
+    { id: 'O_O', label: 'O_O', ext: 'png', pack: 'faces' },
+    { id: 'sidemouth', label: 'Side mouth', ext: 'png', pack: 'faces' },
 ];
-export const EMOJI_PRICE = 3;
-export const PASS_PRICE = 1;
-export const SEASON_PASS_PRICE = 10;
 
-// Preset team icons; customize_team only accepts img/teams/<slug>.(svg|png)
+// Preset team icons; customize_team only accepts img/teams/<slug>.(svg|png), and pack icons only once the pack is owned
 export const ICONS = [
     { path: 'img/teams/zamboni-drivers.svg', label: 'Zamboni' },
     { path: 'img/teams/five-hole-heroes.svg', label: 'Net' },
@@ -48,6 +51,24 @@ export const ICONS = [
     { path: 'img/teams/pylon-patrol.svg', label: 'Pylon' },
     { path: 'img/teams/chirp-chirp.svg', label: 'Bird' },
     { path: 'img/teams/stanley_cup.png', label: 'Cup' },
+    { path: 'img/teams/lightning.svg', label: 'Lightning' },
+    { path: 'img/teams/flame.svg', label: 'Flame' },
+    { path: 'img/teams/snowflake.svg', label: 'Snowflake' },
+    { path: 'img/teams/crown.svg', label: 'Crown' },
+    { path: 'img/teams/shield.svg', label: 'Shield' },
+    { path: 'img/teams/anchor.svg', label: 'Anchor' },
+    { path: 'img/teams/rocket.svg', label: 'Rocket' },
+    { path: 'img/teams/pizza.svg', label: 'Pizza' },
+    { path: 'img/teams/coffee.svg', label: 'Coffee' },
+    { path: 'img/teams/puck.svg', label: 'Puck', pack: 'hockey' },
+    { path: 'img/teams/crossed-sticks.svg', label: 'Sticks', pack: 'hockey' },
+    { path: 'img/teams/skate.svg', label: 'Skate', pack: 'hockey' },
+    { path: 'img/teams/helmet.svg', label: 'Helmet', pack: 'hockey' },
+    { path: 'img/teams/goalie-mask.svg', label: 'Mask', pack: 'hockey' },
+    { path: 'img/teams/jersey.svg', label: 'Jersey', pack: 'hockey' },
+    { path: 'img/teams/whistle.svg', label: 'Whistle', pack: 'hockey' },
+    { path: 'img/teams/goal-light.svg', label: 'Goal light', pack: 'hockey' },
+    { path: 'img/teams/tooth.svg', label: 'Tooth', pack: 'hockey' },
 ];
 
 

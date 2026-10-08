@@ -1,8 +1,8 @@
 import { getTeam, getMyReactions } from '../api.js';
 import { refresh } from '../router.js';
 import { getMe, loadMine } from '../session.js';
-import { playerSheet, waiverInSheet, proposeTradeDialog, tradeSheet, customizeDialog, customCost, buyReactionDialog } from '../dialogs.js';
-import { DEKE_BUNDLES, EMOJIS, EMOJI_PRICE, PASS_PRICE, SEASON_PASS_PRICE } from '../config.js';
+import { playerSheet, waiverInSheet, proposeTradeDialog, tradeSheet, customizeDialog, buyPackDialog, packPreview } from '../dialogs.js';
+import { DEKE_BUNDLES, EMOJIS, PACKS } from '../config.js';
 import { el, esc, setLeague, notFound, draftBanner, teamBadge, supporterStar, rosterTable, weekNav, fmtWeek, ordinal, pill, playerName, spChip, emojiImg, nextRun } from '../render.js';
 
 
@@ -75,28 +75,24 @@ function tradePills(trades) {
     return out;
 }
 
-// r: get_my_reactions result {pass, emojis}. Pass tile + owned pool + shop of the rest.
-function reactionTiles(r) {
+// r: get_my_reactions result {emojis, packs}. Owned pool + pack shop.
+function packsSection(r, team) {
     const owned = EMOJIS.filter(e => r.emojis.includes(e.id));
-    const shop = EMOJIS.filter(e => !r.emojis.includes(e.id));
-    const on = (label, sub) => `<div class="tile tile-on"><b>${label}</b><small>${sub}</small></div>`;
-    const buy = (item, label, sub, cost) =>
-        `<button type="button" class="tile" data-buy="${item}"><b>${label}</b><small>${sub}</small>${pill(`${cost} Deke${cost === 1 ? '' : 's'}`, 'pill-trade')}</button>`;
-    const season = r.season_pass ? on('Season pass', 'Active all season') : buy('season', 'Season pass', 'Every week, rest of season', SEASON_PASS_PRICE);
-    const week = r.season_pass ? '' : r.pass ? on('Weekly pass', 'Active until Monday') : buy('pass', 'Weekly pass', 'This week only', PASS_PRICE);
-    const pass = `<div class="tiles ${week ? 'tiles-2' : ''}">${week}${season}</div>`;
+    const packs = PACKS.map(p => {
+        const has = r.packs.includes(p.id);
+        const tag = has ? pill('Owned', 'pill-in') : pill(`${p.price} Dekes`, 'pill-trade');
+        const inner = `<b>${esc(p.label)}</b><span class="pack-preview">${packPreview(p, team.color)}</span>${tag}`;
+        return has ? `<div class="tile tile-on pack">${inner}</div>` : `<button type="button" class="tile pack" data-buy="${p.id}">${inner}</button>`;
+    }).join('');
     return `
         <h3 class="sub-h">Reactions</h3>
-        <p class="hint">React to this week's Moves and Recent Three Stars games, one emoji each. Needs the weekly pass;
-            you can use any emoji in your pool.</p>
-        ${pass}
-        <p class="label-h">Your pool</p>
+        <p class="hint">React to this week's Moves and Recent Three Stars games, one emoji each. Free all season.</p>
+        <p class="label-h">Your emojis</p>
         <div class="emoji-pool">${owned.map(e => `<span title="${esc(e.label)}">${emojiImg(e.id)}</span>`).join('')}</div>
-        ${shop.length ? `
-            <p class="label-h">Unlock · ${EMOJI_PRICE} Dekes each, yours for good</p>
-            <div class="emoji-shop">${shop.map(e => `
-                <button type="button" class="emoji-buy" data-buy="${e.id}" title="${esc(e.label)}">${emojiImg(e.id)}<small>${EMOJI_PRICE}</small></button>`).join('')}
-            </div>` : ''}`;
+
+        <h3 class="sub-h">Packs</h3>
+        <p class="hint">Extra emojis and team icons, yours for good.</p>
+        <div class="tiles packs">${packs}</div>`;
 }
 
 function customizeSection(team, dekes, reactions) {
@@ -121,13 +117,13 @@ function customizeSection(team, dekes, reactions) {
             <p class="hint">After paying, your Dekes show up here within a minute.</p>
 
             <h3 class="sub-h">Customize Your Team</h3>
-            <p class="hint">Team name, color or a player nickname (tap a player above) cost 1 Deke each; a new icon costs 2.</p>
+            <p class="hint">Team name, color, icon or a player nickname (tap a player above) cost 1 Deke each.</p>
             <div class="tiles tiles-3">${tiles.map(([k, label, cur]) => `
-                <button type="button" class="tile" data-custom="${k}"><b>${label}</b>${cur}${pill(`${customCost(k)} Deke${customCost(k) === 1 ? '' : 's'}`, 'pill-trade')}</button>`).join('')}
+                <button type="button" class="tile" data-custom="${k}"><b>${label}</b>${cur}${pill('1 Deke', 'pill-trade')}</button>`).join('')}
             </div>
             <p class="hint after-table">Want a new icon? Suggest one with <a href="#/support">Message the Dev</a> on the Support page.</p>
 
-            ${reactions?.ok ? reactionTiles(reactions) : ''}
+            ${reactions?.ok ? packsSection(reactions, team) : ''}
         </section>`;
 }
 
@@ -199,10 +195,10 @@ export async function teamPage(id, week) {
         }
         // customizeDialog success updates the session, which already triggers a refresh
         const custom = e.target.closest('[data-custom]');
-        if (custom) return customizeDialog(custom.dataset.custom, mine.dekes ?? 0);
+        if (custom) return customizeDialog(custom.dataset.custom, mine.dekes ?? 0, reactions?.packs);
         const buy = e.target.closest('[data-buy]');
         if (buy) {
-            if (await buyReactionDialog(buy.dataset.buy, mine.dekes ?? 0)) refresh();
+            if (await buyPackDialog(buy.dataset.buy, mine.dekes ?? 0)) refresh();
             return;
         }
         const row = e.target.closest('tr.editable');

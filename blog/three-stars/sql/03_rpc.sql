@@ -83,6 +83,8 @@ as $$
           'assists', rp.assists,
           'points', rp.points,
           'plus_minus', rp.plus_minus,
+          'saves', rp.saves,
+          'shots_against', rp.shots_against,
           'firsts', rp.firsts,
           'seconds', rp.seconds,
           'thirds', rp.thirds,
@@ -90,6 +92,11 @@ as $$
           'goals_leader', rp.goals_leader,
           'points_leader', rp.points_leader,
           'pm_leader', rp.pm_leader,
+          'pim', rp.pim,
+          'fights', rp.fights,
+          'pim_leader', rp.pim_leader,
+          'fights_leader', rp.fights_leader,
+          'sv_leader', rp.sv_leader,
           'bonus_points', rp.bonus_points,
           'total_points', rp.total_points
         )
@@ -272,6 +279,7 @@ as $$
     select pw.player_id,
       sum(pw.games)::int as games, sum(pw.goals)::int as goals, sum(pw.assists)::int as assists,
       sum(pw.points)::int as points, sum(pw.plus_minus)::int as plus_minus,
+      sum(pw.saves)::int as saves, sum(pw.shots_against)::int as shots_against,
       sum(pw.firsts)::int as firsts, sum(pw.seconds)::int as seconds, sum(pw.thirds)::int as thirds,
       sum(pw.star_points)::int as star_points
     from player_week_points pw, lg
@@ -307,6 +315,8 @@ as $$
           'assists', coalesce(r.assists, 0),
           'points', coalesce(r.points, 0),
           'plus_minus', coalesce(r.plus_minus, 0),
+          'saves', r.saves,
+          'shots_against', r.shots_against,
           'firsts', coalesce(r.firsts, 0),
           'seconds', coalesce(r.seconds, 0),
           'thirds', coalesce(r.thirds, 0),
@@ -341,6 +351,7 @@ as $$
         'goals', s.goals,
         'assists', s.assists,
         'saves', s.saves,
+        'shots_against', s.shots_against,
         'is_goalie', s.is_goalie
       ) order by st.star)
       from game_stars st

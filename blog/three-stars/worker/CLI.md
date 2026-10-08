@@ -58,8 +58,8 @@ admin.py <command> [args]
 |---|---|
 | `dekes <league>` | Deke balance per team |
 | `grant-dekes <team> <n> [--note]` | Give Dekes (negative `n` takes them). For gifts, refunds, or a purchase the webhook missed |
-| `supporter <team> [--off]` | Mark (or unmark) a team as Three Stars Supporter for its league's current season. Automatic on any single 40+ Deke Stripe purchase |
-| `grant-pass <league> [--week W]` | Free weekly reaction pass for every team in the league (default current week). Safe to repeat |
+| `supporter <team> [--off]` | Mark (or unmark) a team as Three Stars Supporter for its league's current season. Automatic on any single 20+ Deke Stripe purchase |
+| `grant-pass <league> [--week W]` | Free weekly reaction pass for every team in the league (default current week). Safe to repeat. Unused while reactions are free |
 | `deke-log <team>` | Every purchase, grant and spend (spends show `old -> new`) |
 | `checkin` | Daily dev check. Players/games ingest freshness, yesterday's games stored + starred vs the NHL schedule, each league's roster week vs current, failed txns, draft state (order set, missed scheduled time, posted midweek pending / missed), unmatched payments, new feedback, open items in `ISSUES.md`. `!!` lines need attention |
 | `feedback [--all]` | Messages from the Support page "Message the Dev" form (bugs, ideas), unhandled only unless `--all` |

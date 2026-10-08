@@ -73,6 +73,9 @@ export const fmtDate = iso => d(iso).toLocaleDateString('en-US', { weekday: 'sho
 
 export const signed = n => (n == null ? '–' : n > 0 ? `+${n}` : String(n));
 
+// Hockey style: .921, 1.000
+export const svPct = (sv, sa) => (sa ? (sv / sa).toFixed(3).replace(/^0/, '') : '–');
+
 export function ordinal(n) {
     if (n == null) return '–';
     const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
@@ -138,13 +141,32 @@ export function starPips(p) {
     return out || '<span class="muted">–</span>';
 }
 
+// [flag, chip label, title]; order shared by chips and copy text
+const BONUSES = [
+    ['goals_leader', 'G', 'Goals leader'],
+    ['points_leader', 'PTS', 'Points leader'],
+    ['pm_leader', '+/-', '+/- leader'],
+    ['sv_leader', 'SV%', 'Save Machine: SV% leader'],
+    ['pim_leader', 'PIM', 'Penalty minutes leader'],
+    ['fights_leader', 'FT', 'Five for Fighting: fights leader'],
+];
+
 export function bonusChips(p) {
-    const chips = [];
-    if (p.goals_leader) chips.push('<span class="chip chip-bonus" title="Goals leader +5">G</span>');
-    if (p.points_leader) chips.push('<span class="chip chip-bonus" title="Points leader +5">PTS</span>');
-    if (p.pm_leader) chips.push('<span class="chip chip-bonus" title="+/- leader +5">+/-</span>');
-    return chips.join('');
+    return BONUSES.filter(([k]) => p[k])
+        .map(([, label, title]) => `<span class="chip chip-bonus" title="${title} +5">${label}</span>`).join('');
 }
+
+// G-A and +/- cells; goalies show SV and SV% there instead
+export function statCells(p) {
+    const td = v => `<td class="num hide-sm">${v}</td>`;
+    if (p.position !== 'G') return td(`${p.goals}-${p.assists}`) + td(signed(p.plus_minus));
+    return td(p.saves ?? '–') + td(svPct(p.saves, p.shots_against));
+}
+
+// goalies: column is goalies only, so label it SV / SV% outright
+export const statHeads = (goalies = false) => goalies
+    ? '<th class="num hide-sm">SV</th><th class="num hide-sm">SV%</th>'
+    : '<th class="num hide-sm" title="Saves for goalies">G-A</th><th class="num hide-sm" title="SV% for goalies">+/-</th>';
 
 export const pill = (text, cls = '') => `<span class="pill ${cls}">${esc(text)}</span>`;
 
@@ -157,15 +179,14 @@ export function rosterTable(players, { editable = false, pills = {} } = {}) {
             <td>${playerName(p)}${pills[p.id] ?? ''}</td>
             <td class="stars">${starPips(p)} ${bonusChips(p)}</td>
             <td class="num hide-sm">${p.games}</td>
-            <td class="num hide-sm">${p.goals}-${p.assists}</td>
-            <td class="num hide-sm">${signed(p.plus_minus)}</td>
+            ${statCells(p)}
             <td class="num pts">${p.total_points}</td>
         </tr>`).join('');
     return `
         <table class="roster">
             <thead><tr>
                 <th></th><th>Player</th><th>Stars</th>
-                <th class="num hide-sm">GP</th><th class="num hide-sm">G-A</th><th class="num hide-sm">+/-</th>
+                <th class="num hide-sm">GP</th>${statHeads()}
                 <th class="num">Pts</th>
             </tr></thead>
             <tbody>${rows}</tbody>
@@ -245,8 +266,8 @@ export function spChip(sp, isFinal) {
 
 export const placeClass = sp => sp ? `place${{ 30: 1, 20: 2, 10: 3 }[sp]}` : '';
 
-// base: hash prefix the week is appended to, e.g. '#/week/' or '#/team/3/'
-export function weekNav(nav, base) {
+// base: hash prefix the week is appended to, e.g. '#/week/' or '#/team/3/'; extra: html appended to the row
+export function weekNav(nav, base, extra = '') {
     const link = (wk, label) => wk
         ? `<a class="btn" href="${base}${wk}">${label}</a>`
         : `<span class="btn disabled">${label}</span>`;
@@ -257,5 +278,37 @@ export function weekNav(nav, base) {
             <select onchange="location.hash = this.value">${opts || `<option>${fmtWeek(nav.week)}</option>`}</select>
             ${link(nav.next_week, '›')}
             ${weekStatus(nav)}
+            ${extra}
         </div>`;
+}
+
+
+
+// ### COPY TEXT ###
+
+const MEDAL = { 1: '🥇', 2: '🥈', 3: '🥉' };
+const rankMark = r => MEDAL[r] ?? `${r ?? '–'}.`;
+const spText = (t, wk) => wk.is_scoring ? ` · +${t.sp} SP` : '';
+const lastName = n => n.split(' ').slice(1).join(' ') || n;
+const SITE = 'https://skyhoffert.com/blog/three-stars/';
+const brand = league => `⭐⭐⭐ Three Stars | ${league.name}`;
+
+// Clicks handled in main.js
+export const copyBtn = (text, label) => `<button type="button" class="copy-btn" data-copy="${esc(text)}">${label}</button>`;
+
+// wk: { week, is_scoring } (week nav or history week). One line per team: "🥇 Puck Bunnies 142 · +30 SP"
+export function weekText(league, wk, teams) {
+    const head = `${brand(league)}\n${fmtWeek(wk.week)}${wk.is_scoring ? '' : ' (preseason)'}`;
+    const rows = teams.map(t => `${rankMark(t.week_rank)} ${t.team.name} ${t.total_points}${spText(t, wk)}`);
+    return [head, ...rows, SITE].join('\n');
+}
+
+// Stars as gold/silver/bronze squares, bonuses as crowns; only players who earned something
+export function teamText(league, wk, t) {
+    const lines = t.players.map(p => {
+        const stars = '🟨'.repeat(p.firsts || 0) + '⬜'.repeat(p.seconds || 0) + '🟫'.repeat(p.thirds || 0);
+        const bonus = BONUSES.filter(([k]) => p[k]).map(([, label]) => `👑${label}`).join(' ');
+        return stars || bonus ? [lastName(p.name), stars, bonus].filter(Boolean).join(' ') : null;
+    }).filter(Boolean);
+    return [brand(league), `${t.team.name} · ${fmtWeek(wk.week)}`, `${rankMark(t.week_rank)} ${t.total_points} pts${spText(t, wk)}`, ...lines, SITE].join('\n');
 }

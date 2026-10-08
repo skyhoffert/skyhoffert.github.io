@@ -49,6 +49,9 @@ export function helpPage() {
                     <li><span class="chip chip-bonus">G</span><b>Goals leader</b><span>+5</span></li>
                     <li><span class="chip chip-bonus">PTS</span><b>Points leader</b> (goals + assists)<span>+5</span></li>
                     <li><span class="chip chip-bonus">+/-</span><b>Plus/minus leader</b> (skaters only)<span>+5</span></li>
+                    <li><span class="chip chip-bonus">SV%</span><b>Save Machine</b> (goalies, 25+ shots against)<span>+5</span></li>
+                    <li><span class="chip chip-bonus">PIM</span><b>Penalty minutes leader</b><span>+5</span></li>
+                    <li><span class="chip chip-bonus">FT</span><b>Five for Fighting</b> (most fighting majors)<span>+5</span></li>
                 </ul>
             </div>
         </section>
@@ -101,14 +104,12 @@ export function helpPage() {
         <section>
             <h2>Dekes</h2>
             <div class="prose">
-                <p><b>Dekes</b> let you customize your team. A new <b>team name</b>, <b>color</b> or
-                <b>player nickname</b> costs 1 Deke; a new <b>icon</b> costs 2. They're cosmetic only and never affect scoring.
+                <p><b>Dekes</b> let you customize your team. A new <b>team name</b>, <b>color</b>, <b>icon</b> or
+                <b>player nickname</b> costs 1 Deke. They're cosmetic only and never affect scoring.
                 Clearing a nickname or icon and waiver claims are always free.</p>
                 <p><b>Reactions</b>: tap the <b>+</b> on one of this week's Moves or a Recent Three Stars game to react
-                with an emoji. Reacting needs a <b>weekly reaction pass</b> (1 Deke, good until Monday's rollover) or a
-                <b>season pass</b> (10 Dekes, every week for the rest of the season), and you
-                can react with any emoji in your pool. Everyone starts with fire; each extra emoji costs 3 Dekes and is
-                yours for good. One reaction per team on each item; change it while your pass is active, or remove it any time.</p>
+                with an emoji. Reacting is free all season. Everyone starts with a set of emojis, and <b>packs</b> add more
+                emojis or team icons for good. One reaction per team on each item; change or remove it any time.</p>
                 <p>Buy Dekes in bundles from the <b>Dekes</b> section of your team page. Every purchase helps keep
                 Three Stars ad-free. Got an idea for a new icon? Send it with Message the Dev on the Support page.</p>
             </div>

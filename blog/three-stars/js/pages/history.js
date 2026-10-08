@@ -1,11 +1,11 @@
 import { getHistory } from '../api.js';
-import { esc, setLeague, notFound, teamBadge, supporterStar, weekStatus, fmtWeek, movesList, spChip, placeClass } from '../render.js';
+import { esc, setLeague, notFound, teamBadge, supporterStar, weekStatus, fmtWeek, movesList, spChip, placeClass, copyBtn, weekText } from '../render.js';
 
 
 
 // ### PAGE ###
 
-function weekRow(w) {
+function weekRow(w, league) {
     const teams = w.teams.map(t => `
         <span class="hist-team ${placeClass(t.sp)}">
             <small>${t.week_rank}</small>
@@ -19,6 +19,7 @@ function weekRow(w) {
             <div class="card-head">
                 <a href="#/week/${w.week}"><b>${fmtWeek(w.week)}</b></a>
                 ${weekStatus(w)}
+                ${w.is_final ? copyBtn(weekText(league, w, w.teams), 'Copy recap') : ''}
             </div>
             <div class="hist-teams">${teams}</div>
             ${w.moves?.length ? `<div class="hist-moves">${movesList(w.moves)}</div>` : ''}
@@ -46,7 +47,7 @@ export async function historyPage() {
         <section>
             <h1>History</h1>
             <div class="cards">
-                ${h.weeks.map(weekRow).join('') || '<div class="empty">No weeks yet.</div>'}
+                ${h.weeks.map(w => weekRow(w, h.league)).join('') || '<div class="empty">No weeks yet.</div>'}
                 ${draftCard(h.league)}
             </div>
         </section>`;

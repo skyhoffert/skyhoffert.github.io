@@ -25,6 +25,9 @@ Daily: `admin.py checkin` checks ingest/rollover health, drafts, payments, feedb
   - Goals leader (goalies eligible)
   - Points leader, G+A (goalies eligible)
   - +/- leader (skaters only)
+  - SV% leader, "Save Machine" (goalies only, 25+ shots against that week)
+  - PIM leader (goalies eligible)
+  - Fights leader, "Five for Fighting" (fighting majors, from landing penalty summary mapped by team + sweater)
 - **Weekly placement**: every team gets a unique place 1..N by score, then star count (1sts+2nds+3rds), then team goals (goalies included), then team +/- (skaters only), then a stable coin flip (hash of week + team).
 - **SP** (standing points): 1st 30, 2nd 20, 3rd 10 (hardcoded). Scoring weeks only; a 0-point team earns nothing. Shown provisionally during the live week, counted in standings once final.
 - **Standings**: by SP, then # of 1sts, 2nds, 3rds, then total season points. Columns: SP and 1-2-3 record.
@@ -52,14 +55,15 @@ One auto draft per league season (`drafts`), run by the admin.
 
 ## Dekes
 
-- Cosmetic currency. 1 Deke = one change of team **name** (2-24 chars, unique in league) or **color**; 2 Dekes = new **icon**, None is free (preset list in `js/config.js` `ICONS`, server accepts `img/teams/<slug>.(svg|png)`). A new/changed player nickname also costs 1 (charged in `update_roster_player`); clearing one is free. Unchanged values aren't charged.
-- Bundles (`DEKE_BUNDLES` in `js/config.js`): 3 for $3, 7 for $5, 15 for $10, 40 for $20 (Supporter bundle). Stripe Payment Links with `?client_reference_id=<team id>`; Stripe Product metadata `dekes=<n>`.
-- **Three Stars Supporter** (`teams.supporter_season`): set to the league's season by any single Stripe purchase of 40+ Dekes (`add_dekes`) or `admin.py supporter`. Shown only while it matches `leagues.season` (`team_json.supporter`). Gold ring on the team badge + gold ★ after the name. The Support page pitches the Supporter bundle.
+- Cosmetic currency. 1 Deke = one change of team **name** (2-24 chars, unique in league), **color** or **icon** (None is free; preset list in `js/config.js` `ICONS`, server accepts `img/teams/<slug>.(svg|png)` if not in an unowned icon pack). A new/changed player nickname also costs 1 (charged in `update_roster_player`); clearing one is free. Unchanged values aren't charged.
+- Bundles (`DEKE_BUNDLES` in `js/config.js`): 10 for $3, 20 for $5 (Supporter bundle). New teams start with 10 (`grant_starter_dekes`). Stripe Payment Links with `?client_reference_id=<team id>`; Stripe Product metadata `dekes=<n>`.
+- **Three Stars Supporter** (`teams.supporter_season`): set to the league's season by any single Stripe purchase of 20+ Dekes (`add_dekes`) or `admin.py supporter`. Shown only while it matches `leagues.season` (`team_json.supporter`). Gold ring on the team badge + gold ★ after the name. The Support page pitches the Supporter bundle.
 - `supabase/functions/stripe-webhook` verifies the Stripe signature and calls `add_dekes` with ref = checkout session id (idempotent). Setup: `supabase/STRIPE.md`.
 - Safety net: paid checkouts the webhook can't credit go to `unmatched_payments` → `admin.py unmatched` / `claim`. `admin.py stripe-check` compares Stripe's paid sessions against the ledger.
 - Every purchase / grant / spend is in `deke_ledger` (spends log `old -> new`, doubles as a moderation trail).
 - New teams start with 3 (`starter` ledger entry, insert trigger on `teams`).
-- Reactions: one emoji per team on a current-week Moves line or a Recent Three Stars game. Needs the weekly reaction pass (1 Deke; admin can gift with `grant-pass`) or a season pass (10 Dekes, `season_passes`). Emoji pool: fire free, others 3 Dekes each, permanent (`EMOJIS` in `js/config.js` + `reaction_emojis()` in `09`; `img/emoji/<id>.svg`, or `.png` with `ext: 'png'`).
+- Reactions: one emoji per team on a current-week Moves line or a Recent Three Stars game. Free; the pass tables/helpers (`reaction_passes`, `season_passes`) are kept but unused. Emoji pool: starter set (`starter_emojis()` in `09`) + owned emoji packs + legacy single buys (`team_emojis`). `EMOJIS` in `js/config.js`; `img/emoji/<id>.svg`, or `.png` with `ext: 'png'`.
+- Packs: bought once, permanent (`team_packs`, `buy_pack`). Contents in `all_packs()` in `08` and `PACKS` + `pack` tags on `EMOJIS`/`ICONS` in `js/config.js`. Emoji packs add to the pool; icon packs unlock team icons (`icon_unlocked`, checked by `customize_team`). Current: Classics (5), Faces (10), Hockey Icons (5).
 - Icon ideas go through Message the Dev (Support page). The old `icon_suggestions` / `suggest_icon` path is unused by the UI; `admin.py suggestions` still lists past ones.
 
 
@@ -123,8 +127,8 @@ Applied by pasting into the dashboard SQL editor. Every file is idempotent. Fres
 - `04_waivers.sql`: `process_waivers`, PIN-gated `get_my_team`, `update_roster_player`, `set_waiver_in`.
 - `06_trades.sql`: `trade_plan`, `process_trades`, PIN-gated `propose_trade`, `respond_trade`, `cancel_trade`.
 - `07_leagues.sql`: `leagues.pass_hash`, `set_league_password` (service), anon `join_league`.
-- `08_dekes.sql`: `teams.dekes`, `deke_ledger`, `icon_suggestions`, service `add_dekes`, PIN-gated `customize_team`, `suggest_icon`.
-- `09_reactions.sql`: `reaction_emojis()`, `team_emojis`, `reaction_passes`, `season_passes`, `reactions`, anon `get_reactions`, PIN-gated `get_my_reactions`, `react`, `buy_reaction_item`.
+- `08_dekes.sql`: `teams.dekes`, `deke_ledger`, `team_packs`, `icon_suggestions`, service `add_dekes`, `all_packs()`, PIN-gated `customize_team`, `buy_pack`, `suggest_icon`.
+- `09_reactions.sql`: `starter_emojis()`, `team_emojis`, `reaction_passes`, `season_passes`, `reactions`, anon `get_reactions`, PIN-gated `get_my_reactions`, `react`.
 - `10_draft.sql`: `draft_pool`, anon `get_draft`, `get_draft_pool`, PIN-gated `set_wishlist`, service `run_draft`, `run_midweek`.
 - `11_feedback.sql`: `feedback`, anon `send_feedback`.
 - `05_rls.sql`: RLS on all tables, no anon table access. Anon may only execute the granted `get_*` and owner RPCs. Re-run after adding tables/functions.

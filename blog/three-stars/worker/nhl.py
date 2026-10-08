@@ -101,15 +101,17 @@ def roster_players(abbrev):
 
 
 def goalie_saves(p):
-    if p.get('saves') is not None:
-        return p['saves']
-    # older boxscores only have "saves/shots"
-    ssa = p.get('saveShotsAgainst') or ''
-    return int(ssa.split('/')[0]) if '/' in ssa else None
+    # (saves, shots against); older boxscores only have "saves/shots"
+    ssa = (p.get('saveShotsAgainst') or '').split('/')
+    sv, sa = p.get('saves'), p.get('shotsAgainst')
+    if len(ssa) == 2:
+        sv = int(ssa[0]) if sv is None else sv
+        sa = int(ssa[1]) if sa is None else sa
+    return sv, sa
 
 
 def game_stats(box):
-    # Goalie rows lack goals/assists; stored as 0
+    # Goalie rows lack goals/assists; stored as 0 (goalie scoring intentionally not counted)
     out = []
     pbg = box.get('playerByGameStats', {})
     for side in ('awayTeam', 'homeTeam'):
@@ -117,13 +119,17 @@ def game_stats(box):
         for group in ('forwards', 'defense', 'goalies'):
             for p in pbg.get(side, {}).get(group, []):
                 is_goalie = group == 'goalies'
+                sv, sa = goalie_saves(p) if is_goalie else (None, None)
                 out.append({
                     'player_id': p['playerId'],
                     'goals': p.get('goals', 0),
                     'assists': p.get('assists', 0),
                     'plus_minus': None if is_goalie else p.get('plusMinus', 0),
                     'is_goalie': is_goalie,
-                    'saves': goalie_saves(p) if is_goalie else None,
+                    'saves': sv,
+                    'shots_against': sa,
+                    'pim': p.get('pim') or 0,
+                    'sweater': p.get('sweaterNumber'),
                     'name': name_default(p.get('name')),
                     'position': p.get('position'),
                     'nhl_team': abbrev,
@@ -133,3 +139,16 @@ def game_stats(box):
 
 def three_stars(land):
     return [{'star': s['star'], 'player_id': s['playerId']} for s in land.get('summary', {}).get('threeStars', [])]
+
+
+def fights(land):
+    # {(team abbrev, sweater): fighting majors}; landing penalties have no player id, game_stats maps sweater -> id
+    out = {}
+    for period in land.get('summary', {}).get('penalties', []):
+        for pen in period.get('penalties', []):
+            who = pen.get('committedByPlayer')
+            if pen.get('descKey') != 'fighting' or not who:
+                continue
+            k = (name_default(pen.get('teamAbbrev')), who.get('sweaterNumber'))
+            out[k] = out.get(k, 0) + 1
+    return out

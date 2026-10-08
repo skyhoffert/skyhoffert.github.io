@@ -8,12 +8,10 @@ Create one product per bundle, each with a one-time price and **metadata `dekes`
 
 | Product | Price | Metadata |
 |---|---|---|
-| 3 Dekes | $3.00 | `dekes` = `3` |
-| 7 Dekes | $5.00 | `dekes` = `7` |
-| 15 Dekes | $10.00 | `dekes` = `15` |
-| 40 Dekes (Supporter) | $20.00 | `dekes` = `40` |
+| 10 Dekes | $3.00 | `dekes` = `10` |
+| 20 Dekes (Supporter) | $5.00 | `dekes` = `20` |
 
-Any single purchase of 40+ Dekes also makes the team a Three Stars Supporter for the league's season (`add_dekes` in `sql/08_dekes.sql`); no webhook change needed.
+Any single purchase of 20+ Dekes also makes the team a Three Stars Supporter for the league's season (`add_dekes` in `sql/08_dekes.sql`); no webhook change needed.
 
 ## 2. Payment Links (Stripe dashboard → Payment Links)
 
@@ -74,4 +72,4 @@ The function holds one set of Stripe secrets, so switching is all-or-nothing:
 3. Swap the live payment link URLs into `DEKE_BUNDLES` in `js/config.js` (they start `https://buy.stripe.com/` without `test_`).
 4. Redeploy the function so the unmatched safety net is live: `npx supabase functions deploy stripe-webhook --no-verify-jwt --use-api`
 5. Put a live restricted key (Checkout Sessions: Read) in `worker/.env` as `STRIPE_SECRET_KEY` for `stripe-check`.
-6. Buy the smallest bundle with a real card, check `deke-log`, then refund it in Stripe and `grant-dekes <team> -3 --note refund`.
+6. Buy the smallest bundle with a real card, check `deke-log`, then refund it in Stripe and `grant-dekes <team> -10 --note refund`.

@@ -918,7 +918,7 @@ def main():
     p.add_argument('--note')
     p.set_defaults(fn=cmd_grant_dekes)
 
-    p = sp.add_parser('supporter', help='mark a team as Three Stars Supporter for its league\'s season (auto on any 40+ Deke purchase)')
+    p = sp.add_parser('supporter', help='mark a team as Three Stars Supporter for its league\'s season (auto on any 20+ Deke purchase)')
     p.add_argument('team', type=int)
     p.add_argument('--off', action='store_true')
     p.set_defaults(fn=cmd_supporter)

@@ -44,6 +44,7 @@ def ingest_game(g):
 
     stats = nhl.game_stats(box)
     stars = nhl.three_stars(land)
+    fights = nhl.fights(land)
     stubs = [{'id': s['player_id'], 'last_name': s['name'], 'position': s['position'], 'nhl_team': s['nhl_team']} for s in stats]
     stubs += [{'id': s['playerId'], 'last_name': nhl.name_default(s.get('name')), 'position': s.get('position'), 'nhl_team': s.get('teamAbbrev')}
               for s in land.get('summary', {}).get('threeStars', [])]
@@ -69,6 +70,9 @@ def ingest_game(g):
         'plus_minus': s['plus_minus'],
         'is_goalie': s['is_goalie'],
         'saves': s['saves'],
+        'shots_against': s['shots_against'],
+        'pim': s['pim'],
+        'fights': fights.get((s['nhl_team'], s['sweater']), 0),
     } for s in stats], 'game_id,player_id')
     db.upsert('game_stars', [{'game_id': gid, **s} for s in stars], 'game_id,star')
 
