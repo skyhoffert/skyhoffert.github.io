@@ -58,6 +58,10 @@ export const signIn = (team, pin) => mutate('get_my_team', { p_team: team, p_pin
 export const updateRosterPlayer = (team, pin, player, nickname) =>
     mutate('update_roster_player', { p_team: team, p_pin: pin, p_player: player, p_nickname: nickname });
 
+// swaps with the slot's occupant if any
+export const movePlayer = (team, pin, player, slot) =>
+    mutate('move_player', { p_team: team, p_pin: pin, p_player: player, p_slot: slot });
+
 // drop null removes the claim
 export const setWaiverIn = (team, pin, player, drop) =>
     mutate('set_waiver_in', { p_team: team, p_pin: pin, p_player: player, p_drop: drop });

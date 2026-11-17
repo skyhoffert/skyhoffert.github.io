@@ -47,6 +47,7 @@ grant execute on function get_players(int, text, text, text, int) to anon, authe
 grant execute on function get_recent_stars(int, int) to anon, authenticated;
 grant execute on function get_my_team(int, int, text) to anon, authenticated;
 grant execute on function update_roster_player(int, int, text, int, text) to anon, authenticated;
+grant execute on function move_player(int, int, text, int, text) to anon, authenticated;
 grant execute on function set_waiver_in(int, int, text, int, int) to anon, authenticated;
 grant execute on function propose_trade(int, int, text, int, int[], int[]) to anon, authenticated;
 grant execute on function respond_trade(int, int, text, int, boolean) to anon, authenticated;

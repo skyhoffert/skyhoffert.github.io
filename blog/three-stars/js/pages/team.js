@@ -155,7 +155,7 @@ export async function teamPage(id, week) {
     const canTrade = !isMine && !!mine && t.editable;
     const pills = t.editable ? tradePills(mine?.trades) : {};
     if (isMine && t.editable) for (const c of mine?.ins ?? []) pills[c.drop.id] = (pills[c.drop.id] ?? '') + pill(`Drop for #${c.n}`, 'pill-out');
-    const hint = manage ? 'Tap a player to set a nickname. Waiver claims start from the Players page.'
+    const hint = manage ? 'Tap a player to set a nickname or move them to another slot. Waiver claims start from the Players page.'
         : t.editable && !me ? 'Sign in to manage your team.' : '';
 
     const page = el(`<div class="team-page" style="--team:${esc(team.color)}">
@@ -209,7 +209,7 @@ export async function teamPage(id, week) {
             done = tr && await tradeSheet(tr);
         } else if (row.dataset.player) {
             const p = t.week.players.find(x => x.id === Number(row.dataset.player));
-            done = p && await playerSheet(p, mine.dekes ?? 0);
+            done = p && await playerSheet(p, mine.dekes ?? 0, t.week.players, t.league.slots);
         } else if (row.dataset.in) {
             const p = mine.ins.find(x => x.id === Number(row.dataset.in));
             done = p && await waiverInSheet(p, p);

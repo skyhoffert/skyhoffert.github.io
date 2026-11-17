@@ -17,6 +17,7 @@ Daily: `admin.py checkin` checks ingest/rollover health, drafts, payments, feedb
 
 - **League**: 2026-27 regular season only (opened 2026-09-29). Preseason/playoffs/international games ignored.
 - **Roster**: per-league slot counts on `leagues` (`n_f n_d n_g n_x n_s`, 0-9 each; default 2 F, 2 D, 1 G, 1 X, 0 S). X = Flex (F or D), S = Superflex (any). Slot names = type + number (`F1`, `X2`, `S1`), ordered F D G X S (`league_slots`). Players exclusive within a league. Lowering a count is refused while that slot is filled in the latest week.
+- **Slot moves**: owners move a player to another slot on the current week's roster (team page, tap player), swapping with the occupant if both fit. Free, takes effect immediately; slots don't affect scoring. Refused for players in a trade, or if a Waiver In's drop would land in a slot the claimed player doesn't fit (`move_player`).
 - **Team cap**: `leagues.max_teams` (1-16, default 10), enforced on team insert.
 - **Week**: Mon 00:00 → Sun 23:59 US/Eastern. Week ID = Monday's date (e.g. `2026-10-05`).
 - **Preseason weeks**: weeks before the league's `first_scoring_week` show scores and placements but award no SP.
@@ -124,7 +125,7 @@ Applied by pasting into the dashboard SQL editor. Every file is idempotent. Fres
 - `01_schema.sql`: all tables. `leagues` (+ slot config), `teams`, `players`, `games`, `game_stars`, `player_game_stats`, `roster_weeks` (weekly snapshots, unique (league_id, week, player_id)), `pending_transactions`, `waiver_ins`, `moves`, `trades`/`trade_players`, `player_ranks`, `drafts`, `draft_wishlists`, `draft_picks`, `nicknames`. Slot helpers `slot_list`, `league_slots`, `slot_fits`.
 - `02_views.sql`: `player_week_points` → `roster_week_points` (bonuses) → `team_week_scores` (placement + SP) → `season_standings`. Raw data + views, so stat corrections flow through automatically.
 - `03_rpc.sql`: JSON helpers (`league_json` includes `draft_status`), page RPCs `get_standings`, `get_week`, `get_team`, `get_history`, `get_players`, `get_recent_stars`, `rollover(league)`, admin helpers `apply_set`/`apply_drop`.
-- `04_waivers.sql`: `process_waivers`, PIN-gated `get_my_team`, `update_roster_player`, `set_waiver_in`.
+- `04_waivers.sql`: `process_waivers`, PIN-gated `get_my_team`, `update_roster_player`, `move_player`, `set_waiver_in`.
 - `06_trades.sql`: `trade_plan`, `process_trades`, PIN-gated `propose_trade`, `respond_trade`, `cancel_trade`.
 - `07_leagues.sql`: `leagues.pass_hash`, `set_league_password` (service), anon `join_league`.
 - `08_dekes.sql`: `teams.dekes`, `deke_ledger`, `team_packs`, `icon_suggestions`, service `add_dekes`, `all_packs()`, PIN-gated `customize_team`, `buy_pack`, `suggest_icon`.

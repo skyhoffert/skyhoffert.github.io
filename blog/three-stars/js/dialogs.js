@@ -1,4 +1,4 @@
-import { getStandings, getTeam, signIn, checkLeague, updateRosterPlayer, setWaiverIn, proposeTrade, respondTrade, cancelTrade, customizeTeam,
+import { getStandings, getTeam, signIn, checkLeague, updateRosterPlayer, movePlayer, setWaiverIn, proposeTrade, respondTrade, cancelTrade, customizeTeam,
     getReactions, getMyReactions, react, buyPack } from './api.js';
 import { LEAGUE, LEAGUES, ICONS, EMOJIS, PACKS, joinLeague, switchLeague, leaveLeague } from './config.js';
 import { getMe, setMe } from './session.js';
@@ -259,8 +259,30 @@ export function buyPackDialog(id, dekes) {
 
 // ### ROSTER PLAYER ###
 
-export function playerSheet(player, dekes) {
+// Slots this player can move to: empty ones it fits (one per type), or swaps where both players fit
+function moveOptions(player, roster, slots) {
+    const seen = new Set();
+    const out = [];
+    for (const s of slots) {
+        if (s === player.slot || !slotFits(s, player.position)) continue;
+        const occ = roster.find(p => p.slot === s);
+        if (occ && slotFits(player.slot, occ.position)) out.push([s, `${slotLabel(s)} · swap with ${occ.name}`]);
+        else if (!occ && !seen.has(s[0])) {
+            seen.add(s[0]);
+            out.push([s, `${slotLabel(s)} · empty`]);
+        }
+    }
+    return out;
+}
+
+// roster: my current players; slots: league slot list
+export function playerSheet(player, dekes, roster, slots) {
     const me = getMe();
+    const moves = moveOptions(player, roster, slots);
+    const move = moves.length
+        ? `<label>Move to<select name="slot">${moves.map(([s, label]) => `<option value="${s}">${esc(label)}</option>`).join('')}</select></label>
+            <p class="hint">Now in <b>${slotLabel(player.slot)}</b>. Slots don't change scoring; moving lines players up for waiver drops and trades. Free.</p>`
+        : `<p class="hint">Now in <b>${slotLabel(player.slot)}</b>. No other slot fits a ${esc(player.position)} right now.</p>`;
     return openDialog({
         title: player.name,
         sub: `${esc(player.position)} · ${esc(player.nhl_team ?? '')}`,
@@ -268,8 +290,13 @@ export function playerSheet(player, dekes) {
             <label>Nickname
                 <input name="nickname" maxlength="20" autocomplete="off" value="${esc(player.nickname ?? '')}" placeholder="Leave blank to clear">
             </label>
-            <p class="hint">A new nickname costs <b>1 Deke</b> (you have ${dekes}). Clearing one is free.</p>`,
-        onSubmit: (_, f) => updateRosterPlayer(me.team.id, me.pin, player.id, f.nickname),
+            <p class="hint">A new nickname costs <b>1 Deke</b> (you have ${dekes}). Clearing one is free.</p>
+            ${move}`,
+        submitLabel: 'Save nickname',
+        extra: moves.length ? [{ label: 'Move', action: 'move' }] : [],
+        onSubmit: (action, f) => action === 'move'
+            ? movePlayer(me.team.id, me.pin, player.id, f.slot)
+            : updateRosterPlayer(me.team.id, me.pin, player.id, f.nickname),
     });
 }
 

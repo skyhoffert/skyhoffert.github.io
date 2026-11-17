@@ -7,6 +7,10 @@ Updated weekly. Spot a bug or have an idea? Use **Message the Dev** on the [Supp
 - Late joiners will be able to pick up free agents into empty roster spots (for now the commissioner fills their roster).
 - A warning before you leave the draft page with unsaved wishlist changes.
 
+## Week of Nov 16, 2026
+
+- **Move players between slots.** Tap a player on your team page to move them to another slot they fit, like swapping a forward in F with one in Flex. Free and instant. Slots don't change scoring, but the right lineup lets your waiver claims and trades fit.
+
 ## Week of Oct 5, 2026
 
 - **Cheaper Dekes.** 10 Dekes for $3, or the **Supporter bundle**: 20 Dekes for $5, which also makes your team a Three Stars Supporter for the season.

@@ -183,6 +183,68 @@ begin
 end;
 $$;
 
+-- Move a player to another slot on the team's current roster, swapping with its occupant if any.
+-- Slots don't affect scoring; this lines players up so waiver drops and trades fit.
+-- Refused for players in a trade, or if a Waiver In's drop would land in a slot the claimed player doesn't fit.
+create or replace function move_player(p_league int, p_team int, p_pin text, p_player int, p_slot text)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = public
+as $$
+declare
+  w date := roster_week(p_league);
+  pos text;
+  cur text;
+  occ int;
+  occ_pos text;
+begin
+  if not pin_ok(p_league, p_team, p_pin) then
+    return jsonb_build_object('ok', false, 'error', 'Wrong PIN.');
+  end if;
+  select rw.slot, pl.position into cur, pos from roster_weeks rw join players pl on pl.id = rw.player_id
+  where rw.league_id = p_league and rw.week = w and rw.team_id = p_team and rw.player_id = p_player;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Player is not on this team''s current roster.');
+  end if;
+  if p_slot = cur then
+    return jsonb_build_object('ok', false, 'error', 'Already in that slot.');
+  end if;
+  if not coalesce(p_slot = any(league_slots(p_league)), false) then
+    return jsonb_build_object('ok', false, 'error', 'Your league has no such slot.');
+  end if;
+  if not slot_fits(p_slot, pos) then
+    return jsonb_build_object('ok', false, 'error', 'Position doesn''t fit that slot.');
+  end if;
+
+  select rw.player_id, pl.position into occ, occ_pos from roster_weeks rw join players pl on pl.id = rw.player_id
+  where rw.league_id = p_league and rw.week = w and rw.team_id = p_team and rw.slot = p_slot;
+  if occ is not null and not slot_fits(cur, occ_pos) then
+    return jsonb_build_object('ok', false, 'error', 'The player in that slot doesn''t fit this one.');
+  end if;
+  if exists (select 1 from trade_players tp join trades t on t.id = tp.trade_id
+             where t.league_id = p_league and tp.player_id in (p_player, occ)) then
+    return jsonb_build_object('ok', false, 'error', 'Players in a trade can''t move.');
+  end if;
+  if exists (select 1 from waiver_ins wi join players pl on pl.id = wi.player_id
+             where wi.league_id = p_league and wi.team_id = p_team
+               and ((wi.drop_player_id = p_player and not slot_fits(p_slot, pl.position))
+                 or (wi.drop_player_id = occ and not slot_fits(cur, pl.position)))) then
+    return jsonb_build_object('ok', false, 'error', 'That would break one of your Waiver Ins: the claimed player wouldn''t fit the new slot.');
+  end if;
+
+  -- (team, slot) is unique and not deferrable, so clear both rows before re-inserting
+  delete from roster_weeks
+  where league_id = p_league and week = w and team_id = p_team and player_id in (p_player, occ);
+  insert into roster_weeks (league_id, week, team_id, player_id, slot) values (p_league, w, p_team, p_player, p_slot);
+  if occ is not null then
+    insert into roster_weeks (league_id, week, team_id, player_id, slot) values (p_league, w, p_team, occ, cur);
+  end if;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
 -- Claim p_player, dropping p_drop. Re-claiming the same player just changes the drop (keeps priority).
 -- p_drop null removes the claim.
 create or replace function set_waiver_in(p_league int, p_team int, p_pin text, p_player int, p_drop int)

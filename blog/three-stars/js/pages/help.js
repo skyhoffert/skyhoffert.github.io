@@ -91,7 +91,9 @@ export function helpPage() {
             <div class="prose">
                 <p>Tap the <b>profile icon</b> at the top right and sign in with your team and PIN. Your device
                 remembers you, and your team button then takes you straight to your roster.</p>
-                <p>From your team page you can give players a <b>nickname</b>.</p>
+                <p>From your team page you can give players a <b>nickname</b>, or <b>move</b> a player to another slot that
+                fits, swapping with whoever is there (say, a forward from F into Flex). Moves are free and happen right
+                away. Slots don't change scoring; moving just lines up your waiver drops and trades.</p>
                 <p>From the Players page you can put in a <b>waiver claim</b> on a free agent: pick who you'd drop for
                 them. The new player takes the dropped player's slot, so the drop must be in a slot that fits. You
                 can use the same drop on several claims as backups. Claims are private and ordered by when you
