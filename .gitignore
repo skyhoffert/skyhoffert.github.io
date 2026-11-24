@@ -2,3 +2,6 @@
 node_modules/
 package-lock.json
 
+
+# Exam review room output (contains host keys)
+blog/examreview/test_room.txt
