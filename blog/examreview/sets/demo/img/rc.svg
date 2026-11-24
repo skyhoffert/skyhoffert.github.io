@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 220" width="340" height="220" font-family="Helvetica, Arial, sans-serif" font-size="16">
+  <g fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- input terminal wire + R -->
+    <path d="M30 40 H100 l6 -10 l12 20 l12 -20 l12 20 l12 -20 l12 20 l6 -10 H290"/>
+    <!-- C -->
+    <path d="M230 40 V108 M205 108 H255 M205 122 H255 M230 122 V190"/>
+    <!-- bottom wire -->
+    <path d="M30 190 H290"/>
+  </g>
+  <circle cx="30" cy="40" r="5" fill="#fff" stroke="#111" stroke-width="2.5"/>
+  <circle cx="30" cy="190" r="5" fill="#fff" stroke="#111" stroke-width="2.5"/>
+  <circle cx="290" cy="40" r="5" fill="#fff" stroke="#111" stroke-width="2.5"/>
+  <circle cx="290" cy="190" r="5" fill="#fff" stroke="#111" stroke-width="2.5"/>
+  <circle cx="230" cy="40" r="4" fill="#111"/>
+  <circle cx="230" cy="190" r="4" fill="#111"/>
+  <g fill="#111">
+    <text x="112" y="20">R = 1 kΩ</text>
+    <text x="262" y="120">C = 100 nF</text>
+    <text x="10" y="120" font-style="italic">v</text><text x="18" y="125" font-size="12">in</text>
+    <text x="300" y="120" font-style="italic">v</text><text x="308" y="125" font-size="12">out</text>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 230" width="340" height="230" font-family="Helvetica, Arial, sans-serif" font-size="16">
+  <g fill="none" stroke="#111" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- source -->
+    <path d="M50 40 V85"/>
+    <circle cx="50" cy="115" r="30"/>
+    <path d="M50 145 V200"/>
+    <path d="M42 102 h16 M50 94 v16 M42 130 h16"/>
+    <!-- top wire + R1 -->
+    <path d="M50 40 H110 l6 -10 l12 20 l12 -20 l12 20 l12 -20 l12 20 l6 -10 H260"/>
+    <!-- R2 -->
+    <path d="M220 40 V80 l-10 6 l20 12 l-20 12 l20 12 l-20 12 l20 12 l-10 6 V200"/>
+    <!-- bottom wire -->
+    <path d="M50 200 H260"/>
+    <!-- ground -->
+    <path d="M140 200 v10 M124 210 h32 M130 217 h20 M136 224 h8"/>
+  </g>
+  <circle cx="220" cy="40" r="4" fill="#111"/>
+  <circle cx="260" cy="40" r="5" fill="#fff" stroke="#111" stroke-width="2.5"/>
+  <circle cx="260" cy="200" r="5" fill="#fff" stroke="#111" stroke-width="2.5"/>
+  <circle cx="220" cy="200" r="4" fill="#111"/>
+  <g fill="#111">
+    <text x="4" y="120">5 V</text>
+    <text x="128" y="20">R₁ = 10 kΩ</text>
+    <text x="240" y="125">R₂ = 20 kΩ</text>
+    <text x="272" y="45">+</text>
+    <text x="272" y="125" font-style="italic">V</text><text x="283" y="130" font-size="12">out</text>
+    <text x="272" y="205">−</text>
+  </g>
+</svg>

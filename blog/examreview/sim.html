@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Review · Bot Simulator</title>
+    <link rel="icon" href="favicon.svg">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="js/sim.js"></script>
+</head>
+<body class="sim">
+    <h1>🤖 Bot simulator</h1>
+    <p class="muted">Joins fake students to a room so you can rehearse the host flow. Bots answer a few seconds after each question opens; kick them from the host screen when done.</p>
+    <div class="row">
+        <label>Room <input id="room" class="codeinput" maxlength="4" size="5"></label>
+        <label>Bots <input id="count" type="number" min="1" max="40" value="12" style="width:5em"></label>
+        <label>Accuracy % <input id="acc" type="number" min="0" max="100" value="65" style="width:5em"></label>
+        <label>Skip % <input id="skip" type="number" min="0" max="100" value="10" style="width:5em"></label>
+        <button class="primary" id="start">Join bots</button>
+        <button id="stop" disabled>Stop</button>
+    </div>
+    <div class="log" id="log"></div>
+</body>
+</html>
